@@ -1,0 +1,388 @@
+/**
+ * Unit tests for auth.ts pure/near-pure functions
+ */
+
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { join } from "node:path";
+import { homedir } from "node:os";
+
+const virtualFs: Record<string, { content: string }> = {};
+const mockAuthDir = join(homedir(), ".local", "share", "loglog");
+
+vi.mock("node:fs", () => ({
+	existsSync: vi.fn((path: string) => {
+		const normalized = path.replace(/\\/g, "/");
+		return normalized in virtualFs;
+	}),
+	readFileSync: vi.fn((path: string) => {
+		const normalized = path.replace(/\\/g, "/");
+		const file = virtualFs[normalized];
+		if (!file) {
+			const error = new Error(
+				`ENOENT: no such file or directory, open '${path}'`,
+			) as NodeJS.ErrnoException;
+			error.code = "ENOENT";
+			throw error;
+		}
+		return file.content;
+	}),
+	writeFileSync: vi.fn((path: string, content: string) => {
+		const normalized = path.replace(/\\/g, "/");
+		virtualFs[normalized] = { content };
+	}),
+	chmodSync: vi.fn(),
+	mkdirSync: vi.fn(),
+	unlinkSync: vi.fn((path: string) => {
+		const normalized = path.replace(/\\/g, "/");
+		if (!(normalized in virtualFs)) {
+			const error = new Error(
+				`ENOENT: no such file or directory, unlink '${path}'`,
+			) as NodeJS.ErrnoException;
+			error.code = "ENOENT";
+			throw error;
+		}
+		delete virtualFs[normalized];
+	}),
+}));
+
+import {
+	getAuthPath,
+	getToken,
+	getTokenOrNull,
+	isLoggedIn,
+	getAuthStatus,
+	loadAuthData,
+	saveAuthData,
+	clearAuthData,
+	NotLoggedInError,
+	TokenExpiredError,
+	type AuthData,
+} from "../auth.js";
+
+function clearVirtualFs(): void {
+	for (const key of Object.keys(virtualFs)) {
+		delete virtualFs[key];
+	}
+}
+
+beforeEach(() => {
+	vi.clearAllMocks();
+	clearVirtualFs();
+});
+
+afterEach(() => {
+	vi.clearAllMocks();
+	clearVirtualFs();
+});
+
+function addAuthFile(data: AuthData): void {
+	const authPath = join(mockAuthDir, "auth.json");
+	virtualFs[authPath.replace(/\\/g, "/")] = {
+		content: JSON.stringify(data),
+	};
+}
+
+function createFutureDate(): string {
+	const future = new Date();
+	future.setFullYear(future.getFullYear() + 1);
+	return future.toISOString();
+}
+
+function createPastDate(): string {
+	const past = new Date();
+	past.setFullYear(past.getFullYear() - 1);
+	return past.toISOString();
+}
+
+describe("getAuthPath", () => {
+	it("returns path under XDG data dir", () => {
+		const result = getAuthPath();
+		expect(result).toBe(join(mockAuthDir, "auth.json"));
+	});
+});
+
+describe("loadAuthData", () => {
+	it("returns null when auth file does not exist", () => {
+		const result = loadAuthData();
+		expect(result).toBeNull();
+	});
+
+	it("returns auth data when valid file exists", () => {
+		const authData: AuthData = {
+			token: "test-token",
+			expiresAt: createFutureDate(),
+			workosId: "user-123",
+			email: "test@example.com",
+		};
+		addAuthFile(authData);
+
+		const result = loadAuthData();
+		expect(result).toEqual(authData);
+	});
+
+	it("returns null when file contains invalid JSON", () => {
+		const authPath = join(mockAuthDir, "auth.json");
+		virtualFs[authPath.replace(/\\/g, "/")] = {
+			content: "not valid json {{{",
+		};
+
+		const result = loadAuthData();
+		expect(result).toBeNull();
+	});
+
+	it("returns null when token is missing", () => {
+		const authPath = join(mockAuthDir, "auth.json");
+		virtualFs[authPath.replace(/\\/g, "/")] = {
+			content: JSON.stringify({ workosId: "user-123" }),
+		};
+
+		const result = loadAuthData();
+		expect(result).toBeNull();
+	});
+
+	it("returns null when token is not a string", () => {
+		const authPath = join(mockAuthDir, "auth.json");
+		virtualFs[authPath.replace(/\\/g, "/")] = {
+			content: JSON.stringify({ token: 12345 }),
+		};
+
+		const result = loadAuthData();
+		expect(result).toBeNull();
+	});
+});
+
+describe("saveAuthData", () => {
+	it("saves auth data to correct path", () => {
+		const authData: AuthData = {
+			token: "test-token",
+			expiresAt: createFutureDate(),
+		};
+
+		saveAuthData(authData);
+
+		const authPath = join(mockAuthDir, "auth.json");
+		const saved = virtualFs[authPath.replace(/\\/g, "/")];
+		expect(saved).toBeDefined();
+		expect(JSON.parse(saved!.content)).toEqual(authData);
+	});
+
+	it("creates directory if it does not exist", async () => {
+		const fs = await import("node:fs");
+		const authData: AuthData = { token: "test-token" };
+
+		saveAuthData(authData);
+
+		expect(fs.mkdirSync).toHaveBeenCalledWith(mockAuthDir, { recursive: true });
+		expect(fs.chmodSync).toHaveBeenCalledWith(join(mockAuthDir, "auth.json"), 0o600);
+	});
+});
+
+describe("clearAuthData", () => {
+	it("returns false when auth file does not exist", () => {
+		const result = clearAuthData();
+		expect(result).toBe(false);
+	});
+
+	it("returns true and deletes file when auth file exists", async () => {
+		const fs = await import("node:fs");
+		addAuthFile({ token: "test-token" });
+
+		const result = clearAuthData();
+		expect(result).toBe(true);
+		expect(fs.unlinkSync).toHaveBeenCalled();
+	});
+});
+
+describe("getToken", () => {
+	it("throws NotLoggedInError when not logged in", async () => {
+		await expect(getToken()).rejects.toThrow(NotLoggedInError);
+	});
+
+	it("throws TokenExpiredError when token is expired and no refresh token", async () => {
+		addAuthFile({
+			token: "expired-token",
+			expiresAt: createPastDate(),
+		});
+
+		await expect(getToken()).rejects.toThrow(TokenExpiredError);
+	});
+
+	it("returns token when valid and not expired", async () => {
+		addAuthFile({
+			token: "valid-token",
+			expiresAt: createFutureDate(),
+		});
+
+		const result = await getToken();
+		expect(result).toBe("valid-token");
+	});
+
+	it("returns token when expiresAt is missing (no expiration)", async () => {
+		addAuthFile({
+			token: "no-expiry-token",
+		});
+
+		const result = await getToken();
+		expect(result).toBe("no-expiry-token");
+	});
+});
+
+describe("getTokenOrNull", () => {
+	it("returns null when not logged in", async () => {
+		const result = await getTokenOrNull();
+		expect(result).toBeNull();
+	});
+
+	it("returns null when token is expired", async () => {
+		addAuthFile({
+			token: "expired-token",
+			expiresAt: createPastDate(),
+		});
+
+		const result = await getTokenOrNull();
+		expect(result).toBeNull();
+	});
+
+	it("returns token when valid", async () => {
+		addAuthFile({
+			token: "valid-token",
+			expiresAt: createFutureDate(),
+		});
+
+		const result = await getTokenOrNull();
+		expect(result).toBe("valid-token");
+	});
+
+	it("returns token when expiresAt is missing", async () => {
+		addAuthFile({
+			token: "no-expiry-token",
+		});
+
+		const result = await getTokenOrNull();
+		expect(result).toBe("no-expiry-token");
+	});
+});
+
+describe("isLoggedIn", () => {
+	it("returns false when not logged in", async () => {
+		const result = await isLoggedIn();
+		expect(result).toBe(false);
+	});
+
+	it("returns false when token is expired", async () => {
+		addAuthFile({
+			token: "expired-token",
+			expiresAt: createPastDate(),
+		});
+
+		const result = await isLoggedIn();
+		expect(result).toBe(false);
+	});
+
+	it("returns true when valid token exists", async () => {
+		addAuthFile({
+			token: "valid-token",
+			expiresAt: createFutureDate(),
+		});
+
+		const result = await isLoggedIn();
+		expect(result).toBe(true);
+	});
+
+	it("returns true when token has no expiration", async () => {
+		addAuthFile({
+			token: "no-expiry-token",
+		});
+
+		const result = await isLoggedIn();
+		expect(result).toBe(true);
+	});
+});
+
+describe("getAuthStatus", () => {
+	it("returns isLoggedIn: false when not logged in", async () => {
+		const result = await getAuthStatus();
+		expect(result).toEqual({ isLoggedIn: false });
+	});
+
+	it("returns isLoggedIn: false when token is expired and no refresh token", async () => {
+		addAuthFile({
+			token: "expired-token",
+			expiresAt: createPastDate(),
+			email: "test@example.com",
+			workosId: "user-123",
+		});
+
+		const result = await getAuthStatus();
+		expect(result).toEqual({ isLoggedIn: false });
+	});
+
+	it("returns full status when valid token exists", async () => {
+		const expiresAt = createFutureDate();
+		addAuthFile({
+			token: "valid-token",
+			expiresAt,
+			email: "test@example.com",
+			workosId: "user-123",
+		});
+
+		const result = await getAuthStatus();
+		expect(result).toEqual({
+			isLoggedIn: true,
+			email: "test@example.com",
+			workosId: "user-123",
+			expiresAt,
+		});
+	});
+
+	it("returns status without expiresAt when missing and JWT extraction fails", async () => {
+		// Token without valid JWT structure - extraction will fail
+		addAuthFile({
+			token: "not-a-valid-jwt",
+			email: "test@example.com",
+		});
+
+		const result = await getAuthStatus();
+		expect(result).toEqual({
+			isLoggedIn: true,
+			email: "test@example.com",
+			workosId: undefined,
+			expiresAt: undefined,
+		});
+	});
+
+	it("extracts expiresAt from JWT when missing and persists it", async () => {
+		// Create a valid JWT with exp claim (1 year in the future)
+		const futureExp = Math.floor(Date.now() / 1000) + 365 * 24 * 60 * 60;
+		const payload = { sub: "user-123", exp: futureExp };
+		const jwtPayload = Buffer.from(JSON.stringify(payload)).toString("base64");
+		const validJwt = `header.${jwtPayload}.signature`;
+
+		addAuthFile({
+			token: validJwt,
+			email: "test@example.com",
+		});
+
+		const result = await getAuthStatus();
+		expect(result.isLoggedIn).toBe(true);
+		expect(result.email).toBe("test@example.com");
+		// Should have extracted expiresAt from JWT
+		expect(result.expiresAt).toBeDefined();
+		expect(new Date(result.expiresAt!).getTime()).toBeCloseTo(futureExp * 1000, -3);
+	});
+
+	it("returns isLoggedIn: true without email when email is missing", async () => {
+		addAuthFile({
+			token: "valid-token",
+			workosId: "user-123",
+		});
+
+		const result = await getAuthStatus();
+		expect(result).toEqual({
+			isLoggedIn: true,
+			email: undefined,
+			workosId: "user-123",
+			expiresAt: undefined,
+		});
+	});
+});

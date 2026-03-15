@@ -1,0 +1,113 @@
+/**
+ * Map manager for global and project maps
+ *
+ * Manages:
+ * - Global map: ~/.local/share/loglog/skill/loglog/assets/map.json
+ * - Project map: ./.loglog/map.json
+ */
+
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import {
+	GlobalMapSchema,
+	ProjectMapSchema,
+	type GlobalMap,
+	type GlobalMapRepoEntry,
+	type ProjectMap,
+	type ProjectMapRepoEntry,
+} from "@loglog/types";
+import { Paths } from "./paths.js";
+
+/**
+ * Reads the global map from ~/.local/share/loglog/skill/loglog/assets/map.json
+ * Returns empty map if file doesn't exist or is invalid
+ */
+export function readGlobalMap(): GlobalMap {
+	const mapPath = Paths.loglogGlobalMapPath;
+
+	if (!existsSync(mapPath)) {
+		return { repos: {} };
+	}
+
+	try {
+		const content = readFileSync(mapPath, "utf-8");
+		const data = JSON.parse(content);
+		return GlobalMapSchema.parse(data);
+	} catch {
+		return { repos: {} };
+	}
+}
+
+/**
+ * Writes the global map to ~/.local/share/loglog/skill/loglog/assets/map.json
+ * Creates directory if it doesn't exist
+ */
+export function writeGlobalMap(map: GlobalMap): void {
+	const mapPath = Paths.loglogGlobalMapPath;
+	const mapDir = dirname(mapPath);
+
+	if (!existsSync(mapDir)) {
+		mkdirSync(mapDir, { recursive: true });
+	}
+
+	const validated = GlobalMapSchema.parse(map);
+	writeFileSync(mapPath, JSON.stringify(validated, null, 2), "utf-8");
+}
+
+/**
+ * Adds or updates a repo entry in the global map
+ *
+ * @param qualifiedName - The qualified repo name (owner/repo)
+ * @param entry - The map entry to add/update
+ */
+export function upsertGlobalMapEntry(qualifiedName: string, entry: GlobalMapRepoEntry): void {
+	const map = readGlobalMap();
+	map.repos[qualifiedName] = entry;
+	writeGlobalMap(map);
+}
+
+/**
+ * Removes a repo entry from the global map
+ *
+ * @param qualifiedName - The qualified repo name (owner/repo)
+ * @returns true if repo was removed, false if not found
+ */
+export function removeGlobalMapEntry(qualifiedName: string): boolean {
+	const map = readGlobalMap();
+
+	if (!(qualifiedName in map.repos)) {
+		return false;
+	}
+
+	delete map.repos[qualifiedName];
+	writeGlobalMap(map);
+	return true;
+}
+
+/**
+ * Writes a project map to ./.loglog/map.json
+ *
+ * @param projectRoot - Absolute path to project root
+ * @param entries - Map of qualified repo names to project map entries
+ */
+export function writeProjectMap(
+	projectRoot: string,
+	entries: Record<string, ProjectMapRepoEntry>,
+): void {
+	const mapPath = join(projectRoot, ".loglog", "map.json");
+	const mapDir = dirname(mapPath);
+
+	if (!existsSync(mapDir)) {
+		mkdirSync(mapDir, { recursive: true });
+	}
+
+	const projectMap: ProjectMap = {
+		version: 1,
+		scope: "project",
+		globalMapPath: Paths.loglogGlobalMapPath,
+		repos: entries,
+	};
+
+	const validated = ProjectMapSchema.parse(projectMap);
+	writeFileSync(mapPath, JSON.stringify(validated, null, 2), "utf-8");
+}

@@ -1,0 +1,30 @@
+{
+	"compilerOptions": {
+		"target": "ESNext",
+		"module": "ESNext",
+		"moduleResolution": "bundler",
+		"verbatimModuleSyntax": true,
+		"strict": true,
+		"skipLibCheck": true,
+		"baseUrl": "./",
+		"paths": {
+			"@/server/*": ["./src/*"],
+			"@/root/*": ["../../*"]
+		},
+		"outDir": "./dist",
+		"types": [
+			"@cloudflare/workers-types", 
+			"node",
+			"./worker-configuration.d.ts",
+			// "@types/node",
+			"@types/service-worker-mock",
+			"@cloudflare/vitest-pool-workers"
+		],
+		"composite": true,
+		"jsx": "preserve",
+		"experimentalDecorators": true,
+		"emitDecoratorMetadata": true,
+		"jsxImportSource": "hono/jsx"
+	},
+	"exclude": ["node_modules", "dist", "tests"]
+}

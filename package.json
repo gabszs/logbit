@@ -1,0 +1,55 @@
+{
+	"name": "loglog",
+	"workspaces": {
+		"packages": [
+			"apps/*",
+			"packages/*"
+		],
+		"catalog": {
+			"@convex-dev/better-auth": "^0.10.9",
+			"@edge-runtime/vm": "^5.0.0",
+			"@types/node": "^25.2.0",
+			"alchemy": "^0.83.2",
+			"better-auth": "1.4.13",
+			"convex": "^1.31.7",
+			"convex-test": "^0.0.41",
+			"dotenv": "^17.2.3",
+			"tsdown": "^0.20.1",
+			"typescript": "^5.9.3",
+			"vitest": "^4.0.18",
+			"zod": "^4.3.6"
+		}
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^2.3.8",
+		"alchemy": "^0.81.1",
+		"dotenv": "^17.2.3",
+		"turbo": "^2.6.3"
+	},
+	"packageManager": "bun@1.3.1",
+	"private": true,
+	"scripts": {
+		"check": "biome check --write .",
+		"check:unsafe": "biome check --write --unsafe .",
+		"a:clean": "rm -rf .alchemy && turbo a:clean",
+		"a:dev": "alchemy dev --env-file .env.dev",
+		"a:dev:destroy": "alchemy destroy --env-file .env.dev",
+		"a:prod:deploy": "alchemy deploy --env-file .env.prod",
+		"a:prod:destroy": "alchemy destroy --env-file .env.prod",
+		"a:staging:deploy": "alchemy deploy --env-file .env.staging",
+		"a:staging:destroy": "alchemy destroy --env-file .env.staging",
+		"vite:dev": "turbo dev",
+		"vite:clean": "turbo -F web vite:clean",
+		"build": "turbo -F web build",
+		"typecheck": "turbo typecheck",
+		"dev:native": "turbo -F native dev",
+		"dev:web": "turbo -F web dev",
+		"dev:server": "turbo -F server dev",
+		"db:push": "turbo -F server db:push",
+		"db:studio": "turbo -F server db:studio",
+		"db:generate": "turbo -F server db:generate",
+		"db:migrate": "turbo -F server db:migrate",
+		"do:generate": "turbo -F server do:generate",
+		"ruler:apply": "bunx @intellectronica/ruler@latest apply --local-only"
+	}
+}

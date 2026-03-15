@@ -1,0 +1,48 @@
+{
+	"name": "server",
+	"main": "src/index.ts",
+	"type": "module",
+	"private": true,
+	"scripts": {
+		"build": "wrangler deploy --dry-run",
+		"typecheck": "tsc -b",
+		"compile": "bun build --compile --minify --sourcemap --bytecode ./src/index.ts --outfile server",
+		"dev": "wrangler dev --port=3000",
+		"deploy": "alchemy deploy",
+		"destroy": "alchemy destroy",
+		"a:dev": "alchemy dev",
+		"a:clean": "rm -rf .alchemy",
+		"db:generate": "drizzle-kit generate --config=./drizzle.db.config.ts",
+		"db:migrate": "DB_STAGE=dev drizzle-kit migrate --config=./drizzle.db.config.ts",
+		"db:studio": "DB_STAGE=dev drizzle-kit studio --config=./drizzle.db.config.ts",
+		"db:studio:prod": "drizzle-kit studio --config=./drizzle.db.config.ts",
+		"do:generate": "drizzle-kit generate --config=./drizzle.do.config.ts"
+	},
+	"dependencies": {
+		"@hono/otel": "^1.1.0",
+		"@hono/zod-openapi": "^1.2.0",
+		"@opentelemetry/api": "^1.9.0",
+		"@orpc/server": "^1.13.2",
+		"@scalar/hono-api-reference": "^0.9.30",
+		"@t3-oss/env-nuxt": "^0.13.10",
+		"better-auth": "1.4.10",
+		"better-auth-cloudflare": "^0.2.9",
+		"drizzle-orm": "^0.44.7",
+		"drizzle-zod": "^0.8.3",
+		"hono": "^4.11.3",
+		"hono-rate-limiter": "^0.5.3",
+		"resend": "^6.6.0",
+		"ua-parser-js": "^2.0.7",
+		"ulid": "^3.0.2",
+		"zod": "catalog:"
+	},
+	"devDependencies": {
+		"drizzle-kit": "^0.31.8",
+		"tsx": "^4.21.0",
+		"@types/node": "catalog:",
+		"dotenv": "catalog:",
+		"tsdown": "catalog:",
+		"typescript": "catalog:",
+		"vitest": "catalog:"
+	}
+}

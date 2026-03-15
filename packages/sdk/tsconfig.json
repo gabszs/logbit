@@ -1,0 +1,13 @@
+{
+	"extends": "@loglog/config/tsconfig.base.json",
+	"compilerOptions": {
+		"baseUrl": ".",
+		"outDir": "./dist",
+		"rootDir": "./src",
+		"declaration": true,
+		"declarationMap": true,
+		"types": ["node"]
+	},
+	"include": ["src/**/*"],
+	"exclude": ["node_modules", "dist", "src/__tests__/fixtures"]
+}

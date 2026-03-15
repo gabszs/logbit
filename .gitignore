@@ -1,0 +1,138 @@
+node_modules
+.turbo
+.alchemy
+.env*
+!.env.example
+
+# AI rules
+.cursor
+AGENTS.md
+.cursor/
+.ruler/
+.claude/
+.codex/
+
+plans/
+
+.DS_Store
+
+# START Ruler Generated Files
+/.mcp.json
+/.mcp.json.bak
+/AGENTS.md
+/AGENTS.md.bak
+/CLAUDE.md.bak
+/opencode.json
+/opencode.json.bak
+# END Ruler Generated Files
+
+# prod
+dist/
+/build
+/out/
+
+# dev
+.wrangler
+wrangler.jsonc
+.alchemy
+
+# deps
+node_modules/
+/node_modules
+
+# env
+.env*
+!.env.example
+
+# logs
+logs/
+*.log
+npm-debug.log*
+
+# misc
+.DS_Store
+*.pem
+
+# typescript
+*.tsbuildinfo
+
+**/*.trace
+**/*.zip
+**/*.tar.gz
+**/*.tgz
+**/*.log
+
+package-lock.json
+**/*.bun
+
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+/.pnp
+.pnp.js
+
+# testing
+/coverage
+
+# production
+/build
+
+# misc
+.DS_Store
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Node.js dependencies
+node_modules/
+/build
+/dist
+/coverage
+
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# Environment variables
+.env
+.env.test
+
+# Optional caches
+.npm
+.eslintcache
+.parcel-cache
+
+# OS-generated files
+.DS_Store # macOS
+Thumbs.db # Windows
+
+# Node.js dependencies
+node_modules/
+/build
+/dist
+/coverage
+
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# Environment variables
+.env
+.env.test
+
+# Optional caches
+.npm
+.eslintcache
+.parcel-cache
+
+# OS-generated files
+.DS_Store # macOS
+Thumbs.db # Windows
