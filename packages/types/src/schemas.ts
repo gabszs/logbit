@@ -49,9 +49,21 @@ export const RepoSourceSchema = z.discriminatedUnion("type", [
 	LocalRepoSourceSchema,
 ]);
 
-export const ProjectTypeSchema = z.enum(["monorepo", "library", "cli", "app", "framework"]);
+export const ProjectTypeSchema = z.enum([
+	"monorepo",
+	"library",
+	"cli",
+	"app",
+	"framework",
+]);
 
-export const EntityTypeSchema = z.enum(["package", "module", "feature", "util", "config"]);
+export const EntityTypeSchema = z.enum([
+	"package",
+	"module",
+	"feature",
+	"util",
+	"config",
+]);
 
 export const EntitySchema = z.object({
 	name: z.string(),
@@ -87,7 +99,15 @@ export const ArchitectureSchema = z.object({
 	}),
 });
 
-export const FileRoleSchema = z.enum(["entry", "core", "types", "config", "test", "util", "doc"]);
+export const FileRoleSchema = z.enum([
+	"entry",
+	"core",
+	"types",
+	"config",
+	"test",
+	"util",
+	"doc",
+]);
 
 export const FileIndexEntrySchema = z.object({
 	path: z.string(),

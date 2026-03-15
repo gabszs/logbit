@@ -1,5 +1,8 @@
 import path from "node:path";
-import { defineWorkersProject, readD1Migrations } from "@cloudflare/vitest-pool-workers/config";
+import {
+	defineWorkersProject,
+	readD1Migrations,
+} from "@cloudflare/vitest-pool-workers/config";
 
 export default defineWorkersProject(async () => {
 	const migrationsPath = path.join(__dirname, "migrations");
@@ -46,7 +49,11 @@ export default defineWorkersProject(async () => {
 					singleWorker: true,
 					isolatedStorage: true,
 					miniflare: {
-						compatibilityFlags: ["service_binding_extra_handlers", "nodejs_compat", "rpc"],
+						compatibilityFlags: [
+							"service_binding_extra_handlers",
+							"nodejs_compat",
+							"rpc",
+						],
 						compatibilityDate: "2024-04-01",
 						d1Databases: ["D1"],
 						bindings: { TEST_MIGRATIONS: migrations },

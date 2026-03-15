@@ -1,13 +1,19 @@
-import { context as otelContext, SpanStatusCode, trace } from "@opentelemetry/api";
-import { type Next } from "hono";
+import {
+	context as otelContext,
+	SpanStatusCode,
+	trace,
+} from "@opentelemetry/api";
+import type { Next } from "hono";
 import { createMiddleware } from "hono/factory";
 import { UAParser } from "ua-parser-js";
-import { type ApiKey } from "../features/apiKeys/schemas";
-import { type AppContext, type HonoEnv } from "../types";
+import type { ApiKey } from "../features/apiKeys/schemas";
+import type { AppContext, HonoEnv } from "../types";
 import { httpErrors } from "./errors";
 import { buildOtelQueryAttributeMap } from "./telemetry";
 
-export const authMiddleware = (options: { adminOnly?: boolean; allowApiKey?: boolean } = {}) =>
+export const authMiddleware = (
+	options: { adminOnly?: boolean; allowApiKey?: boolean } = {},
+) =>
 	createMiddleware<HonoEnv>(async (c: AppContext, next) => {
 		const event = c.get("wideEvent");
 
@@ -43,7 +49,8 @@ export const authMiddleware = (options: { adminOnly?: boolean; allowApiKey?: boo
 		const session = await auth.api.getSession({ headers: c.req.raw.headers });
 
 		if (!session) throw httpErrors.unauthorized();
-		if (options.adminOnly && session.user.role !== "admin") throw httpErrors.forbidden();
+		if (options.adminOnly && session.user.role !== "admin")
+			throw httpErrors.forbidden();
 
 		session.user.auth_method = "session";
 		c.set("user", session.user);
@@ -141,7 +148,11 @@ function buildBrowserAttributes(c: AppContext) {
 
 async function extractErrorAttributes(response: Response) {
 	const clonedResponse = response.clone();
-	const body = (await clonedResponse.json()) as { error?: string; message?: string; code?: string };
+	const body = (await clonedResponse.json()) as {
+		error?: string;
+		message?: string;
+		code?: string;
+	};
 	return {
 		"error.status": body.status,
 		"error.message": body.message,
@@ -193,7 +204,9 @@ export const otelConfig = (options: TraceIdMiddlewareOptions = {}) =>
 		const isError = status_code >= 400;
 		const isRateLimit = status_code === 429;
 		const isJsonError =
-			isError && !isRateLimit && c.res.headers.get("content-type")?.includes("application/json");
+			isError &&
+			!isRateLimit &&
+			c.res.headers.get("content-type")?.includes("application/json");
 
 		event["http.response.status_code"] = status_code;
 		event["duration_ms"] = Date.now() - startTime;
@@ -207,13 +220,13 @@ export const otelConfig = (options: TraceIdMiddlewareOptions = {}) =>
 		}
 
 		// if (span && traceId) {
-			// span.addEvent("wideEvent", event);
-			// span.setAttributes(event);
-			// if (isError) {
-			// 	span.setStatus({ code: SpanStatusCode.ERROR, message: `HTTP ${status_code}` });
-			// } else {
-			// 	span.setStatus({ code: SpanStatusCode.OK });
-			// }
+		// span.addEvent("wideEvent", event);
+		// span.setAttributes(event);
+		// if (isError) {
+		// 	span.setStatus({ code: SpanStatusCode.ERROR, message: `HTTP ${status_code}` });
+		// } else {
+		// 	span.setStatus({ code: SpanStatusCode.OK });
+		// }
 		// }
 		span.setAttributes(event);
 		c.res.headers.set(headerName, traceId);

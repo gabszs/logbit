@@ -66,7 +66,11 @@ function readProjectMapSafe(cwd: string): ProjectMap | null {
  * Normalize input to match against repo keys.
  * Accepts: github.com:owner/repo, owner/repo, repo
  */
-function normalizeInput(input: string): { provider?: string; fullName: string; repoName: string } {
+function normalizeInput(input: string): {
+	provider?: string;
+	fullName: string;
+	repoName: string;
+} {
 	const trimmed = input.trim().toLowerCase();
 
 	if (trimmed.includes(":")) {
@@ -104,7 +108,10 @@ function tokenize(str: string): string[] {
  * @param map - A global or project map
  * @returns The matching qualified name or null
  */
-export function resolveRepoKey(input: string, map: GlobalMap | ProjectMap): string | null {
+export function resolveRepoKey(
+	input: string,
+	map: GlobalMap | ProjectMap,
+): string | null {
 	const { provider, fullName, repoName } = normalizeInput(input);
 	const keys = Object.keys(map.repos);
 
@@ -139,7 +146,10 @@ export function resolveRepoKey(input: string, map: GlobalMap | ProjectMap): stri
  * @param options - Options for lookup
  * @returns Entry with scope and qualified name, or null if not found
  */
-export function getMapEntry(input: string, options: GetMapEntryOptions = {}): MapEntry | null {
+export function getMapEntry(
+	input: string,
+	options: GetMapEntryOptions = {},
+): MapEntry | null {
 	const { preferProject = true, cwd = process.cwd() } = options;
 
 	const projectMap = preferProject ? readProjectMapSafe(cwd) : null;
@@ -183,7 +193,10 @@ export function getMapEntry(input: string, options: GetMapEntryOptions = {}): Ma
  * @param options - Search options
  * @returns Sorted list of matches
  */
-export function searchMap(term: string, options: SearchMapOptions = {}): SearchResult[] {
+export function searchMap(
+	term: string,
+	options: SearchMapOptions = {},
+): SearchResult[] {
 	const { limit = 10 } = options;
 
 	const globalMap = readGlobalMapSafe();

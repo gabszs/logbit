@@ -20,22 +20,22 @@ import type * as validation_push from "../validation/push.js";
 import type * as validation_referenceContent from "../validation/referenceContent.js";
 
 import type {
-  ApiFromModules,
-  FilterApi,
-  FunctionReference,
+	ApiFromModules,
+	FilterApi,
+	FunctionReference,
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
-  admin: typeof admin;
-  auth: typeof auth;
-  github: typeof github;
-  http: typeof http;
-  "lib/githubAuth": typeof lib_githubAuth;
-  references: typeof references;
-  repository: typeof repository;
-  "validation/github": typeof validation_github;
-  "validation/push": typeof validation_push;
-  "validation/referenceContent": typeof validation_referenceContent;
+	admin: typeof admin;
+	auth: typeof auth;
+	github: typeof github;
+	http: typeof http;
+	"lib/githubAuth": typeof lib_githubAuth;
+	references: typeof references;
+	repository: typeof repository;
+	"validation/github": typeof validation_github;
+	"validation/push": typeof validation_push;
+	"validation/referenceContent": typeof validation_referenceContent;
 }>;
 
 /**
@@ -47,8 +47,8 @@ declare const fullApi: ApiFromModules<{
  * ```
  */
 export declare const api: FilterApi<
-  typeof fullApi,
-  FunctionReference<any, "public">
+	typeof fullApi,
+	FunctionReference<any, "public">
 >;
 
 /**
@@ -60,8 +60,8 @@ export declare const api: FilterApi<
  * ```
  */
 export declare const internal: FilterApi<
-  typeof fullApi,
-  FunctionReference<any, "internal">
+	typeof fullApi,
+	FunctionReference<any, "internal">
 >;
 
 export declare const components: {};

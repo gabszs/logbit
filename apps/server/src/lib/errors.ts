@@ -1,5 +1,5 @@
 import { HTTPException } from "hono/http-exception";
-import { type ContentfulStatusCode } from "hono/utils/http-status";
+import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { HttpStatusCodes, HttpStatusPhrases } from "./constants";
 
 type ErrorOptions = Partial<{
@@ -54,7 +54,11 @@ export const httpErrors = {
 			HttpStatusCodes.UNPROCESSABLE_ENTITY,
 			opts,
 		),
-	expressionEvaluationFailed: (engine: string, errMsg: string, opts?: ErrorOptions) =>
+	expressionEvaluationFailed: (
+		engine: string,
+		errMsg: string,
+		opts?: ErrorOptions,
+	) =>
 		createHttpException(
 			HttpStatusPhrases.BAD_REQUEST,
 			`Failed to evaluate expression with engine "${engine}": "${errMsg}"`,
@@ -118,7 +122,12 @@ export const httpErrors = {
 		),
 
 	badRequest: (message: string, opts?: ErrorOptions) =>
-		createHttpException(HttpStatusPhrases.BAD_REQUEST, message, HttpStatusCodes.BAD_REQUEST, opts),
+		createHttpException(
+			HttpStatusPhrases.BAD_REQUEST,
+			message,
+			HttpStatusCodes.BAD_REQUEST,
+			opts,
+		),
 
 	unauthorized: (opts?: ErrorOptions) =>
 		createHttpException(

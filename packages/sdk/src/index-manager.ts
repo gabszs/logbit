@@ -9,12 +9,12 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import {
-	GlobalMapSchema,
-	ProjectMapSchema,
 	type GlobalMap,
 	type GlobalMapRepoEntry,
+	GlobalMapSchema,
 	type ProjectMap,
 	type ProjectMapRepoEntry,
+	ProjectMapSchema,
 } from "@loglog/types";
 import { Paths } from "./paths.js";
 
@@ -60,7 +60,10 @@ export function writeGlobalMap(map: GlobalMap): void {
  * @param qualifiedName - The qualified repo name (owner/repo)
  * @param entry - The map entry to add/update
  */
-export function upsertGlobalMapEntry(qualifiedName: string, entry: GlobalMapRepoEntry): void {
+export function upsertGlobalMapEntry(
+	qualifiedName: string,
+	entry: GlobalMapRepoEntry,
+): void {
 	const map = readGlobalMap();
 	map.repos[qualifiedName] = entry;
 	writeGlobalMap(map);

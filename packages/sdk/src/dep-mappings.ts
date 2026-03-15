@@ -127,7 +127,8 @@ export async function resolveFromNpm(
 	const pkg = await fetchNpmPackage(packageName, timeoutMs);
 	if (!pkg?.repository) return null;
 
-	const repoUrl = typeof pkg.repository === "string" ? pkg.repository : pkg.repository.url;
+	const repoUrl =
+		typeof pkg.repository === "string" ? pkg.repository : pkg.repository.url;
 	if (!repoUrl) return null;
 
 	return parseGitHubUrl(repoUrl);

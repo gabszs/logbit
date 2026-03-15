@@ -1,25 +1,25 @@
-import { env } from "cloudflare:workers";
-import { httpInstrumentationMiddleware } from "@hono/otel";
 import { OpenAPIHono } from "@hono/zod-openapi";
-import { instrument } from "@microlabs/otel-cf-workers";
-import { RPCHandler } from "@orpc/server/fetch";
 import { Scalar } from "@scalar/hono-api-reference";
-import { type InferRouterInputs, type InferRouterOutputs } from "@trpc/server";
-import { cors } from "hono/cors";
+import { migrate } from "drizzle-orm/postgres-js/migrator";
 import { showRoutes } from "hono/dev";
-import { appendTrailingSlash } from "hono/trailing-slash";
-import { rateLimiter } from "hono-rate-limiter";
-import documentsRoutes from "./features/documents/routes";
-import { profileRouter } from "./features/profile/routes";
+import { db } from "./db/index";
+import authRouter from "./features/auth/routes";
 import utilityRoutes from "./features/utils/routes";
-import { createAuth } from "./lib/auth";
-import { authMiddleware, otelConfig } from "./lib/middleware";
 import { openApiSchema } from "./lib/openapi";
-import { createContext } from "./lib/orpc";
-import { otel_config } from "./lib/telemetry";
-import { type AppContext } from "./types";
+import type { AppContext } from "./types";
+import { settings } from "node:cluster";
+
+if (settings.NODE_ENV !== "production") {
+	await migrate(db, { migrationsFolder: "./src/db/migrations" });
+}
 
 const app = new OpenAPIHono();
+
+const v1Routes = [authRouter] as const;
+
+v1Routes.forEach((route) => {
+	app.basePath("/v1").route("/", route);
+});
 
 // export const OrpcRouter = {
 // 	profile: profileRouter,
@@ -36,9 +36,6 @@ const app = new OpenAPIHono();
 // app.use("*", otelConfig({ headerName: "otel-trace-id" }));
 // app.use("*", httpInstrumentationMiddleware());
 
-// // trailing slash
-// app.use(appendTrailingSlash());
-
 // // rate-limiter middleware
 // app.use(
 // 	rateLimiter<AppContext>({
@@ -47,6 +44,22 @@ const app = new OpenAPIHono();
 // 		skip: (c) => !c.req.path.startsWith("/api/") && !c.req.path.startsWith("/v1/"),
 // 	}),
 // );
+
+// app.use(
+// 	"/api/auth/*", // or replace with "*" to enable cors for all routes
+// 	cors({
+// 		origin: "http://localhost:3001", // replace with your origin
+// 		allowHeaders: ["Content-Type", "Authorization"],
+// 		allowMethods: ["POST", "GET", "OPTIONS"],
+// 		exposeHeaders: ["Content-Length"],
+// 		maxAge: 600,
+// 		credentials: true,
+// 	}),
+// );
+
+// app.on(["POST", "GET"], "/api/auth/*", (c) => {
+// 	return auth.handler(c.req.raw);
+// });
 
 // // CORS
 // app.use(
@@ -113,25 +126,22 @@ const app = new OpenAPIHono();
 // utilities routes
 app.route("/", utilityRoutes);
 // docs
-app.doc("/doc", openApiSchema);
+app.doc("/open-api", openApiSchema);
 app.get(
 	"/docs",
 	Scalar((c: AppContext) => {
 		return {
-			url: "/doc",
 			pageTitle: "LogLog Documentation",
+			sources: [{ url: "/open-api", title: "API" }],
 			metaData: {
 				title: "LogLog",
 				description: "Complete API documentation for LogLog tracking platform",
 				ogDescription: "LogLog API - Event tracking and analytics",
 				ogTitle: "LogLog API Documentation",
-				// ogImage: "https://your-domain.com/og-image.png", // Optional OG image
 			},
-			// favicon: "/home/gabriel/Documents/tracker/apps/server/src/favicon.ico", // URL do seu favicon
-			// Customização adicional
-			theme: "deepSpace", // "default", "alternate", "moon", "purple", "solarized", "bluePlanet", "saturn", "kepler", "mars", "deepSpace"
-			layout: "modern", // "modern" ou "classic"
-			darkMode: true, // Habilita dark mode por padrão
+			theme: "deepSpace",
+			layout: "modern",
+			darkMode: true,
 		};
 	}),
 );
@@ -139,4 +149,4 @@ app.get(
 showRoutes(app);
 
 export type AppType = typeof app;
-export default app
+export default app;

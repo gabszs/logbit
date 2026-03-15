@@ -4,36 +4,34 @@
  */
 
 export {
-	createExecSyncMock,
-	configureGitMock,
-	resetGitMock,
-	mockChildProcess,
-	type GitMockConfig,
-} from "./git.js";
-
-export {
-	createFetchMock,
 	addFetchRoute,
 	clearFetchRoutes,
-	resetFetchMock,
-	installFetchMock,
-	mockloglogPullResponse,
-	mockloglogCheckResponse,
-	mockGitHubStarsResponse,
-	mockOpenCodeHealthResponse,
-	type FetchResponse,
+	createFetchMock,
 	type FetchMockRoute,
+	type FetchResponse,
+	installFetchMock,
+	mockGitHubStarsResponse,
+	mockloglogCheckResponse,
+	mockloglogPullResponse,
+	mockOpenCodeHealthResponse,
+	resetFetchMock,
 } from "./fetch.js";
-
 export {
-	initVirtualFs,
 	addVirtualFile,
-	removeVirtualFile,
 	clearVirtualFs,
-	getVirtualFs,
 	createFsMock,
 	createFsPromisesMock,
+	getVirtualFs,
+	initVirtualFs,
 	installFsMocks,
+	removeVirtualFile,
 	type VirtualFile,
 	type VirtualFileSystem,
 } from "./fs.js";
+export {
+	configureGitMock,
+	createExecSyncMock,
+	type GitMockConfig,
+	mockChildProcess,
+	resetGitMock,
+} from "./git.js";

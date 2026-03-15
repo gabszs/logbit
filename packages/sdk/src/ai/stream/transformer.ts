@@ -4,16 +4,16 @@
  */
 
 import {
+	type MessagePartUpdatedProps,
 	MessagePartUpdatedPropsSchema,
-	SessionIdlePropsSchema,
+	type SessionErrorPayload,
+	type SessionErrorProps,
 	SessionErrorPropsSchema,
 	SessionErrorSchema,
+	type SessionIdleProps,
+	SessionIdlePropsSchema,
 	type TextPart,
 	type ToolPart,
-	type SessionErrorPayload,
-	type MessagePartUpdatedProps,
-	type SessionIdleProps,
-	type SessionErrorProps,
 } from "./types.js";
 
 /**
@@ -35,7 +35,11 @@ export type ParsedEventResult =
 			toolPart: ToolPart | null;
 	  }
 	| { type: "session.idle"; props: SessionIdleProps }
-	| { type: "session.error"; props: SessionErrorProps; error: SessionErrorPayload | null }
+	| {
+			type: "session.error";
+			props: SessionErrorProps;
+			error: SessionErrorPayload | null;
+	  }
 	| { type: "unknown"; rawType: string };
 
 /**
@@ -45,7 +49,9 @@ export type ParsedEventResult =
 export function parseStreamEvent(event: RawStreamEvent): ParsedEventResult {
 	switch (event.type) {
 		case "message.part.updated": {
-			const propsResult = MessagePartUpdatedPropsSchema.safeParse(event.properties);
+			const propsResult = MessagePartUpdatedPropsSchema.safeParse(
+				event.properties,
+			);
 			if (!propsResult.success) {
 				return { type: "unknown", rawType: event.type };
 			}
@@ -86,7 +92,10 @@ export function parseStreamEvent(event: RawStreamEvent): ParsedEventResult {
 	}
 }
 
-export function isEventForSession(event: RawStreamEvent, sessionId: string): boolean {
+export function isEventForSession(
+	event: RawStreamEvent,
+	sessionId: string,
+): boolean {
 	const props = event.properties;
 	if ("sessionID" in props && typeof props.sessionID === "string") {
 		return props.sessionID === sessionId;

@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-	ReferenceMetaSchema,
 	ArchitectureSchema,
 	ConfigSchema,
 	EntitySchema,
@@ -9,13 +8,14 @@ import {
 	FileIndexSchema,
 	FileRoleSchema,
 	GitProviderSchema,
+	GlobalMapSchema,
 	LocalRepoSourceSchema,
+	ProjectMapSchema,
 	ProjectTypeSchema,
+	ReferenceDataSchema,
+	ReferenceMetaSchema,
 	RemoteRepoSourceSchema,
 	RepoSourceSchema,
-	ReferenceDataSchema,
-	GlobalMapSchema,
-	ProjectMapSchema,
 } from "../schemas.js";
 
 describe("ConfigSchema", () => {
@@ -45,7 +45,9 @@ describe("ConfigSchema", () => {
 		expect(result.success).toBe(true);
 		if (result.success) {
 			expect(result.data.repoRoot).toBe("~/ow");
-			expect(result.data.defaultModel).toBe("anthropic/claude-sonnet-4-20250514");
+			expect(result.data.defaultModel).toBe(
+				"anthropic/claude-sonnet-4-20250514",
+			);
 		}
 	});
 });
@@ -325,7 +327,15 @@ describe("ProjectMapSchema", () => {
 });
 
 describe("FileRoleSchema", () => {
-	const validRoles = ["entry", "core", "types", "config", "test", "util", "doc"];
+	const validRoles = [
+		"entry",
+		"core",
+		"types",
+		"config",
+		"test",
+		"util",
+		"doc",
+	];
 
 	it.each(validRoles)("accepts valid role: %s", (role: string) => {
 		expect(FileRoleSchema.safeParse(role).success).toBe(true);

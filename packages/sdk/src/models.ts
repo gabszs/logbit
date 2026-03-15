@@ -36,7 +36,9 @@ const CACHE_TTL_MS = 5 * 60 * 1000;
 /**
  * Fetch raw data from models.dev with caching
  */
-async function fetchModelsDevData(): Promise<Record<string, ModelsDevProvider>> {
+async function fetchModelsDevData(): Promise<
+	Record<string, ModelsDevProvider>
+> {
 	const now = Date.now();
 	if (cachedData && now - cacheTime < CACHE_TTL_MS) {
 		return cachedData;
@@ -47,7 +49,9 @@ async function fetchModelsDevData(): Promise<Record<string, ModelsDevProvider>> 
 	});
 
 	if (!res.ok) {
-		throw new Error(`Failed to fetch models.dev: ${res.status} ${res.statusText}`);
+		throw new Error(
+			`Failed to fetch models.dev: ${res.status} ${res.statusText}`,
+		);
 	}
 
 	const json = await res.json();
@@ -78,7 +82,9 @@ export async function listProviders(): Promise<ProviderInfo[]> {
 /**
  * Get a specific provider with all its models
  */
-export async function getProvider(providerId: string): Promise<ProviderWithModels | null> {
+export async function getProvider(
+	providerId: string,
+): Promise<ProviderWithModels | null> {
 	const data = await fetchModelsDevData();
 	const provider = data[providerId];
 

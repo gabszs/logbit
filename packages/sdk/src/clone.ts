@@ -2,12 +2,16 @@
  * Git clone and repository management utilities
  */
 
+import { execFileSync, spawn } from "node:child_process";
 import { existsSync, readdirSync, rmSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { execFileSync, spawn } from "node:child_process";
 import type { Config, RemoteRepoSource } from "@loglog/types";
 import { getRepoPath, loadConfig, toReferenceFileName } from "./config.js";
-import { readGlobalMap, upsertGlobalMapEntry, removeGlobalMapEntry } from "./index-manager.js";
+import {
+	readGlobalMap,
+	removeGlobalMapEntry,
+	upsertGlobalMapEntry,
+} from "./index-manager.js";
 import { Paths } from "./paths.js";
 
 export class CloneError extends Error {
@@ -64,13 +68,21 @@ function execGit(args: string[], cwd?: string): string {
 		});
 		return result.trim();
 	} catch (error) {
-		const err = error as { status?: number; stderr?: Buffer | string; message?: string };
+		const err = error as {
+			status?: number;
+			stderr?: Buffer | string;
+			message?: string;
+		};
 		const stderr = err.stderr
 			? typeof err.stderr === "string"
 				? err.stderr
 				: err.stderr.toString()
 			: err.message || "Unknown error";
-		throw new GitError(stderr.trim(), `git ${args.join(" ")}`, err.status ?? null);
+		throw new GitError(
+			stderr.trim(),
+			`git ${args.join(" ")}`,
+			err.status ?? null,
+		);
 	}
 }
 
@@ -96,7 +108,13 @@ function execGitAsync(args: string[], cwd?: string): Promise<string> {
 			if (code === 0) {
 				resolve(stdout.trim());
 			} else {
-				reject(new GitError(stderr.trim() || "Unknown error", `git ${args.join(" ")}`, code));
+				reject(
+					new GitError(
+						stderr.trim() || "Unknown error",
+						`git ${args.join(" ")}`,
+						code,
+					),
+				);
 			}
 		});
 
@@ -121,14 +139,24 @@ export function getCommitDistance(
 		} catch {
 			return null;
 		}
-		const count = execGit(["rev-list", "--count", `${olderSha}..${newerSha}`], repoPath);
+		const count = execGit(
+			["rev-list", "--count", `${olderSha}..${newerSha}`],
+			repoPath,
+		);
 		return Number.parseInt(count, 10);
 	} catch {
 		return null;
 	}
 }
 
-const SPARSE_CHECKOUT_DIRS = ["src", "lib", "packages", "docs", "README.md", "package.json"];
+const SPARSE_CHECKOUT_DIRS = [
+	"src",
+	"lib",
+	"packages",
+	"docs",
+	"README.md",
+	"package.json",
+];
 
 /**
  * Clone a remote repository to the local repo root.
@@ -195,7 +223,9 @@ async function cloneStandard(
 	const args = ["clone"];
 
 	if (options.shallow) {
-		throw new CloneError("Shallow clones are no longer supported. Use a full clone.");
+		throw new CloneError(
+			"Shallow clones are no longer supported. Use a full clone.",
+		);
 	}
 
 	if (options.branch) {
@@ -214,7 +244,9 @@ async function cloneSparse(
 	const args = ["clone", "--filter=blob:none", "--no-checkout", "--sparse"];
 
 	if (options.shallow) {
-		throw new CloneError("Shallow clones are no longer supported. Use a full clone.");
+		throw new CloneError(
+			"Shallow clones are no longer supported. Use a full clone.",
+		);
 	}
 
 	if (options.branch) {
@@ -224,7 +256,10 @@ async function cloneSparse(
 	args.push(cloneUrl, repoPath);
 	await execGitAsync(args);
 
-	await execGitAsync(["sparse-checkout", "set", ...SPARSE_CHECKOUT_DIRS], repoPath);
+	await execGitAsync(
+		["sparse-checkout", "set", ...SPARSE_CHECKOUT_DIRS],
+		repoPath,
+	);
 	await execGitAsync(["checkout"], repoPath);
 }
 

@@ -1,10 +1,6 @@
-import 'dotenv/config';
-import { drizzle } from 'drizzle-orm/bun-sql';
-import { SQL } from 'bun';
+import "dotenv/config";
+import { drizzle } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
 
-const client = new SQL({
-	url: process.env.DATABASE_URL!,
-	max: process.env.DATABASE_MAX_CONNECTIONS,
-	
-});
-const db = drizzle({ client });
+const client = postgres(settings.DATABASE_URL!);
+export const db = drizzle({ client });

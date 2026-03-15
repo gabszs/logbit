@@ -2,12 +2,13 @@
  * Unit tests for clone.ts git operations
  */
 
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { join } from "node:path";
 import { homedir } from "node:os";
+import { join } from "node:path";
 import type { GlobalMapRepoEntry, RemoteRepoSource } from "@loglog/types";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const virtualFs: Record<string, { content: string; isDirectory?: boolean }> = {};
+const virtualFs: Record<string, { content: string; isDirectory?: boolean }> =
+	{};
 const createdDirs = new Set<string>();
 
 function normalizePath(p: string): string {
@@ -33,7 +34,12 @@ interface GitMockConfig {
 	clone?: { shouldSucceed?: boolean; errorMessage?: string };
 	fetch?: { shouldSucceed?: boolean; errorMessage?: string };
 	pull?: { shouldSucceed?: boolean; errorMessage?: string };
-	revParse?: { sha?: string; shouldSucceed?: boolean; errorMessage?: string; shas?: string[] };
+	revParse?: {
+		sha?: string;
+		shouldSucceed?: boolean;
+		errorMessage?: string;
+		shas?: string[];
+	};
 }
 
 const defaultGitConfig: GitMockConfig = {
@@ -75,14 +81,16 @@ vi.mock("node:fs", () => ({
 		}
 		return entries;
 	}),
-	rmSync: vi.fn((path: string, _options?: { recursive?: boolean; force?: boolean }) => {
-		const normalized = normalizePath(path);
-		for (const key of Object.keys(virtualFs)) {
-			if (key === normalized || key.startsWith(normalized + "/")) {
-				delete virtualFs[key];
+	rmSync: vi.fn(
+		(path: string, _options?: { recursive?: boolean; force?: boolean }) => {
+			const normalized = normalizePath(path);
+			for (const key of Object.keys(virtualFs)) {
+				if (key === normalized || key.startsWith(normalized + "/")) {
+					delete virtualFs[key];
+				}
 			}
-		}
-	}),
+		},
+	),
 }));
 
 vi.mock("node:fs/promises", () => ({
@@ -124,11 +132,15 @@ function createMockSpawn(gitCommand: string, args: string[]) {
 						case "clone": {
 							const config = gitConfig.clone ?? defaultGitConfig.clone;
 							shouldSucceed = config?.shouldSucceed ?? true;
-							errorMessage = config?.errorMessage ?? "fatal: repository not found";
+							errorMessage =
+								config?.errorMessage ?? "fatal: repository not found";
 							const destPath = args[args.length - 1];
 							if (destPath) {
 								const normalized = normalizePath(destPath);
-								const parentDir = normalized.substring(0, normalized.lastIndexOf("/"));
+								const parentDir = normalized.substring(
+									0,
+									normalized.lastIndexOf("/"),
+								);
 								virtualFs[parentDir] = { content: "", isDirectory: true };
 								if (shouldSucceed) {
 									virtualFs[normalized] = { content: "", isDirectory: true };
@@ -176,104 +188,123 @@ function createMockSpawn(gitCommand: string, args: string[]) {
 }
 
 vi.mock("node:child_process", () => ({
-	spawn: vi.fn((command: string, args: string[], _options?: { cwd?: string }) => {
-		if (command !== "git") {
-			throw new Error(`Expected git command, got: ${command}`);
-		}
-		return createMockSpawn(args[0] ?? "", args.slice(1));
-	}),
-	execFileSync: vi.fn((command: string, args: string[], options?: { cwd?: string }) => {
-		if (command !== "git") {
-			throw new Error(`Expected git command, got: ${command}`);
-		}
+	spawn: vi.fn(
+		(command: string, args: string[], _options?: { cwd?: string }) => {
+			if (command !== "git") {
+				throw new Error(`Expected git command, got: ${command}`);
+			}
+			return createMockSpawn(args[0] ?? "", args.slice(1));
+		},
+	),
+	execFileSync: vi.fn(
+		(command: string, args: string[], options?: { cwd?: string }) => {
+			if (command !== "git") {
+				throw new Error(`Expected git command, got: ${command}`);
+			}
 
-		const gitCommand = args[0];
-		const cwd = options?.cwd;
+			const gitCommand = args[0];
+			const cwd = options?.cwd;
 
-		switch (gitCommand) {
-			case "clone": {
-				const config = gitConfig.clone ?? defaultGitConfig.clone;
-				const destPath = args[args.length - 1];
-				if (!config?.shouldSucceed) {
+			switch (gitCommand) {
+				case "clone": {
+					const config = gitConfig.clone ?? defaultGitConfig.clone;
+					const destPath = args[args.length - 1];
+					if (!config?.shouldSucceed) {
+						if (destPath) {
+							const normalized = normalizePath(destPath);
+							const parentDir = normalized.substring(
+								0,
+								normalized.lastIndexOf("/"),
+							);
+							virtualFs[parentDir] = { content: "", isDirectory: true };
+						}
+						const error = new Error(
+							config?.errorMessage ?? "Clone failed",
+						) as Error & {
+							status: number;
+							stderr: string;
+						};
+						error.status = 128;
+						error.stderr =
+							config?.errorMessage ?? "fatal: repository not found";
+						throw error;
+					}
 					if (destPath) {
 						const normalized = normalizePath(destPath);
-						const parentDir = normalized.substring(0, normalized.lastIndexOf("/"));
-						virtualFs[parentDir] = { content: "", isDirectory: true };
+						virtualFs[normalized] = { content: "", isDirectory: true };
+						virtualFs[join(normalized, ".git").replace(/\\/g, "/")] = {
+							content: "",
+							isDirectory: true,
+						};
 					}
-					const error = new Error(config?.errorMessage ?? "Clone failed") as Error & {
-						status: number;
-						stderr: string;
-					};
-					error.status = 128;
-					error.stderr = config?.errorMessage ?? "fatal: repository not found";
-					throw error;
+					return "";
 				}
-				if (destPath) {
-					const normalized = normalizePath(destPath);
-					virtualFs[normalized] = { content: "", isDirectory: true };
-					virtualFs[join(normalized, ".git").replace(/\\/g, "/")] = {
-						content: "",
-						isDirectory: true,
-					};
+
+				case "fetch": {
+					const config = gitConfig.fetch ?? defaultGitConfig.fetch;
+					if (!config?.shouldSucceed) {
+						const error = new Error(
+							config?.errorMessage ?? "Fetch failed",
+						) as Error & {
+							status: number;
+							stderr: string;
+						};
+						error.status = 1;
+						error.stderr = config?.errorMessage ?? "fatal: unable to access";
+						throw error;
+					}
+					return "";
 				}
-				return "";
+
+				case "pull": {
+					const config = gitConfig.pull ?? defaultGitConfig.pull;
+					if (!config?.shouldSucceed) {
+						const error = new Error(
+							config?.errorMessage ?? "Pull failed",
+						) as Error & {
+							status: number;
+							stderr: string;
+						};
+						error.status = 1;
+						error.stderr = config?.errorMessage ?? "error: pull failed";
+						throw error;
+					}
+					return "Already up to date.";
+				}
+
+				case "rev-parse": {
+					const config = gitConfig.revParse ?? defaultGitConfig.revParse;
+					if (!config?.shouldSucceed) {
+						const error = new Error(
+							config?.errorMessage ?? "rev-parse failed",
+						) as Error & {
+							status: number;
+							stderr: string;
+						};
+						error.status = 128;
+						error.stderr =
+							config?.errorMessage ?? "fatal: not a git repository";
+						throw error;
+					}
+					if (config.shas && config.shas.length > revParseCallCount) {
+						return (
+							config.shas[revParseCallCount++] ?? config.sha ?? "abc123def456"
+						);
+					}
+					return config.sha ?? "abc123def456";
+				}
+
+				case "sparse-checkout":
+					return "";
+
+				case "checkout":
+					return "";
+
+				default:
+					throw new Error(`Unhandled git command: ${gitCommand} (cwd: ${cwd})`);
 			}
-
-			case "fetch": {
-				const config = gitConfig.fetch ?? defaultGitConfig.fetch;
-				if (!config?.shouldSucceed) {
-					const error = new Error(config?.errorMessage ?? "Fetch failed") as Error & {
-						status: number;
-						stderr: string;
-					};
-					error.status = 1;
-					error.stderr = config?.errorMessage ?? "fatal: unable to access";
-					throw error;
-				}
-				return "";
-			}
-
-			case "pull": {
-				const config = gitConfig.pull ?? defaultGitConfig.pull;
-				if (!config?.shouldSucceed) {
-					const error = new Error(config?.errorMessage ?? "Pull failed") as Error & {
-						status: number;
-						stderr: string;
-					};
-					error.status = 1;
-					error.stderr = config?.errorMessage ?? "error: pull failed";
-					throw error;
-				}
-				return "Already up to date.";
-			}
-
-			case "rev-parse": {
-				const config = gitConfig.revParse ?? defaultGitConfig.revParse;
-				if (!config?.shouldSucceed) {
-					const error = new Error(config?.errorMessage ?? "rev-parse failed") as Error & {
-						status: number;
-						stderr: string;
-					};
-					error.status = 128;
-					error.stderr = config?.errorMessage ?? "fatal: not a git repository";
-					throw error;
-				}
-				if (config.shas && config.shas.length > revParseCallCount) {
-					return config.shas[revParseCallCount++] ?? config.sha ?? "abc123def456";
-				}
-				return config.sha ?? "abc123def456";
-			}
-
-			case "sparse-checkout":
-				return "";
-
-			case "checkout":
-				return "";
-
-			default:
-				throw new Error(`Unhandled git command: ${gitCommand} (cwd: ${cwd})`);
-		}
-	}),
+		},
+	),
 }));
 
 const mockMetaRoot = vi.hoisted(() => "/mock/loglog");
@@ -317,9 +348,11 @@ const mapEntries: Record<string, GlobalMapRepoEntry> = {};
 
 vi.mock("../index-manager.js", () => ({
 	readGlobalMap: vi.fn(() => ({ repos: { ...mapEntries } })),
-	upsertGlobalMapEntry: vi.fn((qualifiedName: string, entry: GlobalMapRepoEntry) => {
-		mapEntries[qualifiedName] = entry;
-	}),
+	upsertGlobalMapEntry: vi.fn(
+		(qualifiedName: string, entry: GlobalMapRepoEntry) => {
+			mapEntries[qualifiedName] = entry;
+		},
+	),
 	removeGlobalMapEntry: vi.fn((qualifiedName: string) => {
 		if (!(qualifiedName in mapEntries)) {
 			return false;
@@ -331,15 +364,15 @@ vi.mock("../index-manager.js", () => ({
 
 import {
 	cloneRepo,
-	updateRepo,
-	removeRepo,
-	listRepos,
-	isRepoCloned,
+	GitError,
 	getClonedRepoPath,
 	getCommitSha,
+	isRepoCloned,
+	listRepos,
 	RepoExistsError,
 	RepoNotFoundError,
-	GitError,
+	removeRepo,
+	updateRepo,
 } from "../clone.js";
 
 const mockSource: RemoteRepoSource = {
@@ -383,7 +416,10 @@ describe("cloneRepo", () => {
 
 		expect(spawn).toHaveBeenCalledWith(
 			"git",
-			expect.arrayContaining(["clone", "https://github.com/tanstack/router.git"]),
+			expect.arrayContaining([
+				"clone",
+				"https://github.com/tanstack/router.git",
+			]),
 			expect.any(Object),
 		);
 	});
@@ -433,7 +469,10 @@ describe("cloneRepo", () => {
 
 		await cloneRepo(mockSource, { force: true });
 
-		expect(rmSync).toHaveBeenCalledWith(expect.any(String), { recursive: true, force: true });
+		expect(rmSync).toHaveBeenCalledWith(expect.any(String), {
+			recursive: true,
+			force: true,
+		});
 		expect(spawn).toHaveBeenCalledWith(
 			"git",
 			expect.arrayContaining(["clone"]),
@@ -481,12 +520,15 @@ describe("cloneRepo", () => {
 
 			await cloneRepo(mockSource, { sparse: true });
 
-			const calls = (spawn as ReturnType<typeof vi.fn>).mock.calls.map((c) => c[1] as string[]);
+			const calls = (spawn as ReturnType<typeof vi.fn>).mock.calls.map(
+				(c) => c[1] as string[],
+			);
 			const sparseSetIdx = calls.findIndex(
 				(args) => args.includes("sparse-checkout") && args.includes("set"),
 			);
 			const checkoutIdx = calls.findIndex(
-				(args) => args.includes("checkout") && !args.includes("sparse-checkout"),
+				(args) =>
+					args.includes("checkout") && !args.includes("sparse-checkout"),
 			);
 
 			expect(sparseSetIdx).toBeGreaterThan(-1);
@@ -505,7 +547,9 @@ describe("cloneRepo", () => {
 			});
 
 			await expect(cloneRepo(mockSource)).rejects.toThrow(GitError);
-			await expect(cloneRepo(mockSource)).rejects.toThrow(/Could not resolve host/);
+			await expect(cloneRepo(mockSource)).rejects.toThrow(
+				/Could not resolve host/,
+			);
 		});
 
 		it("throws GitError with auth failure message", async () => {
@@ -518,19 +562,24 @@ describe("cloneRepo", () => {
 			});
 
 			await expect(cloneRepo(mockSource)).rejects.toThrow(GitError);
-			await expect(cloneRepo(mockSource)).rejects.toThrow(/Authentication failed/);
+			await expect(cloneRepo(mockSource)).rejects.toThrow(
+				/Authentication failed/,
+			);
 		});
 
 		it("throws GitError when repository not found", async () => {
 			configureGitMock({
 				clone: {
 					shouldSucceed: false,
-					errorMessage: "fatal: repository 'https://github.com/tanstack/router.git/' not found",
+					errorMessage:
+						"fatal: repository 'https://github.com/tanstack/router.git/' not found",
 				},
 			});
 
 			await expect(cloneRepo(mockSource)).rejects.toThrow(GitError);
-			await expect(cloneRepo(mockSource)).rejects.toThrow(/repository.*not found/);
+			await expect(cloneRepo(mockSource)).rejects.toThrow(
+				/repository.*not found/,
+			);
 		});
 	});
 
@@ -549,13 +598,19 @@ describe("cloneRepo", () => {
 			const { rmSync } = await import("node:fs");
 
 			configureGitMock({
-				clone: { shouldSucceed: false, errorMessage: "fatal: repository not found" },
+				clone: {
+					shouldSucceed: false,
+					errorMessage: "fatal: repository not found",
+				},
 			});
 
 			await expect(cloneRepo(mockSource)).rejects.toThrow(GitError);
 
 			const ownerDir = join(mockRepoRoot, "github", "tanstack");
-			expect(rmSync).toHaveBeenCalledWith(ownerDir, { recursive: true, force: true });
+			expect(rmSync).toHaveBeenCalledWith(ownerDir, {
+				recursive: true,
+				force: true,
+			});
 		});
 
 		it("creates map entry when reference exists", async () => {
@@ -569,7 +624,9 @@ describe("cloneRepo", () => {
 			await cloneRepo(mockSource);
 
 			expect(mapEntries[mockSource.qualifiedName]).toBeDefined();
-			expect(mapEntries[mockSource.qualifiedName]?.references).toEqual([referenceFileName]);
+			expect(mapEntries[mockSource.qualifiedName]?.references).toEqual([
+				referenceFileName,
+			]);
 		});
 	});
 });
@@ -586,21 +643,29 @@ describe("updateRepo", () => {
 		await updateRepo("github.com:tanstack/router");
 
 		const calls = (spawn as ReturnType<typeof vi.fn>).mock.calls;
-		const fetchCall = calls.find((call) => (call[1] as string[]).includes("fetch"));
-		const pullCall = calls.find((call) => (call[1] as string[]).includes("pull"));
+		const fetchCall = calls.find((call) =>
+			(call[1] as string[]).includes("fetch"),
+		);
+		const pullCall = calls.find((call) =>
+			(call[1] as string[]).includes("pull"),
+		);
 
 		expect(fetchCall).toBeDefined();
 		expect(pullCall).toBeDefined();
 	});
 
 	it("throws RepoNotFoundError if not in index", async () => {
-		await expect(updateRepo("github.com:unknown/repo")).rejects.toThrow(RepoNotFoundError);
+		await expect(updateRepo("github.com:unknown/repo")).rejects.toThrow(
+			RepoNotFoundError,
+		);
 	});
 
 	it("throws RepoNotFoundError if path doesn't exist on disk", async () => {
 		clearVirtualFs(); // Remove repo from disk but keep in index
 
-		await expect(updateRepo("github.com:tanstack/router")).rejects.toThrow(RepoNotFoundError);
+		await expect(updateRepo("github.com:tanstack/router")).rejects.toThrow(
+			RepoNotFoundError,
+		);
 	});
 
 	it("returns UpdateResult with commit SHAs", async () => {
@@ -653,7 +718,9 @@ describe("updateRepo", () => {
 				},
 			});
 
-			await expect(updateRepo("github.com:tanstack/router")).rejects.toThrow(GitError);
+			await expect(updateRepo("github.com:tanstack/router")).rejects.toThrow(
+				GitError,
+			);
 			await expect(updateRepo("github.com:tanstack/router")).rejects.toThrow(
 				/Connection timed out/,
 			);
@@ -663,12 +730,17 @@ describe("updateRepo", () => {
 			configureGitMock({
 				pull: {
 					shouldSucceed: false,
-					errorMessage: "error: Your local changes would be overwritten by merge",
+					errorMessage:
+						"error: Your local changes would be overwritten by merge",
 				},
 			});
 
-			await expect(updateRepo("github.com:tanstack/router")).rejects.toThrow(GitError);
-			await expect(updateRepo("github.com:tanstack/router")).rejects.toThrow(/local changes/);
+			await expect(updateRepo("github.com:tanstack/router")).rejects.toThrow(
+				GitError,
+			);
+			await expect(updateRepo("github.com:tanstack/router")).rejects.toThrow(
+				/local changes/,
+			);
 		});
 
 		it("throws GitError when fetch fails with auth error", async () => {
@@ -679,7 +751,9 @@ describe("updateRepo", () => {
 				},
 			});
 
-			await expect(updateRepo("github.com:tanstack/router")).rejects.toThrow(GitError);
+			await expect(updateRepo("github.com:tanstack/router")).rejects.toThrow(
+				GitError,
+			);
 			await expect(updateRepo("github.com:tanstack/router")).rejects.toThrow(
 				/Authentication failed/,
 			);
@@ -735,7 +809,9 @@ describe("removeRepo", () => {
 
 		await removeRepo("github.com:tanstack/router");
 
-		expect(removeGlobalMapEntry).toHaveBeenCalledWith("github.com:tanstack/router");
+		expect(removeGlobalMapEntry).toHaveBeenCalledWith(
+			"github.com:tanstack/router",
+		);
 	});
 
 	it("returns false if not in index", async () => {
@@ -755,7 +831,10 @@ describe("removeRepo", () => {
 
 		await removeRepo("github.com:tanstack/router", { referenceOnly: true });
 
-		expect(rmSync).not.toHaveBeenCalledWith(mockMapEntry.localPath, expect.anything());
+		expect(rmSync).not.toHaveBeenCalledWith(
+			mockMapEntry.localPath,
+			expect.anything(),
+		);
 		expect(rmSync).toHaveBeenCalledWith(expect.stringContaining("references"), {
 			force: true,
 		});
@@ -778,7 +857,10 @@ describe("removeRepo", () => {
 			expect.stringContaining("references"),
 			expect.anything(),
 		);
-		expect(rmSync).not.toHaveBeenCalledWith(expect.stringContaining("meta"), expect.anything());
+		expect(rmSync).not.toHaveBeenCalledWith(
+			expect.stringContaining("meta"),
+			expect.anything(),
+		);
 	});
 
 	it("with referenceOnly clears references in map", async () => {
@@ -870,7 +952,8 @@ describe("getCommitSha", () => {
 		configureGitMock({
 			revParse: {
 				shouldSucceed: false,
-				errorMessage: "fatal: not a git repository (or any of the parent directories): .git",
+				errorMessage:
+					"fatal: not a git repository (or any of the parent directories): .git",
 			},
 		});
 

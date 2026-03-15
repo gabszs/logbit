@@ -2,11 +2,15 @@ interface VerificationCodeEmailProps {
 	otp: string;
 }
 
-export const renderVerificationCodeEmail = async (otp: string): Promise<string> => {
+export const renderVerificationCodeEmail = async (
+	otp: string,
+): Promise<string> => {
 	return generateVerificationCodeEmail({ otp });
 };
 
-const generateVerificationCodeEmail = ({ otp }: VerificationCodeEmailProps): string => {
+const generateVerificationCodeEmail = ({
+	otp,
+}: VerificationCodeEmailProps): string => {
 	return `<!DOCTYPE html>
 <html>
 <head>

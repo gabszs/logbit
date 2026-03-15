@@ -1,5 +1,5 @@
 import { createRoute, OpenAPIHono } from "@hono/zod-openapi";
-import { type InferSelectModel } from "drizzle-orm";
+import type { InferSelectModel } from "drizzle-orm";
 import {
 	authorizationHeaderSchema,
 	fileUploadSchema,
@@ -10,10 +10,10 @@ import {
 } from "../../common/schemas/baseSchemas";
 import { checkForChanges, getValidatedRouteData } from "../../common/utils";
 import { getDb } from "../../db";
-import { type documents } from "../../db/documents";
+import type { documents } from "../../db/documents";
 import { HttpStatusCodes } from "../../lib/constants";
 import { httpErrors } from "../../lib/errors";
-import { type AppContext } from "../../types";
+import type { AppContext } from "../../types";
 import { DocumentRepository } from "./repository";
 import {
 	descriminatedDocumentSchema,
@@ -196,7 +196,8 @@ documentsRoutes.openapi(
 		try {
 			await service.update(data.params.id, data.body);
 		} catch (err: unknown) {
-			const message = (err as Error)?.cause?.message || (err as Error)?.message || "";
+			const message =
+				(err as Error)?.cause?.message || (err as Error)?.message || "";
 			if (message.includes("UNIQUE constraint failed"))
 				throw httpErrors.duplicateField("document", "name");
 			throw err;
@@ -257,7 +258,8 @@ documentsRoutes.openapi(
 		try {
 			createdDocument = await service.create(documentToCreate);
 		} catch (err: unknown) {
-			const message = (err as Error)?.cause?.message || (err as Error)?.message || "";
+			const message =
+				(err as Error)?.cause?.message || (err as Error)?.message || "";
 			if (message.includes("UNIQUE constraint failed"))
 				throw httpErrors.duplicateField("document", "name");
 			if (message.includes("FOREIGN KEY constraint failed"))

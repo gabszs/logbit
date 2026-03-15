@@ -8,12 +8,12 @@
 		"skipLibCheck": true,
 		"baseUrl": "./",
 		"paths": {
-			"@/server/*": ["./src/*"],
+			"@/*": ["./src/*"],
 			"@/root/*": ["../../*"]
 		},
 		"outDir": "./dist",
 		"types": [
-			"@cloudflare/workers-types", 
+			"@cloudflare/workers-types",
 			"node",
 			"./worker-configuration.d.ts",
 			// "@types/node",

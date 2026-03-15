@@ -3,7 +3,13 @@ import { resolve } from "node:path";
 
 const sourceDir = resolve(process.cwd(), "../backend/convex/_generated");
 const targetDir = resolve(process.cwd(), "dist/convex/_generated");
-const files = ["api.js", "api.d.ts", "server.js", "server.d.ts", "dataModel.d.ts"];
+const files = [
+	"api.js",
+	"api.d.ts",
+	"server.js",
+	"server.d.ts",
+	"dataModel.d.ts",
+];
 
 async function copyGenerated(): Promise<void> {
 	await mkdir(targetDir, { recursive: true });

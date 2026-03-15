@@ -11,8 +11,8 @@ vi.mock("node:fs", () => ({
 
 import { existsSync, readFileSync } from "node:fs";
 import {
-	isBinaryBuffer,
 	hashBuffer,
+	isBinaryBuffer,
 	loadGitignorePatterns,
 	loadGitignorePatternsSimple,
 } from "../util.js";
@@ -54,7 +54,8 @@ describe("util.ts", () => {
 		});
 
 		it("returns false for UTF-8 text buffer", () => {
-			const text = "Hello, World! This is a UTF-8 text file.\nWith multiple lines.\n";
+			const text =
+				"Hello, World! This is a UTF-8 text file.\nWith multiple lines.\n";
 			const buffer = Buffer.from(text, "utf-8");
 			expect(isBinaryBuffer(buffer)).toBe(false);
 		});
@@ -75,7 +76,9 @@ describe("util.ts", () => {
 		});
 
 		it("returns true for actual binary content (null byte)", () => {
-			const buffer = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x00, 0x00, 0x00, 0x0d]);
+			const buffer = Buffer.from([
+				0x89, 0x50, 0x4e, 0x47, 0x00, 0x00, 0x00, 0x0d,
+			]);
 			expect(isBinaryBuffer(buffer)).toBe(true);
 		});
 	});
@@ -107,7 +110,9 @@ describe("util.ts", () => {
 			const buffer = Buffer.from("hello");
 			const hash = hashBuffer(buffer);
 
-			expect(hash).toBe("2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824");
+			expect(hash).toBe(
+				"2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+			);
 		});
 
 		it("handles empty buffer", () => {
@@ -115,7 +120,9 @@ describe("util.ts", () => {
 			const hash = hashBuffer(buffer);
 
 			expect(hash).toHaveLength(64);
-			expect(hash).toBe("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
+			expect(hash).toBe(
+				"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+			);
 		});
 	});
 
@@ -134,7 +141,10 @@ describe("util.ts", () => {
 
 			const result = loadGitignorePatterns("/some/repo");
 
-			expect(result).toContainEqual({ pattern: "node_modules", negation: false });
+			expect(result).toContainEqual({
+				pattern: "node_modules",
+				negation: false,
+			});
 			expect(result).toContainEqual({ pattern: "*.log", negation: false });
 			expect(result).toContainEqual({ pattern: "dist", negation: false });
 		});
@@ -158,7 +168,10 @@ describe("util.ts", () => {
 			const result = loadGitignorePatterns("/some/repo");
 
 			expect(result).toContainEqual({ pattern: "*.log", negation: false });
-			expect(result).toContainEqual({ pattern: "important.log", negation: true });
+			expect(result).toContainEqual({
+				pattern: "important.log",
+				negation: true,
+			});
 			expect(result).toContainEqual({ pattern: "dist", negation: false });
 		});
 
@@ -168,8 +181,14 @@ describe("util.ts", () => {
 
 			const result = loadGitignorePatterns("/some/repo");
 
-			expect(result).toContainEqual({ pattern: "node_modules", negation: false });
-			expect(result).toContainEqual({ pattern: "node_modules/**", negation: false });
+			expect(result).toContainEqual({
+				pattern: "node_modules",
+				negation: false,
+			});
+			expect(result).toContainEqual({
+				pattern: "node_modules/**",
+				negation: false,
+			});
 			expect(result).toContainEqual({ pattern: "build", negation: false });
 			expect(result).toContainEqual({ pattern: "build/**", negation: false });
 		});
@@ -200,7 +219,10 @@ describe("util.ts", () => {
 
 			const result = loadGitignorePatterns("/some/repo");
 
-			expect(result).toContainEqual({ pattern: "node_modules", negation: false });
+			expect(result).toContainEqual({
+				pattern: "node_modules",
+				negation: false,
+			});
 			expect(result).toContainEqual({ pattern: "dist", negation: false });
 		});
 	});
@@ -216,7 +238,9 @@ describe("util.ts", () => {
 
 		it("returns only non-negation patterns as strings", () => {
 			mockExistsSync.mockReturnValue(true);
-			mockReadFileSync.mockReturnValue("*.log\n!important.log\nnode_modules/\n");
+			mockReadFileSync.mockReturnValue(
+				"*.log\n!important.log\nnode_modules/\n",
+			);
 
 			const result = loadGitignorePatternsSimple("/some/repo");
 

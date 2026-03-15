@@ -5,7 +5,11 @@ import { protectedProcedure } from "../../lib/orpc";
 
 export const profileRouter = {
 	getProfile: protectedProcedure.handler(async ({ context }) => {
-		return await context.db.select().from(users).where(eq(users.id, context.session.user.id)).get();
+		return await context.db
+			.select()
+			.from(users)
+			.where(eq(users.id, context.session.user.id))
+			.get();
 	}),
 
 	updateProfile: protectedProcedure

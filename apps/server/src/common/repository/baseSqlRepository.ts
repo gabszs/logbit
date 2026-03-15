@@ -11,11 +11,11 @@ import {
 	type SQL,
 	sql,
 } from "drizzle-orm";
-import { type DrizzleD1Database } from "drizzle-orm/d1";
-import { type SQLiteTable } from "drizzle-orm/sqlite-core";
-import { type z } from "zod";
-import { type searchOptionsSchema } from "../schemas/baseSchemas";
-import { type IRepository } from "./IRepository";
+import type { DrizzleD1Database } from "drizzle-orm/d1";
+import type { SQLiteTable } from "drizzle-orm/sqlite-core";
+import type { z } from "zod";
+import type { searchOptionsSchema } from "../schemas/baseSchemas";
+import type { IRepository } from "./IRepository";
 
 type FilterValue = string | number | boolean | Date | null;
 type Filters = Record<string, FilterValue>;
@@ -54,7 +54,10 @@ export class BaseSqlRepository<Model extends SQLiteTable>
 		return conditions.length > 0 ? and(...conditions) : undefined;
 	}
 
-	protected applySearchOptions(query: any, searchOptions: SearchOptionsWithFilters) {
+	protected applySearchOptions(
+		query: any,
+		searchOptions: SearchOptionsWithFilters,
+	) {
 		const ordering = searchOptions.ordering || "createdAt";
 		const column = ordering.startsWith("-") ? ordering.slice(1) : ordering;
 		const direction = ordering.startsWith("-") ? "desc" : "asc";
@@ -74,13 +77,17 @@ export class BaseSqlRepository<Model extends SQLiteTable>
 				dateConditions.push(lt(createdAtColumn, searchOptions.createdBefore));
 			}
 			if (searchOptions.createdOnOrBefore) {
-				dateConditions.push(lte(createdAtColumn, searchOptions.createdOnOrBefore));
+				dateConditions.push(
+					lte(createdAtColumn, searchOptions.createdOnOrBefore),
+				);
 			}
 			if (searchOptions.createdAfter) {
 				dateConditions.push(gt(createdAtColumn, searchOptions.createdAfter));
 			}
 			if (searchOptions.createdOnOrAfter) {
-				dateConditions.push(gte(createdAtColumn, searchOptions.createdOnOrAfter));
+				dateConditions.push(
+					gte(createdAtColumn, searchOptions.createdOnOrAfter),
+				);
 			}
 
 			if (dateConditions.length > 0) {
@@ -123,8 +130,15 @@ export class BaseSqlRepository<Model extends SQLiteTable>
 		return result[0];
 	}
 
-	async update(id: string, schema: Partial<InferInsertModel<Model>>, filters?: Filters) {
-		let query = this.db.update(this.model).set(schema).where(eq(this.model.id, id));
+	async update(
+		id: string,
+		schema: Partial<InferInsertModel<Model>>,
+		filters?: Filters,
+	) {
+		let query = this.db
+			.update(this.model)
+			.set(schema)
+			.where(eq(this.model.id, id));
 
 		const filterConditions = this.applyFilters(filters);
 		if (filterConditions) {
@@ -146,7 +160,9 @@ export class BaseSqlRepository<Model extends SQLiteTable>
 	}
 
 	async count(filters?: Filters): Promise<number> {
-		let query = this.db.select({ count: sql<number>`count(*)` }).from(this.model);
+		let query = this.db
+			.select({ count: sql<number>`count(*)` })
+			.from(this.model);
 
 		const filterConditions = this.applyFilters(filters);
 		if (filterConditions) {

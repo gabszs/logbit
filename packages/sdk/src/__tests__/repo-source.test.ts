@@ -11,10 +11,10 @@ vi.mock("node:fs", () => ({
 
 import { existsSync, statSync } from "node:fs";
 import {
-	parseRepoInput,
 	getReferenceFileNameForSource,
-	PathNotFoundError,
 	NotGitRepoError,
+	PathNotFoundError,
+	parseRepoInput,
 	RepoSourceError,
 } from "../repo-source.js";
 
@@ -207,7 +207,9 @@ describe("repo-source.ts", () => {
 		it("throws PathNotFoundError for non-existent path", () => {
 			mockExistsSync.mockReturnValue(false);
 
-			expect(() => parseRepoInput("/nonexistent/path")).toThrow(PathNotFoundError);
+			expect(() => parseRepoInput("/nonexistent/path")).toThrow(
+				PathNotFoundError,
+			);
 		});
 
 		it("throws NotGitRepoError for directory without .git", () => {
@@ -223,7 +225,9 @@ describe("repo-source.ts", () => {
 			mockExistsSync.mockReturnValue(true);
 			mockStatSync.mockReturnValue({ isDirectory: () => false });
 
-			expect(() => parseRepoInput("/path/to/file.txt")).toThrow(RepoSourceError);
+			expect(() => parseRepoInput("/path/to/file.txt")).toThrow(
+				RepoSourceError,
+			);
 		});
 	});
 
@@ -277,7 +281,9 @@ describe("repo-source.ts", () => {
 
 	describe("error handling", () => {
 		it("throws for completely invalid input", () => {
-			expect(() => parseRepoInput("not-a-valid-input")).toThrow(RepoSourceError);
+			expect(() => parseRepoInput("not-a-valid-input")).toThrow(
+				RepoSourceError,
+			);
 		});
 
 		it("throws for empty string", () => {
@@ -294,7 +300,9 @@ describe("repo-source.ts", () => {
 		});
 
 		it("throws for URL with unsupported host", () => {
-			expect(() => parseRepoInput("https://codeberg.org/owner/repo")).toThrow(RepoSourceError);
+			expect(() => parseRepoInput("https://codeberg.org/owner/repo")).toThrow(
+				RepoSourceError,
+			);
 		});
 	});
 });

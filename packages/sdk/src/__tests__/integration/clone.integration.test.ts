@@ -10,11 +10,11 @@
  * Run with: npm run test:integration
  */
 
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { existsSync, rmSync, mkdtempSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { RemoteRepoSource } from "@loglog/types";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const TEST_TIMEOUT = 30000; // 30 seconds for network operations
 
@@ -28,10 +28,12 @@ vi.mock("../../config.js", () => ({
 		loglogDir: join(tempDir, "loglog"),
 	}),
 	getMetaRoot: () => tempMetaRoot,
-	getRepoPath: (fullName: string, provider: string) => join(tempRepoRoot, provider, fullName),
+	getRepoPath: (fullName: string, provider: string) =>
+		join(tempRepoRoot, provider, fullName),
 	getReferencePath: (fullName: string) =>
 		join(tempMetaRoot, "references", fullName.replace("/", "-") + ".md"),
-	getMetaPath: (fullName: string) => join(tempMetaRoot, "meta", fullName.replace("/", "-")),
+	getMetaPath: (fullName: string) =>
+		join(tempMetaRoot, "meta", fullName.replace("/", "-")),
 	toReferenceFileName: (fullName: string) => fullName.replace("/", "-") + ".md",
 }));
 
@@ -62,7 +64,7 @@ vi.mock("../../index-manager.js", () => ({
 	readGlobalMap: vi.fn(() => ({ repos: {} })),
 }));
 
-import { cloneRepo, getCommitSha, GitError } from "../../clone.js";
+import { cloneRepo, GitError, getCommitSha } from "../../clone.js";
 
 beforeEach(() => {
 	vi.clearAllMocks();
@@ -95,7 +97,9 @@ describe("clone.integration", () => {
 
 				const repoPath = await cloneRepo(source);
 
-				expect(repoPath).toBe(join(tempRepoRoot, "github", "octocat/Hello-World"));
+				expect(repoPath).toBe(
+					join(tempRepoRoot, "github", "octocat/Hello-World"),
+				);
 
 				expect(existsSync(join(repoPath, ".git"))).toBe(true);
 
@@ -134,8 +138,10 @@ describe("clone.integration", () => {
 					provider: "github",
 					owner: "definitely-not-a-real-user",
 					repo: "definitely-not-a-real-repo-12345",
-					fullName: "definitely-not-a-real-user/definitely-not-a-real-repo-12345",
-					qualifiedName: "github.com:definitely-not-a-real-user/definitely-not-a-real-repo-12345",
+					fullName:
+						"definitely-not-a-real-user/definitely-not-a-real-repo-12345",
+					qualifiedName:
+						"github.com:definitely-not-a-real-user/definitely-not-a-real-repo-12345",
 					cloneUrl:
 						"https://github.com/definitely-not-a-real-user/definitely-not-a-real-repo-12345.git",
 				};

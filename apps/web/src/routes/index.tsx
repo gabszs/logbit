@@ -86,7 +86,7 @@ function GuestLanding() {
 			</div>
 
 			{/* Features Section */}
-			<div className="-mt-16 sm:-mt-20 relative px-4 pb-16 sm:pb-24">
+			<div className="relative -mt-16 px-4 pb-16 sm:-mt-20 sm:pb-24">
 				<FeatureCards />
 			</div>
 

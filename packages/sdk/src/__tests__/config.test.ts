@@ -2,9 +2,9 @@
  * Unit tests for config.ts path utilities
  */
 
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 interface VirtualFile {
 	content: string;
@@ -62,7 +62,9 @@ vi.mock("node:fs", () => ({
 			throw error;
 		}
 		if (file.permissions === 0o000) {
-			const error = new Error(`EACCES: permission denied, open '${path}'`) as NodeJS.ErrnoException;
+			const error = new Error(
+				`EACCES: permission denied, open '${path}'`,
+			) as NodeJS.ErrnoException;
 			error.code = "EACCES";
 			throw error;
 		}
@@ -97,11 +99,11 @@ vi.mock("node:fs", () => ({
 
 import { mkdirSync, writeFileSync } from "node:fs";
 import {
-	getMetaRoot,
-	getRepoRoot,
-	getRepoPath,
-	getMetaPath,
 	getConfigPath,
+	getMetaPath,
+	getMetaRoot,
+	getRepoPath,
+	getRepoRoot,
 	loadConfig,
 	saveConfig,
 	toReferenceFileName,
@@ -113,7 +115,10 @@ describe("config.ts", () => {
 
 	const home = homedir();
 	const configDir = join(home, ".config", "loglog").replace(/\\/g, "/");
-	const configPath = join(home, ".config", "loglog", "loglog.json").replace(/\\/g, "/");
+	const configPath = join(home, ".config", "loglog", "loglog.json").replace(
+		/\\/g,
+		"/",
+	);
 
 	beforeEach(() => {
 		vi.clearAllMocks();
@@ -231,12 +236,16 @@ describe("config.ts", () => {
 	describe("getMetaPath", () => {
 		it("returns {meta}/meta/owner-repo for owner/repo", () => {
 			const result = getMetaPath("tanstack/router");
-			expect(result).toBe(join(home, ".local", "share", "loglog", "meta", "tanstack-router"));
+			expect(result).toBe(
+				join(home, ".local", "share", "loglog", "meta", "tanstack-router"),
+			);
 		});
 
 		it("handles single name (no slash) gracefully", () => {
 			const result = getMetaPath("invalid");
-			expect(result).toBe(join(home, ".local", "share", "loglog", "meta", "invalid"));
+			expect(result).toBe(
+				join(home, ".local", "share", "loglog", "meta", "invalid"),
+			);
 		});
 	});
 
@@ -330,7 +339,9 @@ describe("config.ts", () => {
 		});
 
 		it("returns defaults on read error - permission denied", () => {
-			addVirtualFile(configPath, '{"repoRoot": "/path"}', { permissions: 0o000 });
+			addVirtualFile(configPath, '{"repoRoot": "/path"}', {
+				permissions: 0o000,
+			});
 
 			const result = loadConfig();
 
@@ -350,7 +361,9 @@ describe("config.ts", () => {
 		it("creates directory recursively if missing", () => {
 			saveConfig({ repoRoot: "/new/path" });
 
-			expect(mockMkdirSync).toHaveBeenCalledWith(configDir, { recursive: true });
+			expect(mockMkdirSync).toHaveBeenCalledWith(configDir, {
+				recursive: true,
+			});
 		});
 
 		it("does not create directory if it already exists", () => {
@@ -364,9 +377,12 @@ describe("config.ts", () => {
 		it("creates nested directory structure", () => {
 			saveConfig({ repoRoot: "/new/path" });
 
-			expect(mockMkdirSync).toHaveBeenCalledWith(expect.stringMatching(/loglog$/), {
-				recursive: true,
-			});
+			expect(mockMkdirSync).toHaveBeenCalledWith(
+				expect.stringMatching(/loglog$/),
+				{
+					recursive: true,
+				},
+			);
 		});
 
 		it("merges with existing config", () => {
@@ -380,9 +396,13 @@ describe("config.ts", () => {
 			saveConfig({ repoRoot: "/new/path" });
 
 			expect(mockWriteFileSync).toHaveBeenCalled();
-			const writtenContent = JSON.parse(mockWriteFileSync.mock.calls[0]![1] as string);
+			const writtenContent = JSON.parse(
+				mockWriteFileSync.mock.calls[0]![1] as string,
+			);
 			expect(writtenContent.repoRoot).toBe("/new/path");
-			expect(writtenContent.defaultModel).toBe("anthropic/claude-sonnet-4-20250514");
+			expect(writtenContent.defaultModel).toBe(
+				"anthropic/claude-sonnet-4-20250514",
+			);
 		});
 
 		it("writes valid JSON", () => {
@@ -426,13 +446,19 @@ describe("config.ts", () => {
 
 	describe("toReferenceFileName", () => {
 		it("collapses exact owner/repo match", () => {
-			expect(toReferenceFileName("better-auth/better-auth")).toBe("better-auth.md");
+			expect(toReferenceFileName("better-auth/better-auth")).toBe(
+				"better-auth.md",
+			);
 		});
 
 		it("collapses when repo part is contained in owner", () => {
 			expect(toReferenceFileName("honojs/hono")).toBe("hono.md");
-			expect(toReferenceFileName("get-convex/convex-backend")).toBe("convex-backend.md");
-			expect(toReferenceFileName("get-convex/convex-helpers")).toBe("convex-helpers.md");
+			expect(toReferenceFileName("get-convex/convex-backend")).toBe(
+				"convex-backend.md",
+			);
+			expect(toReferenceFileName("get-convex/convex-helpers")).toBe(
+				"convex-helpers.md",
+			);
 			expect(toReferenceFileName("alchemy-run/alchemy")).toBe("alchemy.md");
 			expect(toReferenceFileName("vitest-dev/vitest")).toBe("vitest.md");
 			expect(toReferenceFileName("use-gesture/gesture")).toBe("gesture.md");
@@ -454,7 +480,9 @@ describe("config.ts", () => {
 
 		it("is case insensitive for matching", () => {
 			expect(toReferenceFileName("HonoJS/Hono")).toBe("hono.md");
-			expect(toReferenceFileName("Get-Convex/Convex-Backend")).toBe("convex-backend.md");
+			expect(toReferenceFileName("Get-Convex/Convex-Backend")).toBe(
+				"convex-backend.md",
+			);
 		});
 	});
 });

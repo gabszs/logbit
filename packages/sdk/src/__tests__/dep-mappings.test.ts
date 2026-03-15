@@ -3,8 +3,8 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { addFetchRoute, installFetchMock, resetFetchMock } from "./mocks/fetch";
 import { resolveDependencyRepo } from "../dep-mappings.js";
+import { addFetchRoute, installFetchMock, resetFetchMock } from "./mocks/fetch";
 
 describe("dep-mappings", () => {
 	const fetchMock = installFetchMock();
@@ -39,16 +39,22 @@ describe("dep-mappings", () => {
 	});
 
 	it("strips .git suffix from spec repo", async () => {
-		const result = await resolveDependencyRepo("mypkg", "git+https://github.com/owner/repo.git", {
-			allowNpm: false,
-		});
+		const result = await resolveDependencyRepo(
+			"mypkg",
+			"git+https://github.com/owner/repo.git",
+			{
+				allowNpm: false,
+			},
+		);
 
 		expect(result.repo).toBe("owner/repo");
 		expect(result.source).toBe("spec");
 	});
 
 	it("skips npm resolution when allowNpm is false", async () => {
-		const result = await resolveDependencyRepo("zod", "^3.0.0", { allowNpm: false });
+		const result = await resolveDependencyRepo("zod", "^3.0.0", {
+			allowNpm: false,
+		});
 
 		expect(result.repo).toBeNull();
 		expect(result.source).toBe("unknown");

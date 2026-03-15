@@ -7,8 +7,8 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { toReferenceFileName } from "./config.js";
-import { Paths } from "./paths.js";
 import type { ResolvedDep } from "./dep-mappings.js";
+import { Paths } from "./paths.js";
 
 export type ReferenceStatus = "installed" | "remote" | "generate" | "unknown";
 
@@ -48,7 +48,9 @@ export function isReferenceInstalled(repo: string): boolean {
  * @param resolvedDeps - Array of resolved dependencies with repo info
  * @returns Array of reference matches with status
  */
-export function matchDependenciesToReferences(resolvedDeps: ResolvedDep[]): ReferenceMatch[] {
+export function matchDependenciesToReferences(
+	resolvedDeps: ResolvedDep[],
+): ReferenceMatch[] {
 	return resolvedDeps.map((dep) => {
 		if (!dep.repo) {
 			return {

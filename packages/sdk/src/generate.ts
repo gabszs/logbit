@@ -3,9 +3,13 @@
  * by delegating all codebase exploration to the AI agent via OpenCode.
  */
 
-import { streamPrompt, type OpenCodeContext, type StreamPromptOptions } from "./ai/opencode.js";
-import { loadConfig, toReferenceName } from "./config.js";
+import {
+	type OpenCodeContext,
+	type StreamPromptOptions,
+	streamPrompt,
+} from "./ai/opencode.js";
 import { getCommitSha } from "./clone.js";
+import { loadConfig, toReferenceName } from "./config.js";
 
 export interface GenerateReferenceOptions {
 	/** AI provider ID (e.g., "anthropic", "openai"). Defaults to config value. */
@@ -188,7 +192,10 @@ Begin exploring now.`;
  * - Model forgets to close the tag (extract to end of response)
  * - Multiple tag pairs (find the one with real content)
  */
-function extractReferenceContent(rawResponse: string, onDebug?: (message: string) => void): string {
+function extractReferenceContent(
+	rawResponse: string,
+	onDebug?: (message: string) => void,
+): string {
 	const openTag = "<reference_output>";
 	const closeTag = "</reference_output>";
 
@@ -242,13 +249,17 @@ function extractReferenceContent(rawResponse: string, onDebug?: (message: string
 			const rawContent = rawResponse.slice(openIdx + openTag.length, closeIdx);
 			const content = cleanContent(rawContent);
 
-			onDebug?.(`[extract] Pair ${i}: open=${openIdx}, close=${closeIdx}, len=${content.length}`);
+			onDebug?.(
+				`[extract] Pair ${i}: open=${openIdx}, close=${closeIdx}, len=${content.length}`,
+			);
 			onDebug?.(
 				`[extract] Preview: "${content.slice(0, 200)}${content.length > 200 ? "..." : ""}"`,
 			);
 
 			if (isTemplateContent(content)) {
-				onDebug?.(`[extract] Skipping pair ${i} - template placeholder content`);
+				onDebug?.(
+					`[extract] Skipping pair ${i} - template placeholder content`,
+				);
 				continue;
 			}
 
@@ -267,7 +278,9 @@ function extractReferenceContent(rawResponse: string, onDebug?: (message: string
 	if (lastOpenIdx !== undefined) {
 		const hasCloseAfter = closeIndices.some((c) => c > lastOpenIdx);
 		if (!hasCloseAfter) {
-			onDebug?.(`[extract] Last open tag at ${lastOpenIdx} is unclosed - extracting to end`);
+			onDebug?.(
+				`[extract] Last open tag at ${lastOpenIdx} is unclosed - extracting to end`,
+			);
 			const rawContent = rawResponse.slice(lastOpenIdx + openTag.length);
 			const content = cleanContent(rawContent);
 
@@ -277,14 +290,14 @@ function extractReferenceContent(rawResponse: string, onDebug?: (message: string
 			);
 
 			if (!isTemplateContent(content) && content.length >= 500) {
-				onDebug?.(`[extract] Using unclosed content - valid`);
+				onDebug?.("[extract] Using unclosed content - valid");
 				validateReferenceContent(content);
 				return content;
 			}
 		}
 	}
 
-	onDebug?.(`[extract] No valid content found`);
+	onDebug?.("[extract] No valid content found");
 	onDebug?.(`[extract] Response tail: "${rawResponse.slice(-300)}"`);
 
 	throw new Error(
@@ -311,7 +324,9 @@ function validateReferenceContent(content: string): void {
 		"{Additional sections",
 	];
 
-	const foundPlaceholders = templatePlaceholders.filter((p) => content.includes(p));
+	const foundPlaceholders = templatePlaceholders.filter((p) =>
+		content.includes(p),
+	);
 	if (foundPlaceholders.length > 0) {
 		throw new Error(
 			`Invalid reference content: contains template placeholders (${foundPlaceholders.slice(0, 3).join(", ")}). ` +
@@ -359,7 +374,9 @@ export async function generateReferenceWithAI(
 
 	onDebug?.(`Starting AI reference generation for ${repoName}`);
 	onDebug?.(`Repo path: ${repoPath}`);
-	onDebug?.(`Provider: ${aiProvider ?? "default"}, Model: ${aiModel ?? "default"}`);
+	onDebug?.(
+		`Provider: ${aiProvider ?? "default"}, Model: ${aiModel ?? "default"}`,
+	);
 
 	const commitSha = getCommitSha(repoPath);
 	onDebug?.(`Commit SHA: ${commitSha}`);
@@ -379,7 +396,9 @@ export async function generateReferenceWithAI(
 
 	const result = await streamPrompt(promptOptions);
 
-	onDebug?.(`Generation complete (${result.durationMs}ms, ${result.text.length} chars)`);
+	onDebug?.(
+		`Generation complete (${result.durationMs}ms, ${result.text.length} chars)`,
+	);
 
 	const referenceContent = extractReferenceContent(result.text, onDebug);
 	onDebug?.(`Extracted reference content (${referenceContent.length} chars)`);

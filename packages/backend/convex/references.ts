@@ -1,10 +1,10 @@
 import { v } from "convex/values";
-import { action, internalMutation, mutation, query } from "./_generated/server";
 import { internal } from "./_generated/api";
+import { action, internalMutation, mutation, query } from "./_generated/server";
 import { getAuthUser } from "./auth";
+import { validateCommit, validateRepo } from "./validation/github";
 import { pushArgs, validatePushArgs } from "./validation/push";
 import { validateReferenceContent } from "./validation/referenceContent";
-import { validateRepo, validateCommit } from "./validation/github";
 
 /**
  * Reference Convex Functions
@@ -16,7 +16,9 @@ export const get = query({
 	handler: async (ctx, args) => {
 		const repo = await ctx.db
 			.query("repository")
-			.withIndex("by_fullNameLower", (q) => q.eq("fullNameLower", args.fullName.toLowerCase()))
+			.withIndex("by_fullNameLower", (q) =>
+				q.eq("fullNameLower", args.fullName.toLowerCase()),
+			)
 			.first();
 
 		if (!repo) return null;
@@ -33,7 +35,9 @@ export const getByName = query({
 	handler: async (ctx, args) => {
 		const repo = await ctx.db
 			.query("repository")
-			.withIndex("by_fullNameLower", (q) => q.eq("fullNameLower", args.fullName.toLowerCase()))
+			.withIndex("by_fullNameLower", (q) =>
+				q.eq("fullNameLower", args.fullName.toLowerCase()),
+			)
 			.first();
 
 		if (!repo) return null;
@@ -52,7 +56,9 @@ export const listByRepo = query({
 	handler: async (ctx, args) => {
 		const repo = await ctx.db
 			.query("repository")
-			.withIndex("by_fullNameLower", (q) => q.eq("fullNameLower", args.fullName.toLowerCase()))
+			.withIndex("by_fullNameLower", (q) =>
+				q.eq("fullNameLower", args.fullName.toLowerCase()),
+			)
 			.first();
 
 		if (!repo) return [];
@@ -142,7 +148,9 @@ export const pull = query({
 	handler: async (ctx, args) => {
 		const repo = await ctx.db
 			.query("repository")
-			.withIndex("by_fullNameLower", (q) => q.eq("fullNameLower", args.fullName.toLowerCase()))
+			.withIndex("by_fullNameLower", (q) =>
+				q.eq("fullNameLower", args.fullName.toLowerCase()),
+			)
 			.first();
 
 		if (!repo) return null;
@@ -178,7 +186,9 @@ export const check = query({
 	handler: async (ctx, args) => {
 		const repo = await ctx.db
 			.query("repository")
-			.withIndex("by_fullNameLower", (q) => q.eq("fullNameLower", args.fullName.toLowerCase()))
+			.withIndex("by_fullNameLower", (q) =>
+				q.eq("fullNameLower", args.fullName.toLowerCase()),
+			)
 			.first();
 
 		if (!repo) return { exists: false as const };
@@ -218,7 +228,9 @@ export type PushError =
 	| "rate_limit"
 	| "github_error";
 
-export type PushResult = { success: true } | { success: false; error: PushError; message?: string };
+export type PushResult =
+	| { success: true }
+	| { success: false; error: PushError; message?: string };
 
 export const push = action({
 	args: pushArgs,
@@ -299,7 +311,13 @@ export const pushInternal = internalMutation({
 		canonicalFullName: v.optional(v.string()),
 	},
 	handler: async (ctx, args): Promise<PushResult> => {
-		const { workosId, repoStars, repoDescription, canonicalFullName, ...referenceData } = args;
+		const {
+			workosId,
+			repoStars,
+			repoDescription,
+			canonicalFullName,
+			...referenceData
+		} = args;
 		const now = new Date().toISOString();
 
 		const fullNameLower = args.fullName.toLowerCase();
@@ -309,7 +327,9 @@ export const pushInternal = internalMutation({
 		const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 		const recentPushes = await ctx.db
 			.query("pushLog")
-			.withIndex("by_workos_date", (q) => q.eq("workosId", workosId).gte("pushedAt", oneDayAgo))
+			.withIndex("by_workos_date", (q) =>
+				q.eq("workosId", workosId).gte("pushedAt", oneDayAgo),
+			)
 			.take(21);
 
 		if (recentPushes.length >= 20) {
@@ -337,7 +357,9 @@ export const pushInternal = internalMutation({
 
 		let repo = await ctx.db
 			.query("repository")
-			.withIndex("by_fullNameLower", (q) => q.eq("fullNameLower", fullNameLower))
+			.withIndex("by_fullNameLower", (q) =>
+				q.eq("fullNameLower", fullNameLower),
+			)
 			.first();
 
 		if (repo) {
@@ -363,7 +385,11 @@ export const pushInternal = internalMutation({
 		}
 
 		if (!repo) {
-			return { success: false, error: "github_error", message: "Failed to create repository" };
+			return {
+				success: false,
+				error: "github_error",
+				message: "Failed to create repository",
+			};
 		}
 
 		const existing = await ctx.db
@@ -410,7 +436,9 @@ export const recordPull = mutation({
 	handler: async (ctx, args) => {
 		const repo = await ctx.db
 			.query("repository")
-			.withIndex("by_fullNameLower", (q) => q.eq("fullNameLower", args.fullName.toLowerCase()))
+			.withIndex("by_fullNameLower", (q) =>
+				q.eq("fullNameLower", args.fullName.toLowerCase()),
+			)
 			.first();
 
 		if (!repo) return;

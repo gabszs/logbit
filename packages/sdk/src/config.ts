@@ -4,9 +4,9 @@
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { ConfigSchema } from "@loglog/types";
 import type { Config } from "@loglog/types";
-import { Paths, expandTilde } from "./paths";
+import { ConfigSchema } from "@loglog/types";
+import { expandTilde, Paths } from "./paths";
 
 /**
  * Returns the repository root directory.
@@ -37,7 +37,9 @@ export function getRepoPath(
 	const root = getRepoRoot(config);
 	const [owner, repo] = fullName.split("/");
 	if (!owner || !repo) {
-		throw new Error(`Invalid fullName format: ${fullName}. Expected "owner/repo"`);
+		throw new Error(
+			`Invalid fullName format: ${fullName}. Expected "owner/repo"`,
+		);
 	}
 	return join(root, provider, owner, repo);
 }
@@ -81,7 +83,9 @@ export function toReferenceFileName(repoName: string): string {
 		const repoLower = repo.toLowerCase();
 
 		const repoParts = repoLower.split("-");
-		const significantPart = repoParts.find((part) => part.length >= 3 && ownerLower.includes(part));
+		const significantPart = repoParts.find(
+			(part) => part.length >= 3 && ownerLower.includes(part),
+		);
 
 		if (significantPart || ownerLower === repoLower) {
 			return `${repoLower}.md`;

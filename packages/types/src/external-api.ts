@@ -63,7 +63,12 @@ export const WorkOSTokenResponseSchema = z.object({
 
 export const WorkOSAuthErrorResponseSchema = z.object({
 	error: z
-		.enum(["authorization_pending", "slow_down", "access_denied", "expired_token"])
+		.enum([
+			"authorization_pending",
+			"slow_down",
+			"access_denied",
+			"expired_token",
+		])
 		.or(z.string()),
 	error_description: z.string().optional(),
 });
@@ -118,14 +123,21 @@ export const ModelsDevProviderSchema = z.object({
 	models: z.record(z.string(), ModelsDevModelSchema),
 });
 
-export const ModelsDevDataSchema = z.record(z.string(), ModelsDevProviderSchema);
+export const ModelsDevDataSchema = z.record(
+	z.string(),
+	ModelsDevProviderSchema,
+);
 
 export type GitHubRepoResponse = z.infer<typeof GitHubRepoResponseSchema>;
 export type GitHubOwnerResponse = z.infer<typeof GitHubOwnerResponseSchema>;
 export type GitHubRepoMetadata = z.infer<typeof GitHubRepoMetadataSchema>;
-export type WorkOSDeviceAuthResponse = z.infer<typeof WorkOSDeviceAuthResponseSchema>;
+export type WorkOSDeviceAuthResponse = z.infer<
+	typeof WorkOSDeviceAuthResponseSchema
+>;
 export type WorkOSTokenResponse = z.infer<typeof WorkOSTokenResponseSchema>;
-export type WorkOSAuthErrorResponse = z.infer<typeof WorkOSAuthErrorResponseSchema>;
+export type WorkOSAuthErrorResponse = z.infer<
+	typeof WorkOSAuthErrorResponseSchema
+>;
 export type NpmPackageResponse = z.infer<typeof NpmPackageResponseSchema>;
 export type ModelsDevProvider = z.infer<typeof ModelsDevProviderSchema>;
 export type ModelsDevData = z.infer<typeof ModelsDevDataSchema>;

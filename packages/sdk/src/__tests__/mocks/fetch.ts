@@ -3,7 +3,7 @@
  * Used to test sync.ts and AI provider detection without network requests
  */
 
-import { vi, type Mock } from "vitest";
+import { type Mock, vi } from "vitest";
 
 export interface FetchResponse {
 	status: number;
@@ -21,7 +21,10 @@ export interface FetchMockRoute {
 	/** Response to return */
 	response:
 		| FetchResponse
-		| ((url: string, init?: RequestInit) => FetchResponse | Promise<FetchResponse>);
+		| ((
+				url: string,
+				init?: RequestInit,
+		  ) => FetchResponse | Promise<FetchResponse>);
 }
 
 let routes: FetchMockRoute[] = [];
@@ -31,32 +34,37 @@ let fetchMock: Mock | null = null;
  * Create a mock fetch function
  */
 export function createFetchMock(): Mock {
-	fetchMock = vi.fn(async (input: string | Request, init?: RequestInit): Promise<Response> => {
-		const url = typeof input === "string" ? input : input.url;
-		const method = init?.method ?? "GET";
+	fetchMock = vi.fn(
+		async (input: string | Request, init?: RequestInit): Promise<Response> => {
+			const url = typeof input === "string" ? input : input.url;
+			const method = init?.method ?? "GET";
 
-		for (const route of routes) {
-			const urlMatches =
-				typeof route.url === "string"
-					? url === route.url || url.includes(route.url)
-					: route.url.test(url);
+			for (const route of routes) {
+				const urlMatches =
+					typeof route.url === "string"
+						? url === route.url || url.includes(route.url)
+						: route.url.test(url);
 
-			const methodMatches = !route.method || route.method.toUpperCase() === method.toUpperCase();
+				const methodMatches =
+					!route.method || route.method.toUpperCase() === method.toUpperCase();
 
-			if (urlMatches && methodMatches) {
-				const response =
-					typeof route.response === "function" ? await route.response(url, init) : route.response;
+				if (urlMatches && methodMatches) {
+					const response =
+						typeof route.response === "function"
+							? await route.response(url, init)
+							: route.response;
 
-				return createMockResponse(response);
+					return createMockResponse(response);
+				}
 			}
-		}
 
-		return createMockResponse({
-			status: 404,
-			ok: false,
-			json: () => Promise.resolve({ error: "Not found" }),
-		});
-	});
+			return createMockResponse({
+				status: 404,
+				ok: false,
+				json: () => Promise.resolve({ error: "Not found" }),
+			});
+		},
+	);
 
 	return fetchMock;
 }
@@ -152,7 +160,8 @@ export function mockloglogCheckResponse(
 		response: {
 			status: 200,
 			ok: true,
-			json: () => Promise.resolve(exists ? { exists: true, ...meta } : { exists: false }),
+			json: () =>
+				Promise.resolve(exists ? { exists: true, ...meta } : { exists: false }),
 		},
 	};
 }

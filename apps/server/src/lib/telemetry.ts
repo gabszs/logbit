@@ -1,4 +1,4 @@
-import { type ResolveConfigFn } from "@microlabs/otel-cf-workers";
+import type { ResolveConfigFn } from "@microlabs/otel-cf-workers";
 import { trace } from "@opentelemetry/api";
 
 export function InstrumentClass(): ClassDecorator {
@@ -22,7 +22,10 @@ export function InstrumentClass(): ClassDecorator {
 					continue;
 				}
 
-				const descriptor = Object.getOwnPropertyDescriptor(currentProto, propertyName);
+				const descriptor = Object.getOwnPropertyDescriptor(
+					currentProto,
+					propertyName,
+				);
 				if (!descriptor || descriptor.get || descriptor.set) continue;
 
 				const originalMethod = descriptor.value;

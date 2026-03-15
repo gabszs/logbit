@@ -169,7 +169,7 @@ function MessageMetadata({ message }: { message: ChatMessage }) {
 			<Button
 				variant="ghost"
 				size="sm"
-				className="-mx-2 md:-mx-3 hover:bg-transparent hover:text-foreground"
+				className="-mx-2 hover:bg-transparent hover:text-foreground md:-mx-3"
 				onClick={handleCopy}
 			>
 				<Copy className="size-3 md:size-4" />

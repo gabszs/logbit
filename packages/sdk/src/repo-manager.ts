@@ -1,8 +1,12 @@
-import { existsSync, statSync, readdirSync, rmSync } from "node:fs";
+import { existsSync, readdirSync, rmSync, statSync } from "node:fs";
 import { join } from "node:path";
-import { updateRepo, GitError } from "./clone.js";
-import { readGlobalMap, removeGlobalMapEntry, upsertGlobalMapEntry } from "./index-manager.js";
-import { loadConfig, getRepoRoot } from "./config.js";
+import { GitError, updateRepo } from "./clone.js";
+import { getRepoRoot, loadConfig } from "./config.js";
+import {
+	readGlobalMap,
+	removeGlobalMapEntry,
+	upsertGlobalMapEntry,
+} from "./index-manager.js";
 import { Paths } from "./paths.js";
 
 export interface RepoStatusSummary {
@@ -108,9 +112,12 @@ function matchesPattern(name: string, pattern: string): boolean {
 	return regex.test(name);
 }
 
-const yieldToEventLoop = () => new Promise<void>((resolve) => setImmediate(resolve));
+const yieldToEventLoop = () =>
+	new Promise<void>((resolve) => setImmediate(resolve));
 
-export async function getRepoStatus(options: RepoStatusOptions = {}): Promise<RepoStatusSummary> {
+export async function getRepoStatus(
+	options: RepoStatusOptions = {},
+): Promise<RepoStatusSummary> {
 	const { onProgress } = options;
 	const map = readGlobalMap();
 	const qualifiedNames = Object.keys(map.repos);
@@ -149,7 +156,9 @@ export async function getRepoStatus(options: RepoStatusOptions = {}): Promise<Re
 	};
 }
 
-export async function updateAllRepos(options: UpdateAllOptions = {}): Promise<UpdateAllResult> {
+export async function updateAllRepos(
+	options: UpdateAllOptions = {},
+): Promise<UpdateAllResult> {
 	const { pattern, dryRun = false, onProgress } = options;
 
 	const map = readGlobalMap();
@@ -201,7 +210,9 @@ export async function updateAllRepos(options: UpdateAllOptions = {}): Promise<Up
 	return { updated, skipped, errors };
 }
 
-export async function pruneRepos(options: PruneOptions = {}): Promise<PruneResult> {
+export async function pruneRepos(
+	options: PruneOptions = {},
+): Promise<PruneResult> {
 	const { dryRun = false, onProgress } = options;
 
 	const map = readGlobalMap();
@@ -227,7 +238,9 @@ export async function pruneRepos(options: PruneOptions = {}): Promise<PruneResul
 	const repoRoot = getRepoRoot(config);
 
 	if (existsSync(repoRoot)) {
-		const indexedPaths = new Set(Object.values(map.repos).map((r) => r.localPath));
+		const indexedPaths = new Set(
+			Object.values(map.repos).map((r) => r.localPath),
+		);
 
 		try {
 			const providers = readdirSync(repoRoot, { withFileTypes: true });
@@ -264,11 +277,17 @@ export async function pruneRepos(options: PruneOptions = {}): Promise<PruneResul
 }
 
 export async function gcRepos(options: GcOptions = {}): Promise<GcResult> {
-	const { olderThanDays, withoutReference = false, dryRun = false, onProgress } = options;
+	const {
+		olderThanDays,
+		withoutReference = false,
+		dryRun = false,
+		onProgress,
+	} = options;
 
 	const map = readGlobalMap();
 	const qualifiedNames = Object.keys(map.repos);
-	const removed: Array<{ repo: string; reason: string; sizeBytes: number }> = [];
+	const removed: Array<{ repo: string; reason: string; sizeBytes: number }> =
+		[];
 	let freedBytes = 0;
 
 	const now = new Date();
@@ -338,16 +357,26 @@ export interface DiscoverOptions {
 }
 
 export interface DiscoverResult {
-	discovered: Array<{ fullName: string; qualifiedName: string; localPath: string }>;
+	discovered: Array<{
+		fullName: string;
+		qualifiedName: string;
+		localPath: string;
+	}>;
 	alreadyIndexed: number;
 }
 
-export async function discoverRepos(options: DiscoverOptions = {}): Promise<DiscoverResult> {
+export async function discoverRepos(
+	options: DiscoverOptions = {},
+): Promise<DiscoverResult> {
 	const { dryRun = false, onProgress } = options;
 
 	const config = loadConfig();
 	const repoRoot = options.repoRoot ?? getRepoRoot(config);
-	const discovered: Array<{ fullName: string; qualifiedName: string; localPath: string }> = [];
+	const discovered: Array<{
+		fullName: string;
+		qualifiedName: string;
+		localPath: string;
+	}> = [];
 	let alreadyIndexed = 0;
 
 	if (!existsSync(repoRoot)) {
@@ -355,7 +384,9 @@ export async function discoverRepos(options: DiscoverOptions = {}): Promise<Disc
 	}
 
 	const map = readGlobalMap();
-	const indexedPaths = new Set(Object.values(map.repos).map((r) => r.localPath));
+	const indexedPaths = new Set(
+		Object.values(map.repos).map((r) => r.localPath),
+	);
 
 	try {
 		const providers = readdirSync(repoRoot, { withFileTypes: true });

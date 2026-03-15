@@ -187,12 +187,16 @@ export type MessagePart = z.infer<typeof MessagePartSchema>;
 
 export type SessionErrorPayload = z.infer<typeof SessionErrorSchema>;
 
-export type MessagePartUpdatedProps = z.infer<typeof MessagePartUpdatedPropsSchema>;
+export type MessagePartUpdatedProps = z.infer<
+	typeof MessagePartUpdatedPropsSchema
+>;
 export type SessionIdleProps = z.infer<typeof SessionIdlePropsSchema>;
 export type SessionErrorProps = z.infer<typeof SessionErrorPropsSchema>;
 export type SessionUpdatedProps = z.infer<typeof SessionUpdatedPropsSchema>;
 
-export type MessagePartUpdatedEvent = z.infer<typeof MessagePartUpdatedEventSchema>;
+export type MessagePartUpdatedEvent = z.infer<
+	typeof MessagePartUpdatedEventSchema
+>;
 export type SessionIdleEvent = z.infer<typeof SessionIdleEventSchema>;
 export type SessionErrorEvent = z.infer<typeof SessionErrorEventSchema>;
 export type SessionUpdatedEvent = z.infer<typeof SessionUpdatedEventSchema>;

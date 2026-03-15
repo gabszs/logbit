@@ -1,159 +1,146 @@
-export {
-	type Config,
-	type RepoSource,
-	type GlobalMap,
-	type GlobalMapRepoEntry,
-	type ProjectMap,
-	type ProjectMapRepoEntry,
-	type FileIndexEntry,
-	type FileIndex,
-	type FileRole,
+export type {
+	Config,
+	FileIndex,
+	FileIndexEntry,
+	FileRole,
+	GlobalMap,
+	GlobalMapRepoEntry,
+	ProjectMap,
+	ProjectMapRepoEntry,
+	RepoSource,
 } from "@loglog/types";
-
-export { VERSION, DEFAULT_IGNORE_PATTERNS } from "./constants.js";
-
 export {
-	getMetaRoot,
-	getRepoRoot,
-	getRepoPath,
-	getReferencePath,
-	getMetaPath,
-	getConfigPath,
-	loadConfig,
-	saveConfig,
-	toReferenceName,
-	toReferenceFileName,
-	toMetaDirName,
-} from "./config.js";
-
-export { expandTilde, Paths } from "./paths.js";
-
-export {
-	parseRepoInput,
-	getReferenceFileNameForSource,
-	RepoSourceError,
-	PathNotFoundError,
-	NotGitRepoError,
-} from "./repo-source.js";
-
-export {
-	readGlobalMap,
-	writeGlobalMap,
-	upsertGlobalMapEntry,
-	removeGlobalMapEntry,
-	writeProjectMap,
-} from "./index-manager.js";
-
-export {
-	resolveRepoKey,
-	getMapEntry,
-	searchMap,
-	getProjectMapPath,
-	type MapEntry,
-	type SearchResult,
-	type GetMapEntryOptions,
-	type SearchMapOptions,
-} from "./map.js";
-
-export {
-	cloneRepo,
-	updateRepo,
-	removeRepo,
-	listRepos,
-	isRepoCloned,
-	getClonedRepoPath,
-	getCommitSha,
-	getCommitDistance,
-	CloneError,
-	RepoExistsError,
-	RepoNotFoundError,
-	GitError,
-	type CloneOptions,
-	type UpdateOptions,
-	type UpdateResult,
-	type RemoveOptions,
-} from "./clone.js";
-
-export {
-	AuthError,
-	NotLoggedInError,
-	TokenExpiredError,
-	getAuthPath,
-	saveAuthData,
-	loadAuthData,
-	clearAuthData,
-	getToken,
-	getTokenOrNull,
-	isLoggedIn,
-	getAuthStatus,
-	refreshAccessToken,
-	type AuthData,
-	type AuthStatus,
-} from "./auth.js";
-
-export {
-	installGlobalSkill,
-	installReference,
-	resolveReferenceKeywords,
-	type InstallReferenceMeta,
-} from "./reference.js";
-
-export {
+	type AgentConfig,
 	agents,
 	detectInstalledAgents,
 	getAgentConfig,
 	getAllAgentConfigs,
-	type AgentConfig,
 } from "./agents.js";
-
 export {
-	detectManifestType,
-	parseDependencies,
-	type ManifestType,
-	type Dependency,
-} from "./manifest.js";
-
+	type AuthData,
+	AuthError,
+	type AuthStatus,
+	clearAuthData,
+	getAuthPath,
+	getAuthStatus,
+	getToken,
+	getTokenOrNull,
+	isLoggedIn,
+	loadAuthData,
+	NotLoggedInError,
+	refreshAccessToken,
+	saveAuthData,
+	TokenExpiredError,
+} from "./auth.js";
+export {
+	CloneError,
+	type CloneOptions,
+	cloneRepo,
+	GitError,
+	getClonedRepoPath,
+	getCommitDistance,
+	getCommitSha,
+	isRepoCloned,
+	listRepos,
+	type RemoveOptions,
+	RepoExistsError,
+	RepoNotFoundError,
+	removeRepo,
+	type UpdateOptions,
+	type UpdateResult,
+	updateRepo,
+} from "./clone.js";
+export {
+	getConfigPath,
+	getMetaPath,
+	getMetaRoot,
+	getReferencePath,
+	getRepoPath,
+	getRepoRoot,
+	loadConfig,
+	saveConfig,
+	toMetaDirName,
+	toReferenceFileName,
+	toReferenceName,
+} from "./config.js";
+export { DEFAULT_IGNORE_PATTERNS, VERSION } from "./constants.js";
 export {
 	FALLBACK_MAPPINGS,
-	resolveFromNpm,
 	getNpmKeywords,
-	resolveDependencyRepo,
 	type ResolveDependencyRepoOptions,
 	type ResolvedDep,
+	resolveDependencyRepo,
+	resolveFromNpm,
 } from "./dep-mappings.js";
+export {
+	readGlobalMap,
+	removeGlobalMapEntry,
+	upsertGlobalMapEntry,
+	writeGlobalMap,
+	writeProjectMap,
+} from "./index-manager.js";
+export {
+	type Dependency,
+	detectManifestType,
+	type ManifestType,
+	parseDependencies,
+} from "./manifest.js";
+export {
+	type GetMapEntryOptions,
+	getMapEntry,
+	getProjectMapPath,
+	type MapEntry,
+	resolveRepoKey,
+	type SearchMapOptions,
+	type SearchResult,
+	searchMap,
+} from "./map.js";
+export {
+	getProvider,
+	listProviders,
+	listProvidersWithModels,
+	type ModelInfo,
+	type ProviderInfo,
+	type ProviderWithModels,
+	validateProviderModel,
+} from "./models.js";
+export { expandTilde, Paths } from "./paths.js";
+export {
+	type InstallReferenceMeta,
+	installGlobalSkill,
+	installReference,
+	resolveReferenceKeywords,
+} from "./reference.js";
 
 export {
+	isReferenceInstalled,
 	matchDependenciesToReferences,
 	matchDependenciesToReferencesWithRemoteCheck,
-	isReferenceInstalled,
-	type ReferenceStatus,
 	type ReferenceMatch,
+	type ReferenceStatus,
 } from "./reference-matcher.js";
 
 export {
-	getRepoStatus,
-	updateAllRepos,
-	pruneRepos,
-	gcRepos,
-	discoverRepos,
-	type RepoStatusSummary,
-	type RepoStatusOptions,
-	type UpdateAllOptions,
-	type UpdateAllResult,
-	type PruneOptions,
-	type PruneResult,
-	type GcOptions,
-	type GcResult,
 	type DiscoverOptions,
 	type DiscoverResult,
+	discoverRepos,
+	type GcOptions,
+	type GcResult,
+	gcRepos,
+	getRepoStatus,
+	type PruneOptions,
+	type PruneResult,
+	pruneRepos,
+	type RepoStatusOptions,
+	type RepoStatusSummary,
+	type UpdateAllOptions,
+	type UpdateAllResult,
+	updateAllRepos,
 } from "./repo-manager.js";
-
 export {
-	listProviders,
-	getProvider,
-	listProvidersWithModels,
-	validateProviderModel,
-	type ProviderInfo,
-	type ModelInfo,
-	type ProviderWithModels,
-} from "./models.js";
+	getReferenceFileNameForSource,
+	NotGitRepoError,
+	PathNotFoundError,
+	parseRepoInput,
+	RepoSourceError,
+} from "./repo-source.js";

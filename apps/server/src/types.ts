@@ -1,3 +1,7 @@
-import { type OpenAPIHono } from "@hono/zod-openapi";
+import type { AuthType } from "./lib/auth";
 
-export type AppContext = OpenAPIHono<{ Bindings: Env }>;
+export type AppContext = {
+	Variables: {
+		auth: AuthType;
+	};
+};

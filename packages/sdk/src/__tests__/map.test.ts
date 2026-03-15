@@ -2,8 +2,8 @@
  * Unit tests for map.ts
  */
 
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { GlobalMap, ProjectMap } from "@loglog/types";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 interface VirtualFile {
 	content: string;
@@ -60,7 +60,12 @@ vi.mock("../paths.js", () => ({
 	},
 }));
 
-import { resolveRepoKey, getMapEntry, searchMap, getProjectMapPath } from "../map.js";
+import {
+	getMapEntry,
+	getProjectMapPath,
+	resolveRepoKey,
+	searchMap,
+} from "../map.js";
 
 describe("map.ts", () => {
 	const sampleGlobalMap: GlobalMap = {
@@ -114,7 +119,10 @@ describe("map.ts", () => {
 
 	describe("resolveRepoKey", () => {
 		it("matches exact qualified name", () => {
-			const result = resolveRepoKey("github.com:tanstack/router", sampleGlobalMap);
+			const result = resolveRepoKey(
+				"github.com:tanstack/router",
+				sampleGlobalMap,
+			);
 			expect(result).toBe("github.com:tanstack/router");
 		});
 
@@ -153,7 +161,9 @@ describe("map.ts", () => {
 			expect(result).not.toBeNull();
 			expect(result?.scope).toBe("global");
 			expect(result?.qualifiedName).toBe("github.com:tanstack/router");
-			expect(result?.entry.localPath).toBe("/home/user/ow/github/tanstack/router");
+			expect(result?.entry.localPath).toBe(
+				"/home/user/ow/github/tanstack/router",
+			);
 		});
 
 		it("prefers project map when it exists", () => {

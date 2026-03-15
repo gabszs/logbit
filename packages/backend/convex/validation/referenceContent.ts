@@ -5,7 +5,9 @@ export interface ContentValidationResult {
 	description?: string;
 }
 
-export function validateReferenceContent(content: string): ContentValidationResult {
+export function validateReferenceContent(
+	content: string,
+): ContentValidationResult {
 	if (content.length < 500) {
 		return { valid: false, error: "Content too short (min 500 chars)" };
 	}
@@ -13,7 +15,9 @@ export function validateReferenceContent(content: string): ContentValidationResu
 		return { valid: false, error: "Content too large (max 200KB)" };
 	}
 
-	const withoutCodeBlocks = content.replace(/```[\s\S]*?```/g, "").replace(/`[^`\n]+`/g, "");
+	const withoutCodeBlocks = content
+		.replace(/```[\s\S]*?```/g, "")
+		.replace(/`[^`\n]+`/g, "");
 	if (/<\s*\/?\s*[a-zA-Z][\s\S]*?>/m.test(withoutCodeBlocks)) {
 		return { valid: false, error: "Raw HTML not allowed in reference content" };
 	}
@@ -23,7 +27,10 @@ export function validateReferenceContent(content: string): ContentValidationResu
 	}
 
 	if (!/^#\s+.+/m.test(content)) {
-		return { valid: false, error: "Reference must contain at least one markdown heading" };
+		return {
+			valid: false,
+			error: "Reference must contain at least one markdown heading",
+		};
 	}
 
 	return {

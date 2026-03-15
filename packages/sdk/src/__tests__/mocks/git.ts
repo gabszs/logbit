@@ -3,7 +3,7 @@
  * Used to test clone.ts without actually executing git commands
  */
 
-import { vi, type Mock } from "vitest";
+import { type Mock, vi } from "vitest";
 
 export interface GitMockConfig {
 	/** Mock git clone behavior */
@@ -28,14 +28,21 @@ export interface GitMockConfig {
 		errorMessage?: string;
 	};
 	/** Custom command handler */
-	customHandler?: (command: string, args: string[], cwd: string | undefined) => string;
+	customHandler?: (
+		command: string,
+		args: string[],
+		cwd: string | undefined,
+	) => string;
 }
 
 const defaultConfig: GitMockConfig = {
 	clone: { shouldSucceed: true },
 	fetch: { shouldSucceed: true },
 	pull: { shouldSucceed: true },
-	revParse: { sha: "abc123def456abc123def456abc123def456abc1", shouldSucceed: true },
+	revParse: {
+		sha: "abc123def456abc123def456abc123def456abc1",
+		shouldSucceed: true,
+	},
 };
 
 let currentConfig: GitMockConfig = { ...defaultConfig };
@@ -63,7 +70,9 @@ export function createExecSyncMock(): Mock {
 			case "clone": {
 				const config = currentConfig.clone ?? defaultConfig.clone;
 				if (!config?.shouldSucceed) {
-					const error = new Error(config?.errorMessage ?? "Clone failed") as Error & {
+					const error = new Error(
+						config?.errorMessage ?? "Clone failed",
+					) as Error & {
 						status: number;
 						stderr: string;
 					};
@@ -77,7 +86,9 @@ export function createExecSyncMock(): Mock {
 			case "fetch": {
 				const config = currentConfig.fetch ?? defaultConfig.fetch;
 				if (!config?.shouldSucceed) {
-					const error = new Error(config?.errorMessage ?? "Fetch failed") as Error & {
+					const error = new Error(
+						config?.errorMessage ?? "Fetch failed",
+					) as Error & {
 						status: number;
 						stderr: string;
 					};
@@ -91,7 +102,9 @@ export function createExecSyncMock(): Mock {
 			case "pull": {
 				const config = currentConfig.pull ?? defaultConfig.pull;
 				if (!config?.shouldSucceed) {
-					const error = new Error(config?.errorMessage ?? "Pull failed") as Error & {
+					const error = new Error(
+						config?.errorMessage ?? "Pull failed",
+					) as Error & {
 						status: number;
 						stderr: string;
 					};
@@ -105,7 +118,9 @@ export function createExecSyncMock(): Mock {
 			case "rev-parse": {
 				const config = currentConfig.revParse ?? defaultConfig.revParse;
 				if (!config?.shouldSucceed) {
-					const error = new Error(config?.errorMessage ?? "rev-parse failed") as Error & {
+					const error = new Error(
+						config?.errorMessage ?? "rev-parse failed",
+					) as Error & {
 						status: number;
 						stderr: string;
 					};

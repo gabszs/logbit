@@ -35,7 +35,8 @@ export class OpenCodeSDKError extends OpenCodeReferenceError {
 	readonly _tag = "OpenCodeSDKError" as const;
 	constructor(message?: string) {
 		super(
-			message ?? "Failed to import @opencode-ai/sdk. Install it with: bun add @opencode-ai/sdk",
+			message ??
+				"Failed to import @opencode-ai/sdk. Install it with: bun add @opencode-ai/sdk",
 		);
 		this.name = "OpenCodeSDKError";
 	}
@@ -160,7 +161,9 @@ export class TimeoutError extends OpenCodeReferenceError {
 		public readonly operation: string = "operation",
 	) {
 		const hint = `The ${operation} did not complete within ${timeoutMs}ms. Consider increasing the timeout or checking if the model is responding.`;
-		super(`Timeout: ${operation} did not complete within ${timeoutMs}ms. ${hint}`);
+		super(
+			`Timeout: ${operation} did not complete within ${timeoutMs}ms. ${hint}`,
+		);
 		this.name = "TimeoutError";
 		this.hint = hint;
 	}

@@ -14,7 +14,9 @@ export const get = query({
 	handler: async (ctx, args) => {
 		return await ctx.db
 			.query("repository")
-			.withIndex("by_fullNameLower", (q) => q.eq("fullNameLower", args.fullName.toLowerCase()))
+			.withIndex("by_fullNameLower", (q) =>
+				q.eq("fullNameLower", args.fullName.toLowerCase()),
+			)
 			.first();
 	},
 });
@@ -42,7 +44,11 @@ export const list = query({
 	handler: async (ctx, args) => {
 		const limit = args.limit ?? 50;
 
-		return await ctx.db.query("repository").withIndex("by_stars").order("desc").take(limit);
+		return await ctx.db
+			.query("repository")
+			.withIndex("by_stars")
+			.order("desc")
+			.take(limit);
 	},
 });
 
@@ -56,7 +62,11 @@ export const listRecent = query({
 	handler: async (ctx, args) => {
 		const limit = args.limit ?? 10;
 
-		return await ctx.db.query("repository").withIndex("by_fetchedAt").order("desc").take(limit);
+		return await ctx.db
+			.query("repository")
+			.withIndex("by_fetchedAt")
+			.order("desc")
+			.take(limit);
 	},
 });
 
@@ -78,7 +88,9 @@ export const upsert = internalMutation({
 		const fullNameLower = args.fullName.toLowerCase();
 		const existing = await ctx.db
 			.query("repository")
-			.withIndex("by_fullNameLower", (q) => q.eq("fullNameLower", fullNameLower))
+			.withIndex("by_fullNameLower", (q) =>
+				q.eq("fullNameLower", fullNameLower),
+			)
 			.first();
 
 		const now = new Date().toISOString();

@@ -1,5 +1,5 @@
-import { redirect } from "@tanstack/react-router";
 import type { QueryClient } from "@tanstack/react-query";
+import { redirect } from "@tanstack/react-router";
 import type { authClient } from "@/web/lib/auth-client";
 
 interface RedirectIfAuthenticatedOptions {
@@ -15,7 +15,7 @@ export async function redirectIfAuthenticated({
 }: RedirectIfAuthenticatedOptions) {
 	// Wrap in React Query for deduplication
 	const session = await queryClient.ensureQueryData({
-		queryKey: ['auth', 'session'],
+		queryKey: ["auth", "session"],
 		queryFn: async () => {
 			const { data, error } = await authClient.getSession();
 			if (error) {
@@ -47,7 +47,7 @@ export async function requireAuthenticated({
 }: RequireAuthenticatedOptions) {
 	// Wrap in React Query for deduplication
 	const session = await queryClient.ensureQueryData({
-		queryKey: ['auth', 'session'],
+		queryKey: ["auth", "session"],
 		queryFn: async () => {
 			const { data, error } = await authClient.getSession();
 			if (error) {

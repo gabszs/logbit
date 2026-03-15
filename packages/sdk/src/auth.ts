@@ -2,10 +2,17 @@
  * Authentication utilities for loglog CLI
  */
 
-import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync, unlinkSync } from "node:fs";
+import {
+	chmodSync,
+	existsSync,
+	mkdirSync,
+	readFileSync,
+	unlinkSync,
+	writeFileSync,
+} from "node:fs";
 import { dirname } from "node:path";
-import { z } from "zod";
 import { WorkOSTokenResponseSchema } from "@loglog/types";
+import { z } from "zod";
 import { Paths } from "./paths";
 
 const AuthDataSchema = z.object({
@@ -61,7 +68,9 @@ function extractJwtExpiration(token: string): string | undefined {
 		const payload = parts[1];
 		if (!payload) return undefined;
 
-		const decoded = JSON.parse(Buffer.from(payload, "base64").toString("utf-8"));
+		const decoded = JSON.parse(
+			Buffer.from(payload, "base64").toString("utf-8"),
+		);
 		if (typeof decoded.exp !== "number") return undefined;
 
 		return new Date(decoded.exp * 1000).toISOString();

@@ -13,7 +13,9 @@ export const documents = pgTable(
 		userId: text("user_id")
 			.notNull()
 			.references(() => users.id, { onDelete: "cascade" }),
-		createdAt: timestamp("created_at", { mode: "date", withTimezone: true }).defaultNow().notNull(),
+		createdAt: timestamp("created_at", { mode: "date", withTimezone: true })
+			.defaultNow()
+			.notNull(),
 		updatedAt: timestamp("updated_at", { mode: "date", withTimezone: true })
 			.defaultNow()
 			.$onUpdate(() => sql`now()`)

@@ -1,5 +1,5 @@
-import { type z } from "zod";
-import { type searchOptionsSchema } from "../schemas/baseSchemas";
+import type { z } from "zod";
+import type { searchOptionsSchema } from "../schemas/baseSchemas";
 
 type SearchOptions = z.infer<typeof searchOptionsSchema>;
 type Filters = Record<string, unknown>;

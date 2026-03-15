@@ -51,7 +51,9 @@ export const deleteReference = mutation({
 
 		const repo = await ctx.db
 			.query("repository")
-			.withIndex("by_fullNameLower", (q) => q.eq("fullNameLower", args.fullName.toLowerCase()))
+			.withIndex("by_fullNameLower", (q) =>
+				q.eq("fullNameLower", args.fullName.toLowerCase()),
+			)
 			.first();
 
 		if (!repo) {
@@ -79,7 +81,9 @@ export const toggleVerified = mutation({
 
 		const repo = await ctx.db
 			.query("repository")
-			.withIndex("by_fullNameLower", (q) => q.eq("fullNameLower", args.fullName.toLowerCase()))
+			.withIndex("by_fullNameLower", (q) =>
+				q.eq("fullNameLower", args.fullName.toLowerCase()),
+			)
 			.first();
 
 		if (!repo) {

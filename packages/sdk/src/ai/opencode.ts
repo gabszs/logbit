@@ -1,16 +1,20 @@
 import { execSync } from "node:child_process";
 import {
+	InvalidModelError,
+	InvalidProviderError,
+	OpenCodeNotInstalledError,
 	OpenCodeReferenceError,
 	OpenCodeSDKError,
-	OpenCodeNotInstalledError,
-	InvalidProviderError,
 	ProviderNotConnectedError,
-	InvalidModelError,
 	ServerStartError,
 	SessionError,
 	TimeoutError,
 } from "./errors.js";
-import { TextAccumulator, parseStreamEvent, isEventForSession } from "./stream/index.js";
+import {
+	isEventForSession,
+	parseStreamEvent,
+	TextAccumulator,
+} from "./stream/index.js";
 
 export const DEFAULT_AI_PROVIDER = "opencode";
 export const DEFAULT_AI_MODEL = "claude-opus-4-5";
@@ -84,7 +88,10 @@ export interface OpenCodeClient {
 		}>;
 	};
 	provider: {
-		list: () => Promise<{ data: OpenCodeProviderListResponse; error?: unknown }>;
+		list: () => Promise<{
+			data: OpenCodeProviderListResponse;
+			error?: unknown;
+		}>;
 	};
 }
 
@@ -116,7 +123,10 @@ interface OpenCodeConfig {
 }
 
 type CreateOpencodeResult = { server: OpenCodeServer };
-type CreateOpencodeClientFn = (opts: { baseUrl: string; directory: string }) => OpenCodeClient;
+type CreateOpencodeClientFn = (opts: {
+	baseUrl: string;
+	directory: string;
+}) => OpenCodeClient;
 type CreateOpencodeFn = (opts: {
 	port: number;
 	cwd?: string;
@@ -156,7 +166,8 @@ async function getOpenCodeSDK(): Promise<{
 			throw new OpenCodeSDKError("SDK missing required exports");
 		}
 		cachedCreateOpencode = sdk.createOpencode as CreateOpencodeFn;
-		cachedCreateOpencodeClient = sdk.createOpencodeClient as CreateOpencodeClientFn;
+		cachedCreateOpencodeClient =
+			sdk.createOpencodeClient as CreateOpencodeClientFn;
 		return {
 			createOpencode: cachedCreateOpencode,
 			createOpencodeClient: cachedCreateOpencodeClient,
@@ -175,7 +186,10 @@ interface ToolRunningState {
 	input?: unknown;
 }
 
-function formatToolMessage(tool: string | undefined, state: ToolRunningState): string | null {
+function formatToolMessage(
+	tool: string | undefined,
+	state: ToolRunningState,
+): string | null {
 	if (state.title) {
 		return state.title;
 	}
@@ -185,7 +199,9 @@ function formatToolMessage(tool: string | undefined, state: ToolRunningState): s
 	}
 
 	const input =
-		state.input && typeof state.input === "object" && !Array.isArray(state.input)
+		state.input &&
+		typeof state.input === "object" &&
+		!Array.isArray(state.input)
 			? (state.input as Record<string, unknown>)
 			: undefined;
 	if (!input) {
@@ -211,7 +227,8 @@ function formatToolMessage(tool: string | undefined, state: ToolRunningState): s
 		case "grep": {
 			const pattern = input.pattern;
 			if (typeof pattern === "string") {
-				const truncated = pattern.length > 30 ? `${pattern.slice(0, 30)}...` : pattern;
+				const truncated =
+					pattern.length > 30 ? `${pattern.slice(0, 30)}...` : pattern;
 				return `Searching for "${truncated}"...`;
 			}
 			return "Searching content...";
@@ -253,7 +270,8 @@ function getOpenCodeConfig(): OpenCodeConfig {
 					"- Always base your analysis on actual code you've read, never speculate",
 				].join("\n"),
 				mode: "primary",
-				description: "Analyze open source codebases and produce summaries and reference files",
+				description:
+					"Analyze open source codebases and produce summaries and reference files",
 				tools: {
 					read: true,
 					grep: true,
@@ -320,7 +338,9 @@ export async function createOpenCodeContext(
 	}
 
 	if (!server) {
-		throw new ServerStartError("Failed to start OpenCode server after all attempts");
+		throw new ServerStartError(
+			"Failed to start OpenCode server after all attempts",
+		);
 	}
 
 	const baseUrl = `http://localhost:${port}`;
@@ -342,7 +362,9 @@ export async function createOpenCodeContext(
 	};
 }
 
-export async function streamPrompt(options: StreamPromptOptions): Promise<StreamPromptResult> {
+export async function streamPrompt(
+	options: StreamPromptOptions,
+): Promise<StreamPromptResult> {
 	const {
 		prompt,
 		cwd,
@@ -362,14 +384,20 @@ export async function streamPrompt(options: StreamPromptOptions): Promise<Stream
 	const providerID = optProvider ?? DEFAULT_AI_PROVIDER;
 	const modelID = optModel ?? DEFAULT_AI_MODEL;
 	const shouldCloseContext = !openCodeContext;
-	const context = openCodeContext ?? (await createOpenCodeContext({ cwd, onDebug: debug }));
+	const context =
+		openCodeContext ?? (await createOpenCodeContext({ cwd, onDebug: debug }));
 	const client = context.createClient(cwd);
 
 	try {
 		debug("Creating session...");
 		const sessionResult = await client.session.create();
 		if (sessionResult.error) {
-			throw new SessionError("Failed to create session", undefined, undefined, sessionResult.error);
+			throw new SessionError(
+				"Failed to create session",
+				undefined,
+				undefined,
+				sessionResult.error,
+			);
 		}
 		const sessionId = sessionResult.data.id;
 		debug(`Session created: ${sessionId}`);
@@ -377,10 +405,14 @@ export async function streamPrompt(options: StreamPromptOptions): Promise<Stream
 		debug("Validating provider and model...");
 		const providerResult = await client.provider.list();
 		if (providerResult.error) {
-			throw new OpenCodeReferenceError("Failed to fetch provider list", providerResult.error);
+			throw new OpenCodeReferenceError(
+				"Failed to fetch provider list",
+				providerResult.error,
+			);
 		}
 
-		const { all: allProviders, connected: connectedProviders } = providerResult.data;
+		const { all: allProviders, connected: connectedProviders } =
+			providerResult.data;
 		const allProviderIds = allProviders.map((p) => p.id);
 
 		const provider = allProviders.find((p) => p.id === providerID);
@@ -464,7 +496,12 @@ export async function streamPrompt(options: StreamPromptOptions): Promise<Stream
 						if (parsed.props.sessionID === sessionId) {
 							const errorName = parsed.error?.name ?? "Unknown session error";
 							debug(`Session error: ${JSON.stringify(parsed.props.error)}`);
-							throw new SessionError(errorName, sessionId, "error", parsed.props.error);
+							throw new SessionError(
+								errorName,
+								sessionId,
+								"error",
+								parsed.props.error,
+							);
 						}
 						break;
 					}

@@ -21,7 +21,10 @@ async function loadConvexModule(): Promise<typeof import("convex/browser")> {
 	}
 }
 
-export async function getConvexClient(url: string, token?: string): Promise<ConvexHttpClient> {
+export async function getConvexClient(
+	url: string,
+	token?: string,
+): Promise<ConvexHttpClient> {
 	const { ConvexHttpClient } = await loadConvexModule();
 	const client = new ConvexHttpClient(url);
 	if (token) client.setAuth(token);

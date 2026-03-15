@@ -40,7 +40,10 @@ export function validatePushArgs(args: {
 	commitSha: string;
 	generatedAt: string;
 }): ValidationResult {
-	if (args.fullName.length < FULLNAME_MIN || args.fullName.length > FULLNAME_MAX) {
+	if (
+		args.fullName.length < FULLNAME_MIN ||
+		args.fullName.length > FULLNAME_MAX
+	) {
 		return {
 			valid: false,
 			error: `fullName must be ${FULLNAME_MIN}-${FULLNAME_MAX} chars`,
@@ -48,10 +51,17 @@ export function validatePushArgs(args: {
 		};
 	}
 	if (!FULLNAME_PATTERN.test(args.fullName)) {
-		return { valid: false, error: "Invalid repo format (expected owner/repo)", field: "fullName" };
+		return {
+			valid: false,
+			error: "Invalid repo format (expected owner/repo)",
+			field: "fullName",
+		};
 	}
 
-	if (args.referenceName.length < SKILLNAME_MIN || args.referenceName.length > SKILLNAME_MAX) {
+	if (
+		args.referenceName.length < SKILLNAME_MIN ||
+		args.referenceName.length > SKILLNAME_MAX
+	) {
 		return {
 			valid: false,
 			error: `referenceName must be ${SKILLNAME_MIN}-${SKILLNAME_MAX} chars`,
@@ -59,7 +69,11 @@ export function validatePushArgs(args: {
 		};
 	}
 	if (!SKILLNAME_PATTERN.test(args.referenceName)) {
-		return { valid: false, error: "Invalid referenceName format", field: "referenceName" };
+		return {
+			valid: false,
+			error: "Invalid referenceName format",
+			field: "referenceName",
+		};
 	}
 
 	if (
@@ -89,15 +103,27 @@ export function validatePushArgs(args: {
 	}
 
 	if (args.commitSha.length !== COMMIT_SHA_LENGTH) {
-		return { valid: false, error: "commitSha must be 40 characters", field: "commitSha" };
+		return {
+			valid: false,
+			error: "commitSha must be 40 characters",
+			field: "commitSha",
+		};
 	}
 	if (!COMMIT_SHA_PATTERN.test(args.commitSha)) {
-		return { valid: false, error: "Invalid commit SHA format", field: "commitSha" };
+		return {
+			valid: false,
+			error: "Invalid commit SHA format",
+			field: "commitSha",
+		};
 	}
 
 	const timestamp = Date.parse(args.generatedAt);
 	if (Number.isNaN(timestamp)) {
-		return { valid: false, error: "Invalid generatedAt timestamp", field: "generatedAt" };
+		return {
+			valid: false,
+			error: "Invalid generatedAt timestamp",
+			field: "generatedAt",
+		};
 	}
 	if (timestamp > Date.now() + 5 * 60_000) {
 		return {

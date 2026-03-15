@@ -9,12 +9,12 @@
 		"@opentelemetry/api": "^1.9.0",
 		"@orpc/server": "^1.13.2",
 		"@scalar/hono-api-reference": "^0.9.30",
-		"@t3-oss/env-nuxt": "^0.13.10",
 		"better-auth": "1.4.10",
 		"better-auth-cloudflare": "^0.2.9",
-		"drizzle-orm": "^0.44.7",
+		"drizzle-orm": "^0.45.1",
 		"drizzle-zod": "^0.8.3",
 		"hono-rate-limiter": "^0.5.3",
+		"postgres": "^3.4.8",
 		"resend": "^6.6.0",
 		"ua-parser-js": "^2.0.7",
 		"ulid": "^3.0.2",
@@ -29,7 +29,7 @@
 		"db:migrate": "drizzle-kit migrate --config=./drizzle.config.ts",
 		"db:studio": "drizzle-kit studio --config=./drizzle.config.ts",
 		"db:studio:prod": "drizzle-kit studio --config=./drizzle.config.ts",
-		"auth:generate": "npx --yes @better-auth/cli@latest generate --config src/lib/auth.ts --output src/db/models/authModels.ts -y"
+		"auth:generate": "npx auth@latest generate --config src/lib/auth.ts --output src/db/models/authModels.ts -y"
 	},
 	"devDependencies": {
 		"drizzle-kit": "^0.31.8",

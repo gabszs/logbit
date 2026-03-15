@@ -18,7 +18,9 @@ export interface CommitValidationResult {
 /**
  * Verify repo exists and has minimum stars
  */
-export async function validateRepo(fullName: string): Promise<RepoValidationResult> {
+export async function validateRepo(
+	fullName: string,
+): Promise<RepoValidationResult> {
 	try {
 		const octokit = getOctokit();
 		const parts = fullName.split("/");
@@ -51,7 +53,12 @@ export async function validateRepo(fullName: string): Promise<RepoValidationResu
 			canonicalFullName: data.full_name,
 		};
 	} catch (error: unknown) {
-		if (error && typeof error === "object" && "status" in error && error.status === 404) {
+		if (
+			error &&
+			typeof error === "object" &&
+			"status" in error &&
+			error.status === 404
+		) {
 			return { valid: false, error: "Repository not found on GitHub" };
 		}
 		return {
@@ -82,7 +89,12 @@ export async function validateCommit(
 
 		return { valid: true };
 	} catch (error: unknown) {
-		if (error && typeof error === "object" && "status" in error && error.status === 404) {
+		if (
+			error &&
+			typeof error === "object" &&
+			"status" in error &&
+			error.status === 404
+		) {
 			return { valid: false, error: "Commit not found in repository" };
 		}
 		return {

@@ -58,12 +58,12 @@ vi.mock("../index-manager.js", () => ({
 	}),
 }));
 
+import * as fs from "node:fs";
 import { streamPrompt } from "../ai/opencode.js";
 import { getCommitSha } from "../clone.js";
 import { loadConfig } from "../config.js";
 import { generateReferenceWithAI } from "../generate.js";
 import { installReference } from "../reference.js";
-import * as fs from "node:fs";
 
 const mockStreamPrompt = streamPrompt as ReturnType<typeof vi.fn>;
 const mockGetCommitSha = getCommitSha as ReturnType<typeof vi.fn>;
@@ -102,9 +102,9 @@ ${longContent}
 			durationMs: 1000,
 		});
 
-		await expect(generateReferenceWithAI("/mock/repo", "test/repo")).rejects.toThrow(
-			"no valid <reference_output> tags found",
-		);
+		await expect(
+			generateReferenceWithAI("/mock/repo", "test/repo"),
+		).rejects.toThrow("no valid <reference_output> tags found");
 	});
 
 	it("throws when reference content too short", async () => {
@@ -116,9 +116,9 @@ Short
 			durationMs: 1000,
 		});
 
-		await expect(generateReferenceWithAI("/mock/repo", "test/repo")).rejects.toThrow(
-			"no valid <reference_output> tags found",
-		);
+		await expect(
+			generateReferenceWithAI("/mock/repo", "test/repo"),
+		).rejects.toThrow("no valid <reference_output> tags found");
 	});
 
 	it("throws when reference content missing markdown heading", async () => {
@@ -130,9 +130,9 @@ ${"This is some content ".repeat(50)}
 			durationMs: 1000,
 		});
 
-		await expect(generateReferenceWithAI("/mock/repo", "test/repo")).rejects.toThrow(
-			"must start with markdown heading",
-		);
+		await expect(
+			generateReferenceWithAI("/mock/repo", "test/repo"),
+		).rejects.toThrow("must start with markdown heading");
 	});
 
 	it("uses custom provider and model when provided", async () => {
@@ -279,11 +279,17 @@ describe("installReference", () => {
 			updatedAt: "2026-01-01T00:00:00Z",
 		};
 
-		installReference("github.com:tanstack/router", "tanstack/router", "/new/path", "# Updated", {
-			referenceUpdatedAt: "2026-01-27T00:00:00Z",
-			commitSha: "abc123",
-			version: "0.1.0",
-		});
+		installReference(
+			"github.com:tanstack/router",
+			"tanstack/router",
+			"/new/path",
+			"# Updated",
+			{
+				referenceUpdatedAt: "2026-01-27T00:00:00Z",
+				commitSha: "abc123",
+				version: "0.1.0",
+			},
+		);
 
 		const updatedEntry = globalMapState.repos["github.com:tanstack/router"];
 		expect(updatedEntry).toBeDefined();

@@ -2,8 +2,8 @@
  * Dependency manifest parsing for multiple package ecosystems
  */
 
-import { existsSync, readdirSync, readFileSync } from "node:fs";
 import type { Dirent } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 export type ManifestType = "npm" | "python" | "rust" | "go" | "unknown";
@@ -62,14 +62,19 @@ function parseNpmDependencies(dir: string): Dependency[] {
 	const rootPath = join(dir, "package.json");
 	const rootDeps = parsePackageJson(rootPath);
 	const workspaceDeps = parseWorkspaceDependencies(dir);
-	return mergeDependencies(rootDeps, workspaceDeps).sort((a, b) => a.name.localeCompare(b.name));
+	return mergeDependencies(rootDeps, workspaceDeps).sort((a, b) =>
+		a.name.localeCompare(b.name),
+	);
 }
 
 function parseWorkspaceDependencies(dir: string): Dependency[] {
 	const workspacePatterns = getWorkspacePatterns(dir);
 	if (workspacePatterns.length === 0) return [];
 
-	const packageJsonPaths = resolveWorkspacePackageJsonPaths(dir, workspacePatterns);
+	const packageJsonPaths = resolveWorkspacePackageJsonPaths(
+		dir,
+		workspacePatterns,
+	);
 	const deps: Dependency[] = [];
 	for (const path of packageJsonPaths) {
 		deps.push(...parsePackageJson(path));
@@ -114,8 +119,13 @@ function getWorkspacePatterns(dir: string): string[] {
 	return Array.from(patterns);
 }
 
-function resolveWorkspacePackageJsonPaths(dir: string, patterns: string[]): string[] {
-	const includePatterns = patterns.filter((pattern) => !pattern.startsWith("!"));
+function resolveWorkspacePackageJsonPaths(
+	dir: string,
+	patterns: string[],
+): string[] {
+	const includePatterns = patterns.filter(
+		(pattern) => !pattern.startsWith("!"),
+	);
 	const excludePatterns = patterns
 		.filter((pattern) => pattern.startsWith("!"))
 		.map((pattern) => pattern.slice(1));
@@ -160,7 +170,9 @@ function walkDirectories(root: string): string[] {
 			if (!entry.isDirectory()) continue;
 			if (DEFAULT_IGNORED_DIRS.has(entry.name)) continue;
 
-			const nextRelative = relativePath ? `${relativePath}/${entry.name}` : entry.name;
+			const nextRelative = relativePath
+				? `${relativePath}/${entry.name}`
+				: entry.name;
 			results.push(nextRelative);
 			stack.push(nextRelative);
 		}
@@ -225,7 +237,10 @@ function readJson(path: string): Record<string, unknown> | null {
 	}
 }
 
-function mergeDependencies(base: Dependency[], incoming: Dependency[]): Dependency[] {
+function mergeDependencies(
+	base: Dependency[],
+	incoming: Dependency[],
+): Dependency[] {
 	const map = new Map<string, Dependency>();
 
 	for (const dep of [...base, ...incoming]) {
@@ -270,7 +285,10 @@ function parsePackageJson(path: string): Dependency[] {
 			}
 		}
 
-		if (pkg.optionalDependencies && typeof pkg.optionalDependencies === "object") {
+		if (
+			pkg.optionalDependencies &&
+			typeof pkg.optionalDependencies === "object"
+		) {
 			for (const [name, version] of Object.entries(pkg.optionalDependencies)) {
 				deps.push({ name, version: version as string, dev: false });
 			}
@@ -290,7 +308,9 @@ function parsePyprojectToml(path: string): Dependency[] {
 		const content = readFileSync(path, "utf-8");
 		const deps: Dependency[] = [];
 
-		const depsSection = content.match(/\[project\.dependencies\]([\s\S]*?)(?=\[|$)/);
+		const depsSection = content.match(
+			/\[project\.dependencies\]([\s\S]*?)(?=\[|$)/,
+		);
 		if (!depsSection?.[1]) return [];
 
 		const lines = depsSection[1].split("\n");
@@ -325,10 +345,16 @@ function parseCargoToml(path: string): Dependency[] {
 		const lines = depsSection[1].split("\n");
 		for (const line of lines) {
 			const simpleMatch = line.match(/^([a-zA-Z0-9_-]+)\s*=\s*"([^"]+)"/);
-			const tableMatch = line.match(/^([a-zA-Z0-9_-]+)\s*=\s*{.*version\s*=\s*"([^"]+)"/);
+			const tableMatch = line.match(
+				/^([a-zA-Z0-9_-]+)\s*=\s*{.*version\s*=\s*"([^"]+)"/,
+			);
 
 			if (simpleMatch?.[1] && simpleMatch[2]) {
-				deps.push({ name: simpleMatch[1], version: simpleMatch[2], dev: false });
+				deps.push({
+					name: simpleMatch[1],
+					version: simpleMatch[2],
+					dev: false,
+				});
 			} else if (tableMatch?.[1] && tableMatch[2]) {
 				deps.push({ name: tableMatch[1], version: tableMatch[2], dev: false });
 			}

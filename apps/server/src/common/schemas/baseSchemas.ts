@@ -14,12 +14,18 @@ export const searchOptionsSchema = z.object({
 		.default(100)
 		.describe("Number of items per page"),
 	ordering: z.string().default("-created_at").describe("Ordering field"),
-	created_before: z.iso.datetime().optional().describe("Filter by creation date before (ISO 8601)"),
+	created_before: z.iso
+		.datetime()
+		.optional()
+		.describe("Filter by creation date before (ISO 8601)"),
 	created_on_or_before: z.iso
 		.datetime()
 		.optional()
 		.describe("Filter by creation date on or before (ISO 8601)"),
-	created_after: z.iso.datetime().optional().describe("Filter by creation date after (ISO 8601)"),
+	created_after: z.iso
+		.datetime()
+		.optional()
+		.describe("Filter by creation date after (ISO 8601)"),
 	created_on_or_after: z.iso
 		.datetime()
 		.optional()

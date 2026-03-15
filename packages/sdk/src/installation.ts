@@ -12,7 +12,13 @@ import { VERSION } from "./constants.js";
 const GITHUB_REPO = "oscabriel/loglog";
 const NPM_PACKAGE = "loglog";
 
-export type InstallMethod = "curl" | "npm" | "pnpm" | "bun" | "brew" | "unknown";
+export type InstallMethod =
+	| "curl"
+	| "npm"
+	| "pnpm"
+	| "bun"
+	| "brew"
+	| "unknown";
 
 /**
  * Detect how loglog was installed
@@ -111,12 +117,20 @@ export function getCurrentVersion(): string {
 /**
  * Fetch latest version from appropriate source
  */
-export async function fetchLatestVersion(method?: InstallMethod): Promise<string | null> {
+export async function fetchLatestVersion(
+	method?: InstallMethod,
+): Promise<string | null> {
 	const installMethod = method ?? detectInstallMethod();
 
 	try {
-		if (installMethod === "npm" || installMethod === "pnpm" || installMethod === "bun") {
-			const response = await fetch(`https://registry.npmjs.org/${NPM_PACKAGE}/latest`);
+		if (
+			installMethod === "npm" ||
+			installMethod === "pnpm" ||
+			installMethod === "bun"
+		) {
+			const response = await fetch(
+				`https://registry.npmjs.org/${NPM_PACKAGE}/latest`,
+			);
 			if (!response.ok) return null;
 			const json = await response.json();
 			const result = NpmPackageResponseSchema.safeParse(json);
@@ -124,12 +138,15 @@ export async function fetchLatestVersion(method?: InstallMethod): Promise<string
 			return result.data.version ?? null;
 		}
 
-		const response = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/releases/latest`, {
-			headers: {
-				Accept: "application/vnd.github.v3+json",
-				"User-Agent": "loglog-cli",
+		const response = await fetch(
+			`https://api.github.com/repos/${GITHUB_REPO}/releases/latest`,
+			{
+				headers: {
+					Accept: "application/vnd.github.v3+json",
+					"User-Agent": "loglog-cli",
+				},
 			},
-		});
+		);
 		if (!response.ok) return null;
 		const json = await response.json();
 		const tagName =
@@ -145,7 +162,10 @@ export async function fetchLatestVersion(method?: InstallMethod): Promise<string
 /**
  * Execute upgrade for given method
  */
-export function executeUpgrade(method: InstallMethod, version: string): Promise<void> {
+export function executeUpgrade(
+	method: InstallMethod,
+	version: string,
+): Promise<void> {
 	return new Promise((resolve, reject) => {
 		let cmd: string;
 		let args: string[];
@@ -153,7 +173,10 @@ export function executeUpgrade(method: InstallMethod, version: string): Promise<
 		switch (method) {
 			case "curl":
 				cmd = "bash";
-				args = ["-c", `curl -fsSL https://loglog.sh/install | VERSION=${version} bash`];
+				args = [
+					"-c",
+					`curl -fsSL https://loglog.sh/install | VERSION=${version} bash`,
+				];
 				break;
 			case "npm":
 				cmd = "npm";
@@ -172,7 +195,7 @@ export function executeUpgrade(method: InstallMethod, version: string): Promise<
 				args = ["upgrade", "loglog"];
 				break;
 			default:
-				reject(new Error(`Cannot upgrade: unknown installation method`));
+				reject(new Error("Cannot upgrade: unknown installation method"));
 				return;
 		}
 
@@ -222,7 +245,7 @@ export function executeUninstall(method: InstallMethod): Promise<void> {
 				args = ["uninstall", "loglog"];
 				break;
 			default:
-				reject(new Error(`Cannot uninstall: unknown installation method`));
+				reject(new Error("Cannot uninstall: unknown installation method"));
 				return;
 		}
 
@@ -275,9 +298,13 @@ export function cleanShellConfig(filePath: string): boolean {
 			const trimmed = line.trim();
 			if (
 				trimmed.includes(".local/bin") &&
-				(trimmed.startsWith("export PATH=") || trimmed.startsWith("fish_add_path"))
+				(trimmed.startsWith("export PATH=") ||
+					trimmed.startsWith("fish_add_path"))
 			) {
-				if (trimmed.includes("# loglog") || trimmed === 'export PATH="$HOME/.local/bin:$PATH"') {
+				if (
+					trimmed.includes("# loglog") ||
+					trimmed === 'export PATH="$HOME/.local/bin:$PATH"'
+				) {
 					modified = true;
 					continue;
 				}

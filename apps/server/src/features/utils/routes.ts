@@ -1,6 +1,6 @@
 import { createRoute, OpenAPIHono } from "@hono/zod-openapi";
 import { HttpStatusCodes } from "../../lib/constants";
-import { type AppContext } from "../../types";
+import type { AppContext } from "../../types";
 import { healthSchema } from "./schemas";
 
 const utilityRoutes = new OpenAPIHono<AppContext>();
@@ -29,7 +29,9 @@ const debugHandler = async (c: AppContext) => {
 	const headerString = Object.entries(headers)
 		.map(([key, value]) => `-H "${key}: ${value}"`)
 		.join(" \\\n ");
-	const dataPart = bodyText ? ` \\\n -d '${bodyText.replace(/'/g, "'\\''")}'` : "";
+	const dataPart = bodyText
+		? ` \\\n -d '${bodyText.replace(/'/g, "'\\''")}'`
+		: "";
 	const curl = `curl -X ${method} "${url}" \\\n ${headerString}${dataPart}`;
 	console.log("curl:", curl);
 
@@ -40,7 +42,8 @@ utilityRoutes.openapi(
 	createRoute({
 		tags: ["utilities"],
 		summary: "Health check endpoint",
-		description: "Returns the health status of the service along with the current timestamp",
+		description:
+			"Returns the health status of the service along with the current timestamp",
 		method: "get",
 		path: "/health",
 		responses: {

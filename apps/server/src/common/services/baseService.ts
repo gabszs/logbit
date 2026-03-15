@@ -1,6 +1,6 @@
-import { type z } from "zod";
-import { type IRepository } from "../repository/IRepository";
-import { type searchOptionsSchema } from "../schemas/baseSchemas";
+import type { z } from "zod";
+import type { IRepository } from "../repository/IRepository";
+import type { searchOptionsSchema } from "../schemas/baseSchemas";
 
 type SearchOptions = z.infer<typeof searchOptionsSchema>;
 export type Filters = Record<string, unknown>;

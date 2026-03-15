@@ -1,5 +1,10 @@
-import { query, mutation, type QueryCtx, type MutationCtx } from "./_generated/server";
 import { v } from "convex/values";
+import {
+	type MutationCtx,
+	mutation,
+	type QueryCtx,
+	query,
+} from "./_generated/server";
 
 /**
  * User object validator for Convex return types.

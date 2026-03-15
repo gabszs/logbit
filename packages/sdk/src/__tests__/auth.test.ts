@@ -2,9 +2,9 @@
  * Unit tests for auth.ts pure/near-pure functions
  */
 
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { join } from "node:path";
 import { homedir } from "node:os";
+import { join } from "node:path";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const virtualFs: Record<string, { content: string }> = {};
 const mockAuthDir = join(homedir(), ".local", "share", "loglog");
@@ -46,17 +46,17 @@ vi.mock("node:fs", () => ({
 }));
 
 import {
+	type AuthData,
+	clearAuthData,
 	getAuthPath,
+	getAuthStatus,
 	getToken,
 	getTokenOrNull,
 	isLoggedIn,
-	getAuthStatus,
 	loadAuthData,
-	saveAuthData,
-	clearAuthData,
 	NotLoggedInError,
+	saveAuthData,
 	TokenExpiredError,
-	type AuthData,
 } from "../auth.js";
 
 function clearVirtualFs(): void {
@@ -173,7 +173,10 @@ describe("saveAuthData", () => {
 		saveAuthData(authData);
 
 		expect(fs.mkdirSync).toHaveBeenCalledWith(mockAuthDir, { recursive: true });
-		expect(fs.chmodSync).toHaveBeenCalledWith(join(mockAuthDir, "auth.json"), 0o600);
+		expect(fs.chmodSync).toHaveBeenCalledWith(
+			join(mockAuthDir, "auth.json"),
+			0o600,
+		);
 	});
 });
 
@@ -368,7 +371,10 @@ describe("getAuthStatus", () => {
 		expect(result.email).toBe("test@example.com");
 		// Should have extracted expiresAt from JWT
 		expect(result.expiresAt).toBeDefined();
-		expect(new Date(result.expiresAt!).getTime()).toBeCloseTo(futureExp * 1000, -3);
+		expect(new Date(result.expiresAt!).getTime()).toBeCloseTo(
+			futureExp * 1000,
+			-3,
+		);
 	});
 
 	it("returns isLoggedIn: true without email when email is missing", async () => {

@@ -1,20 +1,20 @@
 import {
-	mkdirSync,
-	writeFileSync,
-	readFileSync,
+	existsSync,
 	lstatSync,
-	unlinkSync,
+	mkdirSync,
+	readFileSync,
 	rmSync,
 	symlinkSync,
-	existsSync,
+	unlinkSync,
+	writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
 import { z } from "zod";
-import { loadConfig, toMetaDirName, toReferenceFileName } from "./config.js";
 import { agents } from "./agents.js";
-import { expandTilde, Paths } from "./paths.js";
-import { readGlobalMap, writeGlobalMap } from "./index-manager.js";
+import { loadConfig, toMetaDirName, toReferenceFileName } from "./config.js";
 import { getNpmKeywords } from "./dep-mappings.js";
+import { readGlobalMap, writeGlobalMap } from "./index-manager.js";
+import { expandTilde, Paths } from "./paths.js";
 
 const PackageJsonNameSchema = z.object({
 	name: z.string().optional(),
@@ -253,16 +253,25 @@ export function installGlobalSkill(): void {
 		writeFileSync(skillPath, GLOBAL_SKILL_TEMPLATE, "utf-8");
 	}
 
-	const installationReferencePath = join(Paths.loglogReferencesDir, "installation.md");
+	const installationReferencePath = join(
+		Paths.loglogReferencesDir,
+		"installation.md",
+	);
 	if (!existsSync(installationReferencePath)) {
-		writeFileSync(installationReferencePath, INSTALLATION_REFERENCE_TEMPLATE, "utf-8");
+		writeFileSync(
+			installationReferencePath,
+			INSTALLATION_REFERENCE_TEMPLATE,
+			"utf-8",
+		);
 	}
 
 	const configuredAgents = config.agents ?? [];
 	for (const agentName of configuredAgents) {
 		const agentConfig = agents[agentName];
 		if (agentConfig) {
-			const agentSkillDir = expandTilde(join(agentConfig.globalSkillsDir, "loglog"));
+			const agentSkillDir = expandTilde(
+				join(agentConfig.globalSkillsDir, "loglog"),
+			);
 			ensureSymlink(Paths.loglogSkillDir, agentSkillDir);
 		}
 	}
@@ -314,16 +323,25 @@ export function installReference(
 	};
 	const [host] = qualifiedName.split(":");
 	const legacyProvider = host ? legacyProviderMap[host] : undefined;
-	const legacyQualifiedName = legacyProvider ? `${legacyProvider}:${fullName}` : undefined;
-	const legacyEntry = legacyQualifiedName ? map.repos[legacyQualifiedName] : undefined;
+	const legacyQualifiedName = legacyProvider
+		? `${legacyProvider}:${fullName}`
+		: undefined;
+	const legacyEntry = legacyQualifiedName
+		? map.repos[legacyQualifiedName]
+		: undefined;
 
-	const references = [...(existingEntry?.references ?? []), ...(legacyEntry?.references ?? [])];
+	const references = [
+		...(existingEntry?.references ?? []),
+		...(legacyEntry?.references ?? []),
+	];
 	if (!references.includes(referenceFileName)) {
 		references.push(referenceFileName);
 	}
 
 	const derivedKeywords =
-		keywords && keywords.length > 0 ? keywords : deriveMinimalKeywords(fullName);
+		keywords && keywords.length > 0
+			? keywords
+			: deriveMinimalKeywords(fullName);
 
 	map.repos[qualifiedName] = {
 		localPath,

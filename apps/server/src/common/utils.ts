@@ -1,5 +1,5 @@
 import { httpErrors } from "../lib/errors";
-import { type AppContext } from "./types";
+import type { AppContext } from "./types";
 
 type RouteData = {
 	params: any;

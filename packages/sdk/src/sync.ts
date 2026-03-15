@@ -3,8 +3,8 @@
  * Uses ConvexHttpClient for direct type-safe API calls
  */
 
-import { toReferenceName } from "./config.js";
 import { GitHubRepoMetadataSchema, type RepoSource } from "@loglog/types";
+import { toReferenceName } from "./config.js";
 import { getConvexClient, SyncUnavailableError } from "./sync/client.js";
 
 type ConvexApi = typeof import("@loglog/sdk/convex/api").api;
@@ -55,14 +55,18 @@ export class NetworkError extends SyncError {
 }
 
 export class AuthenticationError extends SyncError {
-	constructor(message = "Authentication required. Please run 'ow auth login' first.") {
+	constructor(
+		message = "Authentication required. Please run 'ow auth login' first.",
+	) {
 		super(message);
 		this.name = "AuthenticationError";
 	}
 }
 
 export class RateLimitError extends SyncError {
-	constructor(message = "Rate limit exceeded. You can push up to 3 times per repo per day.") {
+	constructor(
+		message = "Rate limit exceeded. You can push up to 3 times per repo per day.",
+	) {
 		super(message);
 		this.name = "RateLimitError";
 	}
@@ -211,7 +215,9 @@ async function createClient(token?: string) {
  * @param fullName - Repository full name (owner/repo)
  * @returns Reference data or null if not found
  */
-export async function pullReference(fullName: string): Promise<PullResponse | null> {
+export async function pullReference(
+	fullName: string,
+): Promise<PullResponse | null> {
 	const client = await createClient();
 	const api = await getApi();
 	try {
@@ -225,7 +231,10 @@ export async function pullReference(fullName: string): Promise<PullResponse | nu
 		if (!result) return null;
 
 		client
-			.mutation(api.references.recordPull, { fullName, referenceName: result.referenceName })
+			.mutation(api.references.recordPull, {
+				fullName,
+				referenceName: result.referenceName,
+			})
 			.catch(() => {});
 
 		return toPullResponse(result);
@@ -249,10 +258,15 @@ export async function pullReferenceByName(
 	const client = await createClient();
 	const api = await getApi();
 	try {
-		const result = await client.query(api.references.pull, { fullName, referenceName });
+		const result = await client.query(api.references.pull, {
+			fullName,
+			referenceName,
+		});
 		if (!result) return null;
 
-		client.mutation(api.references.recordPull, { fullName, referenceName }).catch(() => {});
+		client
+			.mutation(api.references.recordPull, { fullName, referenceName })
+			.catch(() => {});
 
 		return toPullResponse(result);
 	} catch (error) {
@@ -290,13 +304,17 @@ export async function pushReference(
 				case "auth_required":
 					throw new AuthenticationError();
 				case "rate_limit":
-					throw new RateLimitError("Rate limit exceeded. You can push up to 20 times per day.");
+					throw new RateLimitError(
+						"Rate limit exceeded. You can push up to 20 times per day.",
+					);
 				case "commit_already_exists":
 					throw new CommitExistsError(result.message);
 				case "invalid_input":
 					throw new InvalidInputError(result.message ?? "Invalid input");
 				case "invalid_reference":
-					throw new InvalidReferenceError(result.message ?? "Invalid reference content");
+					throw new InvalidReferenceError(
+						result.message ?? "Invalid reference content",
+					);
 				case "repo_not_found":
 					throw new RepoNotFoundError(result.message);
 				case "low_stars":
@@ -365,7 +383,10 @@ export async function checkRemoteByName(
 	const client = await createClient();
 	const api = await getApi();
 	try {
-		const result = await client.query(api.references.check, { fullName, referenceName });
+		const result = await client.query(api.references.check, {
+			fullName,
+			referenceName,
+		});
 		if (!result.exists) {
 			return { exists: false };
 		}
@@ -462,7 +483,10 @@ export async function fetchGitHubMetadata(
  * @param repo - Repository name
  * @returns Number of stars, or 0 on error
  */
-export async function fetchRepoStars(owner: string, repo: string): Promise<number> {
+export async function fetchRepoStars(
+	owner: string,
+	repo: string,
+): Promise<number> {
 	const metadata = await fetchGitHubMetadata(owner, repo);
 	return metadata?.stars ?? 0;
 }
@@ -508,7 +532,8 @@ export function validatePushAllowed(source: RepoSource): void {
 	const result = canPushToWeb(source);
 
 	if (!result.allowed) {
-		const reason: "local" | "not-github" = source.type === "local" ? "local" : "not-github";
+		const reason: "local" | "not-github" =
+			source.type === "local" ? "local" : "not-github";
 
 		throw new PushNotAllowedError(result.reason!, reason);
 	}

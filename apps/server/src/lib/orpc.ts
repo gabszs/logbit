@@ -1,5 +1,5 @@
 import { ORPCError, os } from "@orpc/server";
-import { type Context as HonoContext } from "hono";
+import type { Context as HonoContext } from "hono";
 import { getDb } from "../db";
 
 export type CreateContextOptions = {

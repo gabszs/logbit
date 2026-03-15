@@ -2,9 +2,9 @@
  * Unit tests for index-manager.ts
  */
 
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { join } from "node:path";
 import type { GlobalMap, GlobalMapRepoEntry } from "@loglog/types";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 interface VirtualFile {
 	content: string;
@@ -42,7 +42,9 @@ function addVirtualFile(
 const globalMapPath = vi.hoisted(
 	() => "/home/user/.local/share/loglog/skill/loglog/assets/map.json",
 );
-const globalMapDir = vi.hoisted(() => "/home/user/.local/share/loglog/skill/loglog/assets");
+const globalMapDir = vi.hoisted(
+	() => "/home/user/.local/share/loglog/skill/loglog/assets",
+);
 
 vi.mock("node:fs", () => ({
 	existsSync: vi.fn((path: string) => {
@@ -67,7 +69,9 @@ vi.mock("node:fs", () => ({
 			throw error;
 		}
 		if (file.permissions === 0o000) {
-			const error = new Error(`EACCES: permission denied, open '${path}'`) as NodeJS.ErrnoException;
+			const error = new Error(
+				`EACCES: permission denied, open '${path}'`,
+			) as NodeJS.ErrnoException;
 			error.code = "EACCES";
 			throw error;
 		}
@@ -107,14 +111,14 @@ vi.mock("../paths.js", () => ({
 }));
 
 import { mkdirSync, writeFileSync } from "node:fs";
-import { Paths } from "../paths.js";
 import {
 	readGlobalMap,
-	writeGlobalMap,
-	upsertGlobalMapEntry,
 	removeGlobalMapEntry,
+	upsertGlobalMapEntry,
+	writeGlobalMap,
 	writeProjectMap,
 } from "../index-manager.js";
+import { Paths } from "../paths.js";
 
 describe("index-manager.ts", () => {
 	const mockWriteFileSync = writeFileSync as ReturnType<typeof vi.fn>;
@@ -170,7 +174,9 @@ describe("index-manager.ts", () => {
 		it("returns empty map on schema error", () => {
 			addVirtualFile(
 				globalMapPath,
-				JSON.stringify({ repos: { "github.com:tanstack/router": { localPath: "/tmp" } } }),
+				JSON.stringify({
+					repos: { "github.com:tanstack/router": { localPath: "/tmp" } },
+				}),
 			);
 
 			expect(readGlobalMap()).toEqual({ repos: {} });
@@ -181,13 +187,19 @@ describe("index-manager.ts", () => {
 		it("creates directory when missing", () => {
 			writeGlobalMap(sampleMap);
 
-			expect(mockMkdirSync).toHaveBeenCalledWith(globalMapDir, { recursive: true });
+			expect(mockMkdirSync).toHaveBeenCalledWith(globalMapDir, {
+				recursive: true,
+			});
 		});
 
 		it("writes validated JSON", () => {
 			writeGlobalMap(sampleMap);
 
-			expect(mockWriteFileSync).toHaveBeenCalledWith(globalMapPath, expect.any(String), "utf-8");
+			expect(mockWriteFileSync).toHaveBeenCalledWith(
+				globalMapPath,
+				expect.any(String),
+				"utf-8",
+			);
 			const saved = virtualFs[normalizePath(globalMapPath)];
 			expect(saved).toBeDefined();
 			expect(JSON.parse(saved!.content)).toEqual(sampleMap);
@@ -263,7 +275,9 @@ describe("index-manager.ts", () => {
 			expect(mockMkdirSync).toHaveBeenCalledWith(join(projectRoot, ".loglog"), {
 				recursive: true,
 			});
-			const projectMapPath = normalizePath(join(projectRoot, ".loglog", "map.json"));
+			const projectMapPath = normalizePath(
+				join(projectRoot, ".loglog", "map.json"),
+			);
 			const saved = virtualFs[projectMapPath];
 			expect(saved).toBeDefined();
 			const parsed = JSON.parse(saved!.content) as {

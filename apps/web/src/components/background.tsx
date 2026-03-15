@@ -23,7 +23,7 @@ export function AppBackground() {
 			style={backgroundMaskStyle}
 		>
 			<div
-				className="-translate-x-1/2 -translate-y-1/2 absolute top-1/2 left-1/2 size-[160%] opacity-10 dark:opacity-25"
+				className="absolute top-1/2 left-1/2 size-[160%] -translate-x-1/2 -translate-y-1/2 opacity-10 dark:opacity-25"
 				style={{
 					...appBackgroundStyle,
 					transform: "rotate(-15deg)",

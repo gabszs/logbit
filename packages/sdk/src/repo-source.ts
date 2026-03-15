@@ -4,9 +4,13 @@
 
 import { createHash } from "node:crypto";
 import { existsSync, statSync } from "node:fs";
-import { resolve } from "node:path";
-import { basename } from "node:path";
-import type { GitProvider, LocalRepoSource, RemoteRepoSource, RepoSource } from "@loglog/types";
+import { basename, resolve } from "node:path";
+import type {
+	GitProvider,
+	LocalRepoSource,
+	RemoteRepoSource,
+	RepoSource,
+} from "@loglog/types";
 import { toReferenceFileName } from "./config.js";
 import { expandTilde } from "./paths.js";
 
@@ -39,7 +43,8 @@ const PROVIDER_HOSTS: Record<string, GitProvider> = {
 
 const HTTPS_URL_REGEX =
 	/^https?:\/\/(github\.com|gitlab\.com|bitbucket\.org)\/([^/]+)\/([^/]+?)(?:\.git)?$/;
-const SSH_URL_REGEX = /^git@(github\.com|gitlab\.com|bitbucket\.org):([^/]+)\/([^/]+?)(?:\.git)?$/;
+const SSH_URL_REGEX =
+	/^git@(github\.com|gitlab\.com|bitbucket\.org):([^/]+)\/([^/]+?)(?:\.git)?$/;
 const SHORT_FORMAT_REGEX = /^([^/:@]+)\/([^/:@]+)$/;
 
 /**
@@ -52,7 +57,11 @@ function hashPath(path: string): string {
 /**
  * Builds a clone URL for a remote repository
  */
-function buildCloneUrl(provider: GitProvider, owner: string, repo: string): string {
+function buildCloneUrl(
+	provider: GitProvider,
+	owner: string,
+	repo: string,
+): string {
 	const hosts: Record<GitProvider, string> = {
 		github: "github.com",
 		gitlab: "gitlab.com",
@@ -176,7 +185,9 @@ function parseLocalPath(input: string): LocalRepoSource {
  * Determines if input looks like a local path
  */
 function isLocalPath(input: string): boolean {
-	return input.startsWith(".") || input.startsWith("/") || input.startsWith("~");
+	return (
+		input.startsWith(".") || input.startsWith("/") || input.startsWith("~")
+	);
 }
 
 /**

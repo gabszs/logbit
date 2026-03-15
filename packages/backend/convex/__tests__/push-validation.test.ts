@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import { validatePushArgs } from "../validation/push";
 import { validateReferenceContent } from "../validation/referenceContent";
 
@@ -30,19 +30,28 @@ describe("Push Input Validation", () => {
 		});
 
 		it("rejects invalid referenceName format", () => {
-			const result = validatePushArgs({ ...validArgs, referenceName: "Invalid-Name" });
+			const result = validatePushArgs({
+				...validArgs,
+				referenceName: "Invalid-Name",
+			});
 			expect(result.valid).toBe(false);
 			expect(result.field).toBe("referenceName");
 		});
 
 		it("rejects short content", () => {
-			const result = validatePushArgs({ ...validArgs, referenceContent: "short" });
+			const result = validatePushArgs({
+				...validArgs,
+				referenceContent: "short",
+			});
 			expect(result.valid).toBe(false);
 			expect(result.field).toBe("referenceContent");
 		});
 
 		it("rejects oversized content", () => {
-			const result = validatePushArgs({ ...validArgs, referenceContent: "a".repeat(200_001) });
+			const result = validatePushArgs({
+				...validArgs,
+				referenceContent: "a".repeat(200_001),
+			});
 			expect(result.valid).toBe(false);
 			expect(result.field).toBe("referenceContent");
 		});
@@ -54,7 +63,10 @@ describe("Push Input Validation", () => {
 		});
 
 		it("rejects invalid commit SHA format", () => {
-			const result = validatePushArgs({ ...validArgs, commitSha: "G".repeat(40) });
+			const result = validatePushArgs({
+				...validArgs,
+				commitSha: "G".repeat(40),
+			});
 			expect(result.valid).toBe(false);
 			expect(result.field).toBe("commitSha");
 		});
@@ -68,7 +80,10 @@ describe("Push Input Validation", () => {
 
 		it("accepts generatedAt within 5 min of now", () => {
 			const nearFuture = new Date(Date.now() + 3 * 60_000).toISOString();
-			const result = validatePushArgs({ ...validArgs, generatedAt: nearFuture });
+			const result = validatePushArgs({
+				...validArgs,
+				generatedAt: nearFuture,
+			});
 			expect(result.valid).toBe(true);
 		});
 	});

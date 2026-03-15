@@ -3,9 +3,9 @@
  * Uses xdg-basedir package for cross-platform compatibility (Linux/macOS)
  */
 
-import { xdgConfig, xdgData, xdgState } from "xdg-basedir";
-import { join } from "node:path";
 import { homedir } from "node:os";
+import { join } from "node:path";
+import { xdgConfig, xdgData, xdgState } from "xdg-basedir";
 
 const APP_NAME = "loglog";
 

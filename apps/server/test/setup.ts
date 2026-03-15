@@ -5,7 +5,8 @@ await applyD1Migrations(env.D1, env.TEST_MIGRATIONS);
 
 vi.stubGlobal("process", {
 	env: {
-		OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: "https://collector.gabrielcarvalho.dev/v1/traces",
+		OTEL_EXPORTER_OTLP_TRACES_ENDPOINT:
+			"https://collector.gabrielcarvalho.dev/v1/traces",
 		OTEL_SERVICE_NAME: "cloudflare-rss-vitest",
 	},
 });
@@ -118,19 +119,31 @@ const mockInstrumentDO = vi.hoisted(() => {
 		// Create a mock class that extends the original
 		class MockInstrumentedClass extends cls {
 			static serve = vi.fn((_path: string) => ({
-				fetch: vi.fn().mockResolvedValue(new Response("Mock MCP Response", { status: 200 })),
+				fetch: vi
+					.fn()
+					.mockResolvedValue(
+						new Response("Mock MCP Response", { status: 200 }),
+					),
 			}));
 			static serveSSE = vi.fn((_path: string) => ({
-				fetch: vi.fn().mockResolvedValue(new Response("Mock SSE Response", { status: 200 })),
+				fetch: vi
+					.fn()
+					.mockResolvedValue(
+						new Response("Mock SSE Response", { status: 200 }),
+					),
 			}));
 		}
 
 		// Add static methods to the class itself
 		MockInstrumentedClass.serve = vi.fn((_path: string) => ({
-			fetch: vi.fn().mockResolvedValue(new Response("Mock MCP Response", { status: 200 })),
+			fetch: vi
+				.fn()
+				.mockResolvedValue(new Response("Mock MCP Response", { status: 200 })),
 		}));
 		MockInstrumentedClass.serveSSE = vi.fn((_path: string) => ({
-			fetch: vi.fn().mockResolvedValue(new Response("Mock SSE Response", { status: 200 })),
+			fetch: vi
+				.fn()
+				.mockResolvedValue(new Response("Mock SSE Response", { status: 200 })),
 		}));
 
 		return MockInstrumentedClass;
@@ -142,7 +155,10 @@ const mockInstrument = vi.hoisted(() => {
 		// Return the handler as-is for testing, ensuring it has a fetch method
 		return {
 			fetch:
-				handler.fetch || vi.fn().mockResolvedValue(new Response("Mock Response", { status: 200 })),
+				handler.fetch ||
+				vi
+					.fn()
+					.mockResolvedValue(new Response("Mock Response", { status: 200 })),
 			...handler,
 		};
 	};

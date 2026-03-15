@@ -8,13 +8,18 @@
  * The remaining tests cover validation and GitHub API functions that use fetch().
  */
 
+import type { LocalRepoSource, RemoteRepoSource } from "@loglog/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { RemoteRepoSource, LocalRepoSource } from "@loglog/types";
 
 const mockFetch = vi.fn();
 vi.stubGlobal("fetch", mockFetch);
 
-import { canPushToWeb, validatePushAllowed, fetchRepoStars, PushNotAllowedError } from "../sync.js";
+import {
+	canPushToWeb,
+	fetchRepoStars,
+	PushNotAllowedError,
+	validatePushAllowed,
+} from "../sync.js";
 
 describe("sync.ts", () => {
 	const mockGitHubSource: RemoteRepoSource = {
@@ -109,7 +114,9 @@ describe("sync.ts", () => {
 
 	describe("validatePushAllowed", () => {
 		it("throws PushNotAllowedError with reason local for local sources", () => {
-			expect(() => validatePushAllowed(mockLocalSource)).toThrow(PushNotAllowedError);
+			expect(() => validatePushAllowed(mockLocalSource)).toThrow(
+				PushNotAllowedError,
+			);
 
 			try {
 				validatePushAllowed(mockLocalSource);
@@ -119,7 +126,9 @@ describe("sync.ts", () => {
 		});
 
 		it("throws PushNotAllowedError with reason not-github for gitlab", () => {
-			expect(() => validatePushAllowed(mockGitLabSource)).toThrow(PushNotAllowedError);
+			expect(() => validatePushAllowed(mockGitLabSource)).toThrow(
+				PushNotAllowedError,
+			);
 
 			try {
 				validatePushAllowed(mockGitLabSource);
