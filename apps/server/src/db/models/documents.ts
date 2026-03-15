@@ -1,7 +1,7 @@
-import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
-import { users } from "./models/authModels";
+import { index, pgTable, sql, text, timestamp } from "drizzle-orm/pg-core";
+import { users } from "./authModels";
 
-export const documents = sqliteTable(
+export const documents = pgTable(
 	"documents",
 	{
 		id: text("id").primaryKey(),
@@ -13,10 +13,10 @@ export const documents = sqliteTable(
 		userId: text("user_id")
 			.notNull()
 			.references(() => users.id, { onDelete: "cascade" }),
-		createdAt: integer("created_at", { mode: "timestamp" }).defaultNow().notNull(),
-		updatedAt: integer("updated_at", { mode: "timestamp" })
+		createdAt: timestamp("created_at", { mode: "date", withTimezone: true }).defaultNow().notNull(),
+		updatedAt: timestamp("updated_at", { mode: "date", withTimezone: true })
 			.defaultNow()
-			.$onUpdate(() => /* @__PURE__ */ new Date())
+			.$onUpdate(() => sql`now()`)
 			.notNull(),
 	},
 	(table) => [index("documents_user_id_idx").on(table.userId)],

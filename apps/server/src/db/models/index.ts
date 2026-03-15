@@ -1,11 +1,11 @@
 import * as authModels from "./authModels";
-import { documents } from "./documents";
+// import { documents } from "./documents";
 
 export * from "drizzle-orm";
 export * from "./authModels";
-export { documents } from "./documents";
+// export { documents } from "./documents";
 
 export const models = {
 	...authModels,
-	documents,
+	// documents,
 } as const;

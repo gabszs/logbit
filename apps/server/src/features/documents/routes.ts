@@ -264,7 +264,6 @@ documentsRoutes.openapi(
 				throw httpErrors.entityNotFound("document");
 			throw err;
 		}
-		console.log(createdDocument);
 
 		return c.json(
 			{

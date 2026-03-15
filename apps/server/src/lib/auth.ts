@@ -84,7 +84,7 @@ function createAuth(c?: AppContext, cf?: IncomingRequestCfProperties) {
 					phoneNumber(),
 					emailOTP({
 						async sendVerificationOTP({ email, otp, type }) {
-							console.log("sendVerificationOTP", { email, otp, type });
+							// console.log("sendVerificationOTP", { email, otp, type });
 							if (type === "sign-in") {
 								const resend = new Resend(c?.env?.RESEND_API_KEY || "");
 								const emailHtml = await renderVerificationCodeEmail(otp);
