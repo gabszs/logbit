@@ -10,6 +10,7 @@ import { models } from "../db/models";
 
 export const auth = betterAuth({
 	basePath: settings.AUTH_BASE_PATH,
+	secret: settings.AUTH_SECRET,
 	database: drizzleAdapter(db, {
 		provider: "pg",
 		schema: models,
@@ -17,11 +18,16 @@ export const auth = betterAuth({
 	emailAndPassword: {
 		enabled: true,
 	},
-	trustedOrigins: settings.CORS_ORIGIN?.split(","),
+	trustedOrigins: settings.CORS_ORIGIN,
 	plugins: [
-		openAPI({
-			path: "/docs",
-		}),
+		...(settings.ENABLE_OPEN_API
+			? [
+					openAPI({
+						path: settings.AUTH_OPEN_API_PATH,
+						theme: settings.SCALAR_THEME,
+					}),
+				]
+			: []),
 	],
 });
 

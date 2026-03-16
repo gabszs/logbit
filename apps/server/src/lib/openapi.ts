@@ -1,3 +1,8 @@
+import { Scalar } from "@scalar/hono-api-reference";
+import { createMarkdownFromOpenApi } from "@scalar/openapi-to-markdown";
+import { settings } from "@/env";
+import type { AppType } from "@/types";
+
 export const openApiSchema = {
 	openapi: "3.0.3",
 	externalDocs: {
@@ -29,3 +34,24 @@ export const openApiSchema = {
 		},
 	},
 };
+
+export async function setupOpenApi(app: AppType) {
+	app.doc("/open-api", openApiSchema);
+
+	app.get(
+		"/docs",
+		Scalar((c) => ({
+			pageTitle: "LogLog Documentation",
+			sources: [{ url: "/open-api", title: "API" }],
+			metaData: {
+				title: "LogLog docs",
+				description: "Complete API documentation for LogLog platform",
+			},
+			theme: settings.SCALAR_THEME,
+		})),
+	);
+
+	const content = app.getOpenAPI31Document(openApiSchema);
+	const aiMarkdown = await createMarkdownFromOpenApi(JSON.stringify(content));
+	app.get("llms.txt", (c) => c.text(aiMarkdown));
+}

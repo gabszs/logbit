@@ -1,5 +1,31 @@
-import type { ResolveConfigFn } from "@microlabs/otel-cf-workers";
-import { trace } from "@opentelemetry/api";
+import { context as otelContext, trace } from "@opentelemetry/api";
+import type { MiddlewareHandler, Next } from "hono";
+import { createMiddleware } from "hono/factory";
+import { UAParser } from "ua-parser-js";
+import type { AppContext } from "../types";
+import { buildOtelQueryAttributeMap } from "./telemetry";
+import { settings } from "@/env";
+
+interface InjectOtelTraceHeaderOptions {
+	headerName?: string;
+}
+
+export const injectOtelTraceHeader = (
+	options: InjectOtelTraceHeaderOptions = {},
+): MiddlewareHandler => {
+	const { headerName = settings.OTEL_TRACE_HEADER_NAME } = options;
+
+	return async (c, next) => {
+		await next();
+
+		const traceId = trace.getActiveSpan()?.spanContext().traceId;
+		console.log(traceId)
+		
+		if (traceId) {
+			c.header(headerName, traceId);
+		}
+	};
+};
 
 export function InstrumentClass(): ClassDecorator {
 	return (target: Function) => {
@@ -101,32 +127,162 @@ export function buildOtelQueryAttributeMap(
 	);
 }
 
-export const otel_config: ResolveConfigFn = (env: Env, _trigger) => {
-	return {
-		service: { name: env.OTEL_SERVICE_NAME },
-		exporter: {
-			url: env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT,
-		},
-		// sampling: {
-		// 	headSampler: { ratio: 0.05 },
-		// 	tailSampler: (traceInfo: LocalTrace): boolean => {
-		// 		const localRootSpan = traceInfo.localRootSpan as unknown as ReadableSpan;
-		// 		// console.log(localRootSpan.attributes);
+interface TraceIdMiddlewareOptions {
+	headerName?: string;
+}
 
-		// 		if (localRootSpan.attributes["service.environment"] !== "production") return true;
-		// 		if (localRootSpan.attributes.duration_ms > 500) return true;
-		// 		if (localRootSpan.attributes["outcome"] !== "success") return true;
-		// 		if (localRootSpan.status.code === SpanStatusCode.UNSET) return false;
-		// 		if (localRootSpan.status.code === SpanStatusCode.ERROR) return true;
-		// 		if (localRootSpan.attributes["http.response.status_code"] >= 400) return true;
-		// 		// user defined tail sampling logic
-		// 		if (localRootSpan.attributes["user.role"] === "admin") return true;
-		// 		if (localRootSpan.attributes["user.banned"] === "true") return true;
-		// 		if (localRootSpan.attributes["user.assumed"] === "true") return true;
-		// 		if (localRootSpan.attributes["user.assumed_by"]) return true;
-		// 		if (localRootSpan.attributes["session.expires_at"] < Date.now()) return true;
-		// 		return Math.random() < 0.05;
-		// 	},
-		// },
+function buildUserAgentAttributes(userAgent: string | undefined) {
+	if (!userAgent) return {};
+
+	const ua = new UAParser(userAgent).getResult();
+	return {
+		"user_agent.original": userAgent,
+		"user_agent.device.model": ua.device.model,
+		"user_agent.device.type": ua.device.type,
+		"user_agent.device.vendor": ua.device.vendor,
+		"user_agent.os": ua.os.name,
+		"user_agent.os.version": ua.os.version,
+		"user_agent.browser": ua.browser.name,
+		"user_agent.browser_version": ua.browser.version,
+		"user_agent.browser_major": ua.browser.major,
+		"user_agent.browser.type": ua.browser.type,
+		"user_agent.cpu.architecture": ua.cpu.architecture,
+		"user_agent.engine": ua.engine.name,
+		"user_agent.engine.version": ua.engine.version,
 	};
-};
+}
+
+function buildServiceAttributes(c: AppContext) {
+	return {
+		"service.environment": c.env.ENVIRONMENT,
+		"deployment.environment": c.env.ENVIRONMENT,
+		"service.team": "gabrielcarvalho",
+		"service.owner": "gabrielcarvalho",
+		"service.version": c.env.SERVICE_VERSION,
+		"service.discord": "kali9849",
+		"service.build.git_hash": c.env.commitHash,
+		"service.build.git_branch": c.env.commitBranch,
+		"service.build.deployment.user": c.env.deploymentUser,
+		// "service.build.deployment.email": c.env.deploymentEmail,
+		"service.build.deployment.trigger": c.env.deploymentTrigger,
+		"service.build.deployment.id": c.env.VERSION_METADATA.id,
+		"service.build.deployment.timestamp": c.env.VERSION_METADATA.timestamp,
+	};
+}
+
+function buildClientGeoAttributes(cf: Record<string, unknown> | undefined) {
+	if (!cf) return {};
+	return {
+		// Geo location
+		"client.geo.country.iso_code": cf.country,
+		"client.geo.continent.code": cf.continent,
+		"client.geo.region.iso_code": cf.regionCode,
+		"client.geo.locality.name": cf.city,
+		"client.geo.postal_code": cf.postalCode,
+		"client.geo.location.lat": cf.latitude,
+		"client.geo.location.lon": cf.longitude,
+		// Network/Cloud
+		"cloud.availability_zone": cf.colo,
+		"http.flavor": cf.httpProtocol,
+		"network.tls.protocol.version": cf.tlsVersion,
+		"network.tls.cipher": cf.tlsCipher,
+	};
+}
+
+function buildBrowserAttributes(c: AppContext) {
+	const secChUa = c.req.header("sec-ch-ua");
+	const secChUaMobile = c.req.header("sec-ch-ua-mobile");
+	const secChUaPlatform = c.req.header("sec-ch-ua-platform");
+
+	return {
+		"browser.brands": secChUa,
+		"browser.mobile": secChUaMobile === "?1",
+		"browser.platform": secChUaPlatform?.replace(/"/g, ""),
+	};
+}
+
+async function extractErrorAttributes(response: Response) {
+	const clonedResponse = response.clone();
+	const body = (await clonedResponse.json()) as {
+		error?: string;
+		message?: string;
+		code?: string;
+	};
+	return {
+		"error.status": body.status,
+		"error.message": body.message,
+		"error.code": body.code,
+		outcome: "error",
+	};
+}
+
+export const otelConfig = (options: TraceIdMiddlewareOptions = {}) =>
+	createMiddleware(async (c: AppContext, next: Next) => {
+		const { headerName = "otel-trace-id" } = options;
+		const startTime = Date.now();
+		const span = trace.getSpan(otelContext.active());
+		const traceId = span?.spanContext().traceId;
+
+		const client_address = c.req.header("cf-connecting-ip");
+		const userAgent = c.req.header("user-agent");
+
+		// Extrai o body se existir
+		let requestBody: unknown;
+		try {
+			requestBody = await c.req.json();
+		} catch {
+			// Não há body ou não é JSON
+		}
+
+		const event: Record<string, unknown> = {
+			...buildServiceAttributes(c),
+			...buildClientGeoAttributes(c.req.raw.cf),
+			...buildUserAgentAttributes(userAgent),
+			...buildBrowserAttributes(c),
+			"http.request.id": c.req.header("cf-ray"),
+			"deployment.id": c.env.VERSION_METADATA.id,
+			timestamp: new Date(startTime).toISOString(),
+			"client.address": client_address,
+			...(requestBody !== undefined && { "http.request.body": requestBody }),
+		};
+
+		c.set("wideEvent", event);
+
+		if (span) {
+			span.setAttribute("client.address", client_address);
+			span.setAttributes(buildOtelQueryAttributeMap(c.req.query()));
+		}
+
+		await next();
+
+		const status_code = c.res.status;
+		const isError = status_code >= 400;
+		const isRateLimit = status_code === 429;
+		const isJsonError =
+			isError &&
+			!isRateLimit &&
+			c.res.headers.get("content-type")?.includes("application/json");
+
+		event["http.response.status_code"] = status_code;
+		event["duration_ms"] = Date.now() - startTime;
+		event["ratelimit.triggered"] = isRateLimit;
+
+		if (isJsonError) {
+			// Object.assign(event, await extractErrorAttributes(c.res));
+			event["outcome"] = "error";
+		} else {
+			event["outcome"] = "success";
+		}
+
+		// if (span && traceId) {
+		// span.addEvent("wideEvent", event);
+		// span.setAttributes(event);
+		// if (isError) {
+		// 	span.setStatus({ code: SpanStatusCode.ERROR, message: `HTTP ${status_code}` });
+		// } else {
+		// 	span.setStatus({ code: SpanStatusCode.OK });
+		// }
+		// }
+		span.setAttributes(event);
+		c.res.headers.set(headerName, traceId);
+	});

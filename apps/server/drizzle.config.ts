@@ -1,5 +1,5 @@
-import { defineConfig } from "drizzle-kit";
 import { settings } from "node:cluster";
+import { defineConfig } from "drizzle-kit";
 
 export default defineConfig({
 	schema: "./src/db/models/index.ts",

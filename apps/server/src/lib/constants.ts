@@ -4,6 +4,43 @@ export const EMAIL_FROM_ADDRESS = "noreply@imob.io";
 export const GITHUB_REPO_URL = "https://github.com/imob";
 export const MAIN_SITE_URL = "https://imob.io";
 
+export const ContentTypes: Record<string, string> = {
+	JSON: "application/json",
+	FORM_URLENCODED: "application/x-www-form-urlencoded",
+	FORM_DATA: "multipart/form-data",
+	TEXT: "text/plain",
+	HTML: "text/html",
+	XML: "application/xml",
+	CSV: "text/csv",
+	PDF: "application/pdf",
+	OCTET_STREAM: "application/octet-stream",
+} as const;
+
+export const HttpStatusDescriptions = {
+	// 2xx
+	OK: "Request completed successfully.",
+	CREATED: "Resource created successfully.",
+	ACCEPTED: "Request accepted and being processed.",
+	NO_CONTENT: "Request completed. No content to return.",
+
+	// 4xx
+	BAD_REQUEST: "Invalid request. Check the parameters sent.",
+	UNAUTHORIZED: "Authentication required to access this resource.",
+	FORBIDDEN: "You don't have permission to access this resource.",
+	NOT_FOUND: "The requested resource was not found.",
+	CONFLICT: "Request conflicts with the current state of the resource.",
+	UNPROCESSABLE_ENTITY: "The data sent could not be processed.",
+	TOO_MANY_REQUESTS: "Too many requests. Please try again later.",
+
+	// 5xx
+	INTERNAL_SERVER_ERROR:
+		"An unexpected error occurred. Please try again later.",
+	BAD_GATEWAY: "Invalid response received from upstream server.",
+	SERVICE_UNAVAILABLE:
+		"Service temporarily unavailable. Please try again later.",
+	GATEWAY_TIMEOUT: "Upstream server took too long to respond.",
+} as const;
+
 export const HttpStatusPhrases: Record<string, string> = {
 	/**
 	 * Official Documentation @ https://tools.ietf.org/html/rfc7231#section-6.3.3
