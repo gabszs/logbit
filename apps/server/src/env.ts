@@ -3,9 +3,7 @@ import z from "zod";
 const envSchema = z.object({
 	REDIS_URL: z.string().startsWith("redis://").optional(),
 	DATABASE_URL: z.string().startsWith("postgresql://"),
-	CORS_ORIGIN: z
-		.string()
-		.transform((val) => val.split(",")),
+	CORS_ORIGIN: z.string().transform((val) => val.split(",")),
 	NODE_ENV: z
 		.enum(["development", "production", "test"])
 		.default("development"),
@@ -36,6 +34,7 @@ const envSchema = z.object({
 		.transform((val) => val.split(","))
 		.default(["user-agent", "x-forwarded-for"]),
 	OTEL_TRACE_HEADER_NAME: z.string().default("otel-trace-id"),
+	OTEL_LOG_LEVEL: z.string().default("warn"),
 
 	// EPHEMERAL
 	SCALAR_THEME: z.string().default("deepSpace"),

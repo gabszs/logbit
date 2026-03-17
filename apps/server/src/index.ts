@@ -9,7 +9,7 @@ import authRouter from "./features/auth/routes";
 import utilityRoutes from "./features/utils/routes";
 import { store } from "./lib/cache";
 import { setupOpenApi } from "./lib/openapi";
-import { injectOtelTraceHeader, otelConfig } from "./lib/telemetry";
+import { consoleLogger, injectOtelTraceHeader } from "./lib/telemetry";
 import type { AppContext } from "./types";
 
 // RUN MIGRATIONS
@@ -27,13 +27,25 @@ const instrumentationConfig = {
 	captureRequestHeaders:
 		settings.OTEL_INSTRUMENTATION_HTTP_CAPTURE_HEADERS_SERVER,
 };
+
+// const openTelemetry = new NodeSDK({
+// 	resource: resourceFromAttributes({
+// 		[ATTR_SERVICE_NAME]: process.env.OTEL_SERVICE_NAME || "bun-application",
+// 		[ATTR_SERVICE_VERSION]: process.env.OTEL_SERVICE_VERSION || "1.0.0",
+// 	}),
+// 	traceExporter: new OTLPTraceExporter(),
+// 	metricExporter: new OTLPMetricExporter(),
+// 	instrumentations: [getNodeAutoInstrumentations()],
+// });
+// openTelemetry.start();
+
 app.use("*", httpInstrumentationMiddleware(instrumentationConfig));
 app.use(injectOtelTraceHeader());
 
 // rate-limiter middleware
 if (settings.RATE_LIMIT_ENABLED) {
 	if (!settings.REDIS_URL) {
-		console.warn(
+		consoleLogger.warn(
 			"[rate-limit] RATE_LIMIT_SLIDING_WINDOW is enabled but REDIS_URL is not set — falling back to MemoryStore.",
 		);
 	}

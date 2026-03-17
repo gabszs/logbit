@@ -1,4 +1,5 @@
 import { createRoute, OpenAPIHono } from "@hono/zod-openapi";
+import { logger } from "@/lib/telemetry";
 import {
 	ContentTypes,
 	HttpStatusCodes,
@@ -29,6 +30,7 @@ utilityRoutes.openapi(
 		},
 	}),
 	async (c: AppContext) => {
+		logger.warn("This is a warning message");
 		return c.json(
 			{
 				status: "ok",

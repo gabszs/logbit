@@ -12,7 +12,7 @@ import { settings } from "@/env";
 import type { AppContext } from "../types";
 import { buildOtelQueryAttributeMap } from "./telemetry";
 
-const transport = pino.transport({
+const otelTransport = pino.transport({
 	target: "pino-opentelemetry-transport",
 	options: {
 		serviceName: settings.OTEL_SERVICE_NAME,
@@ -26,7 +26,31 @@ const transport = pino.transport({
 	},
 });
 
-
+const consoleTransport = pino.transport({
+	targets: [
+		{
+			target: "pino-opentelemetry-transport",
+			options: {
+				serviceName: settings.OTEL_SERVICE_NAME,
+				serviceVersion: "3.0.0",
+				logLevel: settings.OTEL_LOG_LEVEL,
+				loggerName: "pino-opentelemetry-transport",
+				resourceAttributes: {
+					"os.type": os.type(),
+					"os.version": os.release(),
+				},
+			},
+		},
+		{
+			target: "pino-pretty",
+			options: {
+				colorize: true,
+				translateTime: "SYS:standard",
+				ignore: "pid,hostname,trace_id,span_id,trace_flags",
+			},
+		},
+	],
+});
 
 function otelMixin() {
 	const span = trace.getSpan(otelContext.active());
@@ -44,15 +68,15 @@ function otelMixin() {
 	};
 }
 
-export const logger = pino(
-	{
-		mixin: otelMixin,
-		mixinMergeStrategy(mergeObject, mixinObject) {
-			return { ...mergeObject, ...mixinObject };
-		},
+const pinoOptions: pino.LoggerOptions = {
+	mixin: otelMixin,
+	mixinMergeStrategy(mergeObject, mixinObject) {
+		return { ...mergeObject, ...mixinObject };
 	},
-	transport,
-);
+};
+
+export const logger = pino(pinoOptions, otelTransport);
+export const consoleLogger = pino(pinoOptions, consoleTransport);
 
 interface InjectOtelTraceHeaderOptions {
 	headerName?: string;

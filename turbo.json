@@ -15,6 +15,10 @@
 			"cache": false,
 			"persistent": true
 		},
+		"otel-dev": {
+			"cache": false,
+			"persistent": true
+		},
 		"db:push": {
 			"cache": false,
 			"persistent": true
