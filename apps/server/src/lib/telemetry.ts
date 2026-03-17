@@ -1,10 +1,70 @@
-import { context as otelContext, trace } from "@opentelemetry/api";
+import { settings } from "@/env";
+import { isSpanContextValid, context as otelContext, trace } from "@opentelemetry/api";
+import logsAPI from '@opentelemetry/api-logs';
+import { ConsoleLogRecordExporter, LoggerProvider, SimpleLogRecordProcessor } from "@opentelemetry/sdk-logs";
+import { OpenTelemetryTransportV3 } from '@opentelemetry/winston-transport';
 import type { MiddlewareHandler, Next } from "hono";
 import { createMiddleware } from "hono/factory";
+import pino from "pino";
 import { UAParser } from "ua-parser-js";
+import winston from 'winston';
 import type { AppContext } from "../types";
 import { buildOtelQueryAttributeMap } from "./telemetry";
-import { settings } from "@/env";
+import os from 'node:os';
+
+const loggerProvider = new LoggerProvider({
+  processors: [new SimpleLogRecordProcessor(new ConsoleLogRecordExporter())],
+});
+logsAPI.logs.setGlobalLoggerProvider(loggerProvider);
+
+export const logger1 = winston.createLogger({
+  level: 'info',
+  transports: [
+    new winston.transports.Console(),
+    new OpenTelemetryTransportV3()
+  ]
+});
+
+const transport = pino.transport({
+  target: "pino-opentelemetry-transport",
+  options: {
+    serviceName: settings.OTEL_SERVICE_NAME,
+    serviceVersion: "3.0.0",
+    logLevel: settings.OTEL_LOG_LEVEL,
+	loggerName: "pino-opentelemetry-transport",
+    resourceAttributes: {
+      "os.type": os.type(),
+      "os.version": os.release(),
+    },
+  },
+});
+
+
+function otelMixin() {
+  const span = trace.getSpan(otelContext.active());
+
+  if (!span) return {};
+
+  const spanContext = span.spanContext();
+
+  if (!isSpanContextValid(spanContext)) return {};
+
+  return {
+    trace_id: spanContext.traceId,
+    span_id: spanContext.spanId,
+    trace_flags: `0${spanContext.traceFlags.toString(16)}`, // "01"
+  };
+}
+
+export const logger = pino(
+  {
+    mixin: otelMixin,
+    mixinMergeStrategy(mergeObject, mixinObject) {
+      return { ...mergeObject, ...mixinObject };
+    },
+  },
+  transport,
+);
 
 interface InjectOtelTraceHeaderOptions {
 	headerName?: string;
@@ -14,13 +74,9 @@ export const injectOtelTraceHeader = (
 	options: InjectOtelTraceHeaderOptions = {},
 ): MiddlewareHandler => {
 	const { headerName = settings.OTEL_TRACE_HEADER_NAME } = options;
-
 	return async (c, next) => {
 		await next();
-
 		const traceId = trace.getActiveSpan()?.spanContext().traceId;
-		console.log(traceId)
-		
 		if (traceId) {
 			c.header(headerName, traceId);
 		}
