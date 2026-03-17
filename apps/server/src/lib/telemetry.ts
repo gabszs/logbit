@@ -1,69 +1,57 @@
-import { settings } from "@/env";
-import { isSpanContextValid, context as otelContext, trace } from "@opentelemetry/api";
-import logsAPI from '@opentelemetry/api-logs';
-import { ConsoleLogRecordExporter, LoggerProvider, SimpleLogRecordProcessor } from "@opentelemetry/sdk-logs";
-import { OpenTelemetryTransportV3 } from '@opentelemetry/winston-transport';
+import os from "node:os";
+import {
+	isSpanContextValid,
+	context as otelContext,
+	trace,
+} from "@opentelemetry/api";
 import type { MiddlewareHandler, Next } from "hono";
 import { createMiddleware } from "hono/factory";
 import pino from "pino";
 import { UAParser } from "ua-parser-js";
-import winston from 'winston';
+import { settings } from "@/env";
 import type { AppContext } from "../types";
 import { buildOtelQueryAttributeMap } from "./telemetry";
-import os from 'node:os';
-
-const loggerProvider = new LoggerProvider({
-  processors: [new SimpleLogRecordProcessor(new ConsoleLogRecordExporter())],
-});
-logsAPI.logs.setGlobalLoggerProvider(loggerProvider);
-
-export const logger1 = winston.createLogger({
-  level: 'info',
-  transports: [
-    new winston.transports.Console(),
-    new OpenTelemetryTransportV3()
-  ]
-});
 
 const transport = pino.transport({
-  target: "pino-opentelemetry-transport",
-  options: {
-    serviceName: settings.OTEL_SERVICE_NAME,
-    serviceVersion: "3.0.0",
-    logLevel: settings.OTEL_LOG_LEVEL,
-	loggerName: "pino-opentelemetry-transport",
-    resourceAttributes: {
-      "os.type": os.type(),
-      "os.version": os.release(),
-    },
-  },
+	target: "pino-opentelemetry-transport",
+	options: {
+		serviceName: settings.OTEL_SERVICE_NAME,
+		serviceVersion: "3.0.0",
+		logLevel: settings.OTEL_LOG_LEVEL,
+		loggerName: "pino-opentelemetry-transport",
+		resourceAttributes: {
+			"os.type": os.type(),
+			"os.version": os.release(),
+		},
+	},
 });
+
 
 
 function otelMixin() {
-  const span = trace.getSpan(otelContext.active());
+	const span = trace.getSpan(otelContext.active());
 
-  if (!span) return {};
+	if (!span) return {};
 
-  const spanContext = span.spanContext();
+	const spanContext = span.spanContext();
 
-  if (!isSpanContextValid(spanContext)) return {};
+	if (!isSpanContextValid(spanContext)) return {};
 
-  return {
-    trace_id: spanContext.traceId,
-    span_id: spanContext.spanId,
-    trace_flags: `0${spanContext.traceFlags.toString(16)}`, // "01"
-  };
+	return {
+		trace_id: spanContext.traceId,
+		span_id: spanContext.spanId,
+		trace_flags: `0${spanContext.traceFlags.toString(16)}`, // "01"
+	};
 }
 
 export const logger = pino(
-  {
-    mixin: otelMixin,
-    mixinMergeStrategy(mergeObject, mixinObject) {
-      return { ...mergeObject, ...mixinObject };
-    },
-  },
-  transport,
+	{
+		mixin: otelMixin,
+		mixinMergeStrategy(mergeObject, mixinObject) {
+			return { ...mergeObject, ...mixinObject };
+		},
+	},
+	transport,
 );
 
 interface InjectOtelTraceHeaderOptions {
