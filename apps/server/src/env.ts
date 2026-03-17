@@ -1,12 +1,17 @@
 import z from "zod";
 
 const envSchema = z.object({
+	// GENERAL SETTINGS
 	REDIS_URL: z.string().startsWith("redis://").optional(),
 	DATABASE_URL: z.string().startsWith("postgresql://"),
 	CORS_ORIGIN: z.string().transform((val) => val.split(",")),
 	NODE_ENV: z
 		.enum(["development", "production", "test"])
 		.default("development"),
+
+	// EPHEMERAL
+	SCALAR_THEME: z.string().default("deepSpace"),
+	ENABLE_OPEN_API: z.coerce.boolean().default(true),
 
 	// Auth settings
 	AUTH_SECRET: z.string().default("supersecret"),
@@ -27,7 +32,9 @@ const envSchema = z.object({
 	RATE_LIMIT_PREFIX: z.string().default("loglog-api-limit:"),
 
 	// INTERNAL OTEL-SETTINGS
+	OTEL_PROFILING_ENABLED: z.coerce.boolean().default(false),
 	OTEL_SERVICE_NAME: z.string().default("loglog-api"),
+	OTEL_SERVICE_NAMESPACE: z.string().optional(),
 	OTEL_SERVICE_VERSION: z.string().default("1.0.0"),
 	OTEL_INSTRUMENTATION_HTTP_CAPTURE_HEADERS_SERVER: z
 		.string()
@@ -35,10 +42,6 @@ const envSchema = z.object({
 		.default(["user-agent", "x-forwarded-for"]),
 	OTEL_TRACE_HEADER_NAME: z.string().default("otel-trace-id"),
 	OTEL_LOG_LEVEL: z.string().default("warn"),
-
-	// EPHEMERAL
-	SCALAR_THEME: z.string().default("deepSpace"),
-	ENABLE_OPEN_API: z.coerce.boolean().default(true),
 });
 
 export const settings = envSchema.parse(Bun.env);

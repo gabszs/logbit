@@ -1,8 +1,9 @@
-import v8 from "node:v8";
+import { settings } from "@/env";
 import { DiagConsoleLogger, DiagLogLevel, diag } from "@opentelemetry/api";
 import { getNodeAutoInstrumentations } from "@opentelemetry/auto-instrumentations-node";
 import { OTLPMetricExporter } from "@opentelemetry/exporter-metrics-otlp-http";
 import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http";
+import { HostMetrics } from '@opentelemetry/host-metrics';
 import { resourceFromAttributes } from "@opentelemetry/resources";
 import { PeriodicExportingMetricReader } from "@opentelemetry/sdk-metrics";
 import { NodeSDK } from "@opentelemetry/sdk-node";
@@ -10,7 +11,7 @@ import {
 	ATTR_SERVICE_NAME,
 	ATTR_SERVICE_VERSION,
 } from "@opentelemetry/semantic-conventions";
-import { settings } from "@/env";
+import v8 from "node:v8";
 
 // Polyfill for Bun compatibility to prevent OTel crash
 v8.getHeapSpaceStatistics = () => [
@@ -23,8 +24,6 @@ v8.getHeapSpaceStatistics = () => [
 	},
 ];
 
-const isDevelopment = settings.NODE_ENV === "development";
-
 const sdk = new NodeSDK({
 	resource: resourceFromAttributes({
 		[ATTR_SERVICE_NAME]: settings.OTEL_SERVICE_NAME,
@@ -36,9 +35,6 @@ const sdk = new NodeSDK({
 			exporter: new OTLPMetricExporter(),
 		}),
 	],
-	// logRecordProcessors: [
-	//     new logs.SimpleLogRecordProcessor(new logs.ConsoleLogRecordExporter()),
-	// ],
 	instrumentations: [
 		getNodeAutoInstrumentations({
 			"@opentelemetry/instrumentation-fs": { enabled: false },
@@ -55,10 +51,17 @@ diag.setLogger(new DiagConsoleLogger(), {
 
 sdk.start();
 
+const hostMetrics = new HostMetrics({ name: settings.OTEL_SERVICE_NAME });
+hostMetrics.start();
+
 const shutdownSignals = ["SIGTERM", "SIGINT", "SIGQUIT", "uncaughtException"];
 
 for (const signal of shutdownSignals) {
-	process.on(signal, () => {
+	process.on(signal, (errorOrEvent) => {
+		if (signal === "uncaughtException") {
+			console.error("Uncaught exception:", errorOrEvent);
+		}
+
 		sdk
 			.shutdown()
 			.then(() => console.log("OpenTelemetry SDK shut down successfully"))
