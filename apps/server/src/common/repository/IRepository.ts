@@ -9,7 +9,7 @@ export interface IRepository<TData = unknown> {
 
 	getById(id: string, filters?: Filters): Promise<TData | null>;
 
-	create(data: unknown): Promise<TData | void>;
+	create(data: unknown): Promise<TData | null>;
 
 	update?(id: string, data: unknown, filters?: Filters): Promise<unknown>;
 

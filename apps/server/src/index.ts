@@ -27,18 +27,6 @@ const instrumentationConfig = {
 	captureRequestHeaders:
 		settings.OTEL_INSTRUMENTATION_HTTP_CAPTURE_HEADERS_SERVER,
 };
-
-// const openTelemetry = new NodeSDK({
-// 	resource: resourceFromAttributes({
-// 		[ATTR_SERVICE_NAME]: process.env.OTEL_SERVICE_NAME || "bun-application",
-// 		[ATTR_SERVICE_VERSION]: process.env.OTEL_SERVICE_VERSION || "1.0.0",
-// 	}),
-// 	traceExporter: new OTLPTraceExporter(),
-// 	metricExporter: new OTLPMetricExporter(),
-// 	instrumentations: [getNodeAutoInstrumentations()],
-// });
-// openTelemetry.start();
-
 app.use("*", httpInstrumentationMiddleware(instrumentationConfig));
 app.use(injectOtelTraceHeader());
 

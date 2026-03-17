@@ -27,6 +27,13 @@ interface SearchOptionsWithFilters extends z.infer<typeof searchOptionsSchema> {
 	createdOnOrAfter?: Date;
 }
 
+type SearchQuery = {
+	orderBy: (...values: unknown[]) => SearchQuery;
+	where: (condition: SQL<unknown>) => SearchQuery;
+	limit: (value: number) => SearchQuery;
+	offset: (value: number) => SearchQuery;
+};
+
 export class BaseSqlRepository<Model extends SQLiteTable>
 	implements IRepository<InferInsertModel<Model>>
 {
@@ -55,7 +62,7 @@ export class BaseSqlRepository<Model extends SQLiteTable>
 	}
 
 	protected applySearchOptions(
-		query: any,
+		query: SearchQuery,
 		searchOptions: SearchOptionsWithFilters,
 	) {
 		const ordering = searchOptions.ordering || "createdAt";
@@ -91,7 +98,7 @@ export class BaseSqlRepository<Model extends SQLiteTable>
 			}
 
 			if (dateConditions.length > 0) {
-				query = query.where(and(...dateConditions) as any);
+				query = query.where(and(...dateConditions) as SQL<unknown>);
 			}
 		}
 		if (searchOptions.pageSize !== "all") {
