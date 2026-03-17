@@ -27,15 +27,17 @@ interface SearchOptionsWithFilters extends z.infer<typeof searchOptionsSchema> {
 	createdOnOrAfter?: Date;
 }
 
-type SearchQuery = {
-	orderBy: (...values: unknown[]) => SearchQuery;
-	where: (condition: SQL<unknown>) => SearchQuery;
-	limit: (value: number) => SearchQuery;
-	offset: (value: number) => SearchQuery;
-};
-
 export class BaseSqlRepository<Model extends SQLiteTable>
-	implements IRepository<InferInsertModel<Model>>
+	implements
+		IRepository<
+			InferInsertModel<Model>,
+			InferInsertModel<Model>,
+			Partial<InferInsertModel<Model>>,
+			SearchOptionsWithFilters,
+			Filters,
+			object,
+			object
+		>
 {
 	protected model: Model;
 	public db: DrizzleD1Database;
@@ -62,7 +64,7 @@ export class BaseSqlRepository<Model extends SQLiteTable>
 	}
 
 	protected applySearchOptions(
-		query: SearchQuery,
+		query: any,
 		searchOptions: SearchOptionsWithFilters,
 	) {
 		const ordering = searchOptions.ordering || "createdAt";
@@ -180,7 +182,9 @@ export class BaseSqlRepository<Model extends SQLiteTable>
 		return result?.count ?? 0;
 	}
 
-	async query<T = unknown>(queryString: string): Promise<T[]> {
+	async query<
+		T = Record<string, string | number | boolean | Date | null>,
+	>(queryString: string): Promise<T[]> {
 		const result = await this.db.execute(sql.raw(queryString));
 		return result.results as T[];
 	}

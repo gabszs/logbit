@@ -2,20 +2,37 @@ import type { z } from "zod";
 import type { searchOptionsSchema } from "../schemas/baseSchemas";
 
 type SearchOptions = z.infer<typeof searchOptionsSchema>;
-type Filters = Record<string, unknown>;
+type FilterValue = string | number | boolean | Date | null;
+export type Filters = Record<string, FilterValue>;
 
-export interface IRepository<TData = unknown> {
-	getAll(searchOptions: SearchOptions, filters?: Filters): Promise<TData[]>;
+type JsonPrimitive = string | number | boolean | null;
+type JsonValue = JsonPrimitive | { [key: string]: JsonValue } | JsonValue[];
+type JsonObject = { [key: string]: JsonValue };
 
-	getById(id: string, filters?: Filters): Promise<TData | null>;
+export interface IRepository<
+	TData = object,
+	TCreate = Partial<TData>,
+	TUpdate = Partial<TCreate>,
+	TSearchOptions extends SearchOptions = SearchOptions,
+	TFilters extends Filters = Filters,
+	TMutationResult = TData | null,
+	TDeleteResult = object,
+> {
+	getAll(searchOptions: TSearchOptions, filters?: TFilters): Promise<TData[]>;
 
-	create(data: unknown): Promise<TData | null>;
+	getById(id: string, filters?: TFilters): Promise<TData | null>;
 
-	update?(id: string, data: unknown, filters?: Filters): Promise<unknown>;
+	create(data: TCreate): Promise<TMutationResult>;
 
-	delete(id: string, filters?: Filters): Promise<unknown>;
+	update?(
+		id: string,
+		data: TUpdate,
+		filters?: TFilters,
+	): Promise<TMutationResult>;
 
-	count?(filters?: Filters): Promise<number>;
+	delete(id: string, filters?: TFilters): Promise<TDeleteResult>;
 
-	query<T = unknown>(queryString: string): Promise<T[]>;
+	count?(filters?: TFilters): Promise<number>;
+
+	query<T = JsonObject>(queryString: string): Promise<T[]>;
 }

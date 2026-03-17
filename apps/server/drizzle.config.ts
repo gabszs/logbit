@@ -1,5 +1,5 @@
-import { settings } from "@/env";
 import { defineConfig } from "drizzle-kit";
+import { settings } from "@/env";
 
 if (!settings.DATABASE_URL) {
 	throw new Error("DATABASE_URL is required to run Drizzle config");
