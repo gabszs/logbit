@@ -182,9 +182,9 @@ export class BaseSqlRepository<Model extends SQLiteTable>
 		return result?.count ?? 0;
 	}
 
-	async query<
-		T = Record<string, string | number | boolean | Date | null>,
-	>(queryString: string): Promise<T[]> {
+	async query<T = Record<string, string | number | boolean | Date | null>>(
+		queryString: string,
+	): Promise<T[]> {
 		const result = await this.db.execute(sql.raw(queryString));
 		return result.results as T[];
 	}

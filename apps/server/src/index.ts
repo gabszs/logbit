@@ -1,8 +1,8 @@
 import { httpInstrumentationMiddleware } from "@hono/otel";
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
-import { showRoutes } from "hono/dev";
 import { rateLimiter } from "hono-rate-limiter";
+import { showRoutes } from "hono/dev";
 import { db } from "./db/index";
 import { settings } from "./env";
 import authRouter from "./features/auth/routes";
@@ -83,7 +83,7 @@ app.route("/", utilityRoutes);
 
 // docs
 if (settings.ENABLE_OPEN_API) {
-	await setupOpenApi(app);
+	setupOpenApi(app);
 }
 
 showRoutes(app);

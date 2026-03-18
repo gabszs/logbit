@@ -1,7 +1,9 @@
-import { settings } from "@/env";
-import type { AppType } from "@/types";
+import type { RouteConfig } from "@hono/zod-openapi";
 import { Scalar } from "@scalar/hono-api-reference";
 import { createMarkdownFromOpenApi } from "@scalar/openapi-to-markdown";
+import type { OpenAPIV3 } from "openapi-types";
+import { settings } from "@/env";
+import type { AppType } from "@/types";
 import { auth } from "./auth";
 
 export const openApiSchema = {
@@ -22,9 +24,9 @@ export const openApiSchema = {
 		},
 		termsOfService: "https://traki.io/privacy",
 	},
-};
+} satisfies OpenAPIV3.Document;
 
-const tagDescriptions: { name: string; description: string }[] = [
+const tagDescriptions: OpenAPIV3.TagObject[] = [
 	{
 		name: "Utilities",
 		description:
@@ -59,35 +61,12 @@ const tagDescriptions: { name: string; description: string }[] = [
 		name: "Cloudflare",
 		description:
 			"Endpoints integrated with Cloudflare infrastructure for edge-level operations and configurations.",
-	}
+	},
 ];
 
-export async function setupOpenApi(app: AppType) {
-	const schema = await auth.api.generateOpenAPISchema();
-
-	for (const [key, value] of Object.entries(
-		schema.components?.securitySchemes ?? {},
-	)) {
-		app.openAPIRegistry.registerComponent("securitySchemes", key, value);
-	}
-	for (const [key, value] of Object.entries(schema.components?.schemas ?? {})) {
-		app.openAPIRegistry.registerComponent("schemas", key, value);
-	}
-	for (const [path, pathItem] of Object.entries(schema.paths ?? {})) {
-		const fullPath = `${settings.AUTH_BASE_PATH}${path}`;
-		for (const [method, operation] of Object.entries(pathItem)) {
-			const op = operation as any;
-			app.openAPIRegistry.registerPath({
-				method: method as any,
-				path: fullPath,
-				...op,
-				summary: path,
-				tags: op.tags?.map((tag: string) => (tag === "Default" ? "Auth" : tag)),
-			});
-		}
-	}
-
+export function setupOpenApi(app: AppType) {
 	app.doc("/open-api", { ...openApiSchema, tags: tagDescriptions });
+
 	app.get(
 		"/docs",
 		Scalar({
@@ -102,7 +81,7 @@ export async function setupOpenApi(app: AppType) {
 				preferredSecurityScheme: "bearerAuth",
 				securitySchemes: {
 					bearerAuth: {
-						token: "loglog_session_token", // valor padrão, o usuário preenche na UI
+						token: "loglog_session_token",
 					},
 					apiKeyCookie: {
 						value: "loglog_cookie",
@@ -112,7 +91,39 @@ export async function setupOpenApi(app: AppType) {
 		}),
 	);
 
-	const content = app.getOpenAPI31Document(openApiSchema);
-	const aiMarkdown = await createMarkdownFromOpenApi(JSON.stringify(content));
-	app.get("llms.txt", (c) => c.text(aiMarkdown));
+	(async () => {
+		const schema = await auth.api.generateOpenAPISchema();
+
+		for (const [key, value] of Object.entries(
+			schema.components?.securitySchemes ?? {},
+		)) {
+			app.openAPIRegistry.registerComponent("securitySchemes", key, value);
+		}
+
+		for (const [key, value] of Object.entries(
+			schema.components?.schemas ?? {},
+		)) {
+			app.openAPIRegistry.registerComponent("schemas", key, value);
+		}
+
+		for (const [path, pathItem] of Object.entries(schema.paths ?? {})) {
+			const fullPath = `${settings.AUTH_BASE_PATH}${path}`;
+			for (const [method, operation] of Object.entries(
+				pathItem as OpenAPIV3.PathItemObject,
+			)) {
+				const op = operation as OpenAPIV3.OperationObject;
+				app.openAPIRegistry.registerPath({
+					method: method as RouteConfig["method"],
+					path: fullPath,
+					...op,
+					summary: path,
+					tags: op.tags?.map((tag) => (tag === "Default" ? "Auth" : tag)),
+				});
+			}
+		}
+
+		const content = app.getOpenAPI31Document(openApiSchema);
+		const aiMarkdown = await createMarkdownFromOpenApi(JSON.stringify(content));
+		app.get("llms.txt", (c) => c.text(aiMarkdown));
+	})();
 }

@@ -1,9 +1,9 @@
-import { settings } from "@/env";
+import v8 from "node:v8";
 import { DiagConsoleLogger, DiagLogLevel, diag } from "@opentelemetry/api";
 import { getNodeAutoInstrumentations } from "@opentelemetry/auto-instrumentations-node";
 import { OTLPMetricExporter } from "@opentelemetry/exporter-metrics-otlp-http";
 import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http";
-import { HostMetrics } from '@opentelemetry/host-metrics';
+import { HostMetrics } from "@opentelemetry/host-metrics";
 import { resourceFromAttributes } from "@opentelemetry/resources";
 import { PeriodicExportingMetricReader } from "@opentelemetry/sdk-metrics";
 import { NodeSDK } from "@opentelemetry/sdk-node";
@@ -11,7 +11,7 @@ import {
 	ATTR_SERVICE_NAME,
 	ATTR_SERVICE_VERSION,
 } from "@opentelemetry/semantic-conventions";
-import v8 from "node:v8";
+import { settings } from "@/env";
 
 // Polyfill for Bun compatibility to prevent OTel crash
 v8.getHeapSpaceStatistics = () => [
@@ -40,6 +40,7 @@ const sdk = new NodeSDK({
 			"@opentelemetry/instrumentation-fs": { enabled: false },
 			"@opentelemetry/instrumentation-dns": { enabled: false },
 			"@opentelemetry/instrumentation-pino": { enabled: false },
+			"@opentelemetry/instrumentation-ioredis": { enabled: true },
 		}),
 	],
 });

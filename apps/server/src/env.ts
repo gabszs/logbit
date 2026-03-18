@@ -43,4 +43,4 @@ const envSchema = z.object({
 	OTEL_LOG_LEVEL: z.string().default("warn"),
 });
 
-export const settings = envSchema.parse(Bun.env);
+export const settings = envSchema.parse(process.env);
