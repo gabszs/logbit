@@ -20,36 +20,41 @@ export const openApiSchema = {
 			url: "https://traki.io",
 		},
 		termsOfService: "https://traki.io/privacy",
-	},
-
-	components: {
-		securitySchemes: {
-			bearerAuth: {
-				type: "http",
-				scheme: "bearer",
-				bearerFormat: "API Key",
-				description:
-					"Enter your API key in the format **Bearer &lt;api_key&gt;**. You can generate API keys from your dashboard at https://traki.io/dashboard/api-keys",
-			},
-		},
-	},
+	}
 };
 
 export async function setupOpenApi(app: AppType) {
 	app.doc("/open-api", openApiSchema);
 
-	app.get(
-		"/docs",
-		Scalar((c) => ({
-			pageTitle: "LogLog Documentation",
-			sources: [{ url: "/open-api", title: "API" }],
-			metaData: {
-				title: "LogLog docs",
-				description: "Complete API documentation for LogLog platform",
-			},
-			theme: settings.SCALAR_THEME,
-		})),
-	);
+app.openAPIRegistry.registerComponent("securitySchemes", "bearerAuth", {
+    type: "http",
+    scheme: "bearer",
+    bearerFormat: "JWT",
+});
+
+app.get(
+    "/docs",
+    Scalar({
+        pageTitle: "LogLog Documentation",
+        sources: [
+            { url: "/open-api", title: "API" },
+            { url: "/api/auth/open-api/generate-schema", title: "Auth" },
+        ],
+        metaData: {
+            title: "LogLog docs",
+            description: "Complete API documentation for LogLog platform",
+        },
+        theme: settings.SCALAR_THEME,
+        authentication: {
+            preferredSecurityScheme: "bearerAuth",
+            securitySchemes: {
+                bearerAuth: {
+                    token: "loglog_session_token", // valor padrão, o usuário preenche na UI
+                },
+            },
+        },
+    })
+);
 
 	const content = app.getOpenAPI31Document(openApiSchema);
 	const aiMarkdown = await createMarkdownFromOpenApi(JSON.stringify(content));
