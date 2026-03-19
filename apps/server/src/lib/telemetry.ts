@@ -1,9 +1,6 @@
-import os from "node:os";
-import {
-	isSpanContextValid,
-	context as otelContext,
-	trace,
-} from "@opentelemetry/api";
+import { context as otelContext, trace } from "@opentelemetry/api";
+import type { LogAttributes } from "@opentelemetry/api-logs";
+import { logs, SeverityNumber } from "@opentelemetry/api-logs";
 import type { MiddlewareHandler, Next } from "hono";
 import { createMiddleware } from "hono/factory";
 import pino from "pino";
@@ -12,71 +9,71 @@ import { settings } from "@/env";
 import type { AppContext } from "../types";
 import { buildOtelQueryAttributeMap } from "./telemetry";
 
-const otelTransport = pino.transport({
-	target: "pino-opentelemetry-transport",
-	options: {
-		serviceName: settings.OTEL_SERVICE_NAME,
-		serviceVersion: "3.0.0",
-		logLevel: settings.OTEL_LOG_LEVEL,
-		loggerName: "pino-opentelemetry-transport",
-		resourceAttributes: {
-			"os.type": os.type(),
-			"os.version": os.release(),
-		},
-	},
-});
-
-const consoleTransport = pino.transport({
-	targets: [
-		{
-			target: "pino-opentelemetry-transport",
-			options: {
-				serviceName: settings.OTEL_SERVICE_NAME,
-				serviceVersion: "3.0.0",
-				logLevel: settings.OTEL_LOG_LEVEL,
-				loggerName: "pino-opentelemetry-transport",
-				resourceAttributes: {
-					"os.type": os.type(),
-					"os.version": os.release(),
+const consoleLogger = pino(
+	{},
+	pino.transport({
+		targets: [
+			{
+				target: "pino-pretty",
+				options: {
+					colorize: true,
+					translateTime: "SYS:standard",
 				},
 			},
-		},
-		{
-			target: "pino-pretty",
-			options: {
-				colorize: true,
-				translateTime: "SYS:standard",
-				ignore: "pid,hostname,trace_id,span_id,trace_flags",
-			},
-		},
-	],
-});
+		],
+	}),
+);
 
-function otelMixin() {
-	const span = trace.getSpan(otelContext.active());
+type LogOptions = {
+	attributes?: LogAttributes;
+	severity?: SeverityNumber;
+	printConsole?: boolean;
+};
 
-	if (!span) return {};
+function createLogger(name: string, version?: string) {
+	const otelLogger = logs.getLogger(name, version);
 
-	const spanContext = span.spanContext();
+	function emit(
+		severityNumber: SeverityNumber,
+		severityText: string,
+		body: string,
+		{ attributes, severity, printConsole }: LogOptions = {},
+	) {
+		otelLogger.emit({
+			severityNumber: severity ?? severityNumber,
+			severityText,
+			body,
+			...(attributes ? { attributes } : {}),
+		});
 
-	if (!isSpanContextValid(spanContext)) return {};
+		if (printConsole) {
+			const level = severityText.toLowerCase() as pino.Level;
+			consoleLogger[level](attributes ?? {}, body);
+		}
+	}
 
 	return {
-		trace_id: spanContext.traceId,
-		span_id: spanContext.spanId,
-		trace_flags: `0${spanContext.traceFlags.toString(16)}`, // "01"
+		trace: (body: string, options?: LogOptions) =>
+			emit(SeverityNumber.TRACE, "TRACE", body, options),
+
+		debug: (body: string, options?: LogOptions) =>
+			emit(SeverityNumber.DEBUG, "DEBUG", body, options),
+
+		info: (body: string, options?: LogOptions) =>
+			emit(SeverityNumber.INFO, "INFO", body, options),
+
+		warn: (body: string, options?: LogOptions) =>
+			emit(SeverityNumber.WARN, "WARN", body, options),
+
+		error: (body: string, options?: LogOptions) =>
+			emit(SeverityNumber.ERROR, "ERROR", body, options),
+
+		fatal: (body: string, options?: LogOptions) =>
+			emit(SeverityNumber.FATAL, "FATAL", body, options),
 	};
 }
 
-const pinoOptions: pino.LoggerOptions = {
-	mixin: otelMixin,
-	mixinMergeStrategy(mergeObject, mixinObject) {
-		return { ...mergeObject, ...mixinObject };
-	},
-};
-
-export const logger = pino(pinoOptions, otelTransport);
-export const consoleLogger = pino(pinoOptions, consoleTransport);
+export const logger = createLogger("loglog.api", "1.0.0");
 
 interface InjectOtelTraceHeaderOptions {
 	headerName?: string;

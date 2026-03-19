@@ -1,15 +1,15 @@
 import { httpInstrumentationMiddleware } from "@hono/otel";
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
-import { rateLimiter } from "hono-rate-limiter";
 import { showRoutes } from "hono/dev";
+import { rateLimiter } from "hono-rate-limiter";
 import { db } from "./db/index";
 import { settings } from "./env";
 import authRouter from "./features/auth/routes";
 import utilityRoutes from "./features/utils/routes";
 import { store } from "./lib/cache";
 import { setupOpenApi } from "./lib/openapi";
-import { consoleLogger, injectOtelTraceHeader } from "./lib/telemetry";
+import { injectOtelTraceHeader, logger } from "./lib/telemetry";
 import type { AppContext } from "./types";
 
 // RUN MIGRATIONS
@@ -33,8 +33,9 @@ app.use(injectOtelTraceHeader());
 // rate-limiter middleware
 if (settings.RATE_LIMIT_ENABLED) {
 	if (!settings.REDIS_URL) {
-		consoleLogger.warn(
+		logger.warn(
 			"[rate-limit] RATE_LIMIT_SLIDING_WINDOW is enabled but REDIS_URL is not set — falling back to MemoryStore.",
+			{ printConsole: true },
 		);
 	}
 	app.use(

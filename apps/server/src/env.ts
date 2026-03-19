@@ -32,6 +32,7 @@ const envSchema = z.object({
 	RATE_LIMIT_PREFIX: z.string().default("loglog-api-limit:"),
 
 	// INTERNAL OTEL-SETTINGS
+	OTEL_EXPORTER_OTLP_ENDPOINT: z.string().default("http://localhost:4318"),
 	OTEL_SERVICE_NAME: z.string().default("loglog-api"),
 	OTEL_SERVICE_NAMESPACE: z.string().optional(),
 	OTEL_SERVICE_VERSION: z.string().default("1.0.0"),
