@@ -1,4 +1,5 @@
 import v8 from "node:v8";
+import { BunRedisInstrumentation } from "@loglog/bun-instrumentation-redis";
 import { DiagConsoleLogger, DiagLogLevel, diag } from "@opentelemetry/api";
 import { getNodeAutoInstrumentations } from "@opentelemetry/auto-instrumentations-node";
 import { OTLPMetricExporter } from "@opentelemetry/exporter-metrics-otlp-http";
@@ -36,11 +37,13 @@ const sdk = new NodeSDK({
 		}),
 	],
 	instrumentations: [
+		new BunRedisInstrumentation(),
 		getNodeAutoInstrumentations({
 			"@opentelemetry/instrumentation-fs": { enabled: false },
 			"@opentelemetry/instrumentation-dns": { enabled: false },
 			"@opentelemetry/instrumentation-pino": { enabled: false },
-			"@opentelemetry/instrumentation-ioredis": { enabled: true },
+			"@opentelemetry/instrumentation-ioredis": { enabled: false },
+			"@opentelemetry/instrumentation-redis": { enabled: false },
 		}),
 	],
 });
