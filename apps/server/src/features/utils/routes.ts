@@ -1,5 +1,5 @@
 import { createRoute, OpenAPIHono } from "@hono/zod-openapi";
-import { redis } from "@/lib/cache";
+import { redis } from "bun";
 import { logger } from "@/lib/telemetry";
 import {
 	ContentTypes,
@@ -9,9 +9,9 @@ import {
 import type { AppContext } from "../../types";
 import { healthSchema } from "./schemas";
 
-const utilityRoutes = new OpenAPIHono<AppContext>();
+const utilityRouter = new OpenAPIHono<AppContext>();
 
-utilityRoutes.openapi(
+utilityRouter.openapi(
 	createRoute({
 		tags: ["Utilities"],
 		summary: "Health check endpoint",
@@ -31,7 +31,9 @@ utilityRoutes.openapi(
 		},
 	}),
 	async (c: AppContext) => {
-		redis.get("test");
+		// redis.get("test");
+		await redis.set("test", "hello from node-redis");
+		await redis.get("test");
 		logger.warn("This is a warning message");
 		return c.json(
 			{
@@ -43,4 +45,4 @@ utilityRoutes.openapi(
 	},
 );
 
-export default utilityRoutes;
+export default utilityRouter;

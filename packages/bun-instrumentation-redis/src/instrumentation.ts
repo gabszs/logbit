@@ -1,0 +1,325 @@
+import {
+	context,
+	diag,
+	SpanKind,
+	SpanStatusCode,
+	trace,
+} from "@opentelemetry/api";
+import {
+	InstrumentationBase,
+	InstrumentationNodeModuleDefinition,
+} from "@opentelemetry/instrumentation";
+import { defaultDbStatementSerializer } from "@opentelemetry/redis-common";
+import {
+	ATTR_DB_OPERATION_NAME,
+	ATTR_DB_QUERY_TEXT,
+} from "@opentelemetry/semantic-conventions";
+import type { RedisInstrumentationConfig } from "./types";
+import { getClientAttributes } from "./utils";
+
+const PACKAGE_NAME = "@loglog/bun-instrumentation-redis";
+const PACKAGE_VERSION = "0.1.0";
+
+declare const Bun: any;
+
+const WRAP_SYMBOL = Symbol("opentelemetry.bun-redis.wrapped");
+
+export class BunRedisInstrumentation extends InstrumentationBase {
+	constructor(config: RedisInstrumentationConfig = {}) {
+		super(PACKAGE_NAME, PACKAGE_VERSION, config);
+	}
+
+	protected init() {
+		// Direct patch for Bun's global RedisClient if available
+		if (typeof Bun !== "undefined" && Bun.RedisClient) {
+			console.log("Bun.RedisClient found globally, patching directly...");
+			this._patchRedisClient(Bun.RedisClient);
+		}
+
+		return [
+			new InstrumentationNodeModuleDefinition(
+				"bun",
+				["*"],
+				(moduleExports: any) => {
+					console.log("Bun module loaded, checking for RedisClient...");
+					if (moduleExports && moduleExports.RedisClient) {
+						console.log("RedisClient found in module exports, patching...");
+						this._patchRedisClient(moduleExports.RedisClient);
+					}
+					return moduleExports;
+				},
+				(moduleExports: any) => {
+					if (moduleExports && moduleExports.RedisClient) {
+						this._unpatchRedisClient(moduleExports.RedisClient);
+					}
+				},
+			),
+		];
+	}
+
+	private _patchRedisClient(RedisClient: any) {
+		const proto = RedisClient.prototype;
+
+		// List of commands to patch, based on Bun's valkey.classes.ts
+		const commands = [
+			"get",
+			"set",
+			"del",
+			"incr",
+			"incrby",
+			"incrbyfloat",
+			"decr",
+			"decrby",
+			"exists",
+			"expire",
+			"expireat",
+			"pexpire",
+			"ttl",
+			"hmset",
+			"hset",
+			"hsetnx",
+			"hget",
+			"hmget",
+			"hdel",
+			"hexists",
+			"hrandfield",
+			"hscan",
+			"hgetdel",
+			"hgetex",
+			"hsetex",
+			"hexpire",
+			"hexpireat",
+			"hexpiretime",
+			"hpersist",
+			"hpexpire",
+			"hpexpireat",
+			"hpexpiretime",
+			"hpttl",
+			"httl",
+			"sismember",
+			"sadd",
+			"srem",
+			"smembers",
+			"srandmember",
+			"spop",
+			"hincrby",
+			"hincrbyfloat",
+			"bitcount",
+			"blmove",
+			"blmpop",
+			"blpop",
+			"brpop",
+			"brpoplpush",
+			"getbit",
+			"setbit",
+			"getrange",
+			"setrange",
+			"dump",
+			"expiretime",
+			"getdel",
+			"getex",
+			"hgetall",
+			"hkeys",
+			"hlen",
+			"hvals",
+			"keys",
+			"lindex",
+			"linsert",
+			"llen",
+			"lmove",
+			"lmpop",
+			"lpop",
+			"lpos",
+			"lrange",
+			"lrem",
+			"lset",
+			"ltrim",
+			"persist",
+			"pexpireat",
+			"pexpiretime",
+			"pttl",
+			"randomkey",
+			"rpop",
+			"rpoplpush",
+			"scan",
+			"scard",
+			"sdiff",
+			"sdiffstore",
+			"sinter",
+			"sintercard",
+			"sinterstore",
+			"smismember",
+			"sscan",
+			"strlen",
+			"sunion",
+			"sunionstore",
+			"type",
+			"zcard",
+			"zcount",
+			"zlexcount",
+			"zpopmax",
+			"zpopmin",
+			"zrandmember",
+			"zrange",
+			"zrangebylex",
+			"zrangebyscore",
+			"zrangestore",
+			"zrem",
+			"zremrangebylex",
+			"zremrangebyrank",
+			"zremrangebyscore",
+			"zrevrange",
+			"zrevrangebylex",
+			"zrevrangebyscore",
+			"append",
+			"getset",
+			"lpush",
+			"lpushx",
+			"pfadd",
+			"rpush",
+			"rpushx",
+			"setnx",
+			"setex",
+			"psetex",
+			"zscore",
+			"zincrby",
+			"zmscore",
+			"zadd",
+			"zscan",
+			"zdiff",
+			"zdiffstore",
+			"zinter",
+			"zintercard",
+			"zinterstore",
+			"zunion",
+			"zunionstore",
+			"zmpop",
+			"bzmpop",
+			"bzpopmin",
+			"bzpopmax",
+			"mget",
+			"mset",
+			"msetnx",
+			"ping",
+			"publish",
+			"script",
+			"select",
+			"spublish",
+			"smove",
+			"substr",
+			"hstrlen",
+			"zrank",
+			"zrevrank",
+			"subscribe",
+			"psubscribe",
+			"unsubscribe",
+			"punsubscribe",
+			"pubsub",
+			"copy",
+			"unlink",
+			"touch",
+			"rename",
+			"renamenx",
+			"send", // Generic send method
+		];
+
+		for (const command of commands) {
+			if (typeof proto[command] === "function") {
+				if (proto[command][WRAP_SYMBOL]) {
+					continue;
+				}
+				const original = proto[command];
+				const wrapped = this._patchCommand(command)(original);
+				(wrapped as any)[WRAP_SYMBOL] = true;
+				(wrapped as any)._original = original;
+
+				try {
+					// Since it's writable: true but configurable: false, we just assign it
+					proto[command] = wrapped;
+				} catch (e) {
+					console.error(`Failed to patch RedisClient.prototype.${command}:`, e);
+				}
+			}
+		}
+	}
+
+	private _unpatchRedisClient(RedisClient: any) {
+		const proto = RedisClient.prototype;
+		for (const key in proto) {
+			if (proto[key] && proto[key][WRAP_SYMBOL]) {
+				try {
+					proto[key] = proto[key]._original;
+				} catch (e) {
+					console.error(`Failed to unpatch RedisClient.prototype.${key}:`, e);
+				}
+			}
+		}
+	}
+
+	private _patchCommand(commandName: string) {
+		const instrumentation = this;
+		return (original: Function) => {
+			return function (this: any, ...args: any[]) {
+				// console.log(`Executing wrapped command: ${commandName}`);
+				const config = instrumentation._config as RedisInstrumentationConfig;
+				const hasNoParentSpan = trace.getSpan(context.active()) === undefined;
+
+				if (config.requireParentSpan && hasNoParentSpan) {
+					return original.apply(this, args);
+				}
+
+				const span = instrumentation.tracer.startSpan(`redis-${commandName}`, {
+					kind: SpanKind.CLIENT,
+					attributes: {
+						...getClientAttributes(this),
+						[ATTR_DB_OPERATION_NAME]: commandName,
+					},
+				});
+
+				const serializer =
+					config.dbStatementSerializer || defaultDbStatementSerializer;
+				try {
+					const statement = serializer(commandName, args);
+					if (statement) {
+						span.setAttribute(ATTR_DB_QUERY_TEXT, statement);
+					}
+				} catch (e) {
+					diag.error("Error serializing redis statement", e);
+				}
+
+				return context.with(trace.setSpan(context.active(), span), () => {
+					const result = original.apply(this, args);
+
+					if (result instanceof Promise) {
+						return result.then(
+							(res) => {
+								if (config.responseHook) {
+									try {
+										config.responseHook(span, commandName, args, res);
+									} catch (e) {
+										diag.error("Error in redis responseHook", e);
+									}
+								}
+								span.end();
+								return res;
+							},
+							(err) => {
+								span.recordException(err);
+								span.setStatus({
+									code: SpanStatusCode.ERROR,
+									message: err.message,
+								});
+								span.end();
+								throw err;
+							},
+						);
+					}
+
+					// If it's not a promise (unlikely for Bun Redis commands, but possible for some methods)
+					span.end();
+					return result;
+				});
+			};
+		};
+	}
+}
