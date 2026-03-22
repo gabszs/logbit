@@ -1,4 +1,4 @@
-import { settings } from "@/env";
+import v8 from "node:v8";
 import { BunPgInstrumentation } from "@loglog/bun-instrumentation-pg";
 import { BunRedisInstrumentation } from "@loglog/bun-instrumentation-redis";
 import { DiagConsoleLogger, DiagLogLevel, diag } from "@opentelemetry/api";
@@ -13,7 +13,7 @@ import {
 	ATTR_SERVICE_NAME,
 	ATTR_SERVICE_VERSION,
 } from "@opentelemetry/semantic-conventions";
-import v8 from "node:v8";
+import { settings } from "@/env";
 
 // Polyfill for Bun compatibility to prevent OTel crash
 v8.getHeapSpaceStatistics = () => [
