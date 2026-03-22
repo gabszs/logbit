@@ -28,7 +28,6 @@ export const auth = betterAuth({
 				return redis.get(key);
 			},
 			set: async (key: string, value: string, ttl?: number): Promise<void> => {
-				console.log(`Settings, key: ${key}, value: ${value}, ttl: ${ttl}`);
 				await redis.set(key, value);
 				if (ttl) await redis.expire(key, ttl);
 			},

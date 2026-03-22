@@ -1,4 +1,5 @@
-import v8 from "node:v8";
+import { settings } from "@/env";
+import { BunPgInstrumentation } from "@loglog/bun-instrumentation-pg";
 import { BunRedisInstrumentation } from "@loglog/bun-instrumentation-redis";
 import { DiagConsoleLogger, DiagLogLevel, diag } from "@opentelemetry/api";
 import { getNodeAutoInstrumentations } from "@opentelemetry/auto-instrumentations-node";
@@ -12,7 +13,7 @@ import {
 	ATTR_SERVICE_NAME,
 	ATTR_SERVICE_VERSION,
 } from "@opentelemetry/semantic-conventions";
-import { settings } from "@/env";
+import v8 from "node:v8";
 
 // Polyfill for Bun compatibility to prevent OTel crash
 v8.getHeapSpaceStatistics = () => [
@@ -37,6 +38,7 @@ const sdk = new NodeSDK({
 		}),
 	],
 	instrumentations: [
+		new BunPgInstrumentation(),
 		new BunRedisInstrumentation(),
 		getNodeAutoInstrumentations({
 			"@opentelemetry/instrumentation-fs": { enabled: false },
@@ -44,6 +46,7 @@ const sdk = new NodeSDK({
 			"@opentelemetry/instrumentation-pino": { enabled: false },
 			"@opentelemetry/instrumentation-ioredis": { enabled: false },
 			"@opentelemetry/instrumentation-redis": { enabled: false },
+			"@opentelemetry/instrumentation-pg": { enabled: true },
 		}),
 	],
 });
