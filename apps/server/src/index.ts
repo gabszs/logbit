@@ -1,17 +1,20 @@
 import { httpInstrumentationMiddleware } from "@hono/otel";
 import { OpenAPIHono } from "@hono/zod-openapi";
+import { type InferRouterInputs, type InferRouterOutputs } from "@orpc/server";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
-import { showRoutes } from "hono/dev";
 import { MemoryStore, rateLimiter } from "hono-rate-limiter";
+import { showRoutes } from "hono/dev";
 import { db } from "./db";
 import { settings } from "./env";
 import authRouter from "./features/auth/routes";
+import { profileRouter } from "./features/profile/routes";
 import utilityRoutes from "./features/utils/routes";
 import { BunRedisStore } from "./lib/cache";
-import { authenticateSession, authMiddleware } from "./lib/middleware";
 import { setupOpenApi } from "./lib/openapi";
+import { createContext } from "./lib/orpc";
 import { injectOtelTraceHeader, logger } from "./lib/telemetry";
 import type { AppContext } from "./types";
+import { RPCHandler } from "@orpc/server/fetch";
 
 // RUN MIGRATIONS
 await migrate(db, { migrationsFolder: "./src/db/migrations" });
@@ -58,27 +61,27 @@ if (settings.RATE_LIMIT_ENABLED) {
 }
 
 // ORPC - Profile routes
-// export const OrpcRouter = {
-// 	profile: profileRouter,
-// } as const;
+export const OrpcRouter = {
+	profile: profileRouter,
+} as const;
 
-// const rpcHandler = new RPCHandler(OrpcRouter);
+const rpcHandler = new RPCHandler(OrpcRouter);
 
-// export type AppRouter = typeof OrpcRouter;
-// export type RouterOutputs = InferRouterOutputs<AppRouter>;
-// export type RouterInputs = InferRouterInputs<AppRouter>;
+export type AppRouter = typeof OrpcRouter;
+export type RouterOutputs = InferRouterOutputs<AppRouter>;
+export type RouterInputs = InferRouterInputs<AppRouter>;
 
-// app.use("/api/orpc/*", async (c) => {
-// 	const { matched, response } = await rpcHandler.handle(c.req.raw, {
-// 		prefix: "/api/orpc",
-// 		context: await createContext({ context: c }),
-// 	});
+app.use("/v1/orpc/*", async (c) => {
+	const { matched, response } = await rpcHandler.handle(c.req.raw, {
+		prefix: "/api/orpc",
+		context: await createContext({ context: c }),
+	});
 
-// 	if (!matched || !response) {
-// 		return c.notFound();
-// 	}
-// 	return response;
-// });
+	if (!matched || !response) {
+		return c.notFound();
+	}
+	return response;
+});
 
 // V1 Routes
 const v1Routes = [authRouter] as const;

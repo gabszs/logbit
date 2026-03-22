@@ -5,11 +5,12 @@ import { protectedProcedure } from "../../lib/orpc";
 
 export const profileRouter = {
 	getProfile: protectedProcedure.handler(async ({ context }) => {
-		return await context.db
+		const [user] = await context.db
 			.select()
 			.from(users)
 			.where(eq(users.id, context.session.user.id))
-			.get();
+			.limit(1);
+		return user;
 	}),
 
 	updateProfile: protectedProcedure
@@ -20,7 +21,7 @@ export const profileRouter = {
 			}),
 		)
 		.handler(async ({ context, input }) => {
-			return await context.db
+			const [updatedUser] = await context.db
 				.update(users)
 				.set({
 					name: input.name,
@@ -28,8 +29,8 @@ export const profileRouter = {
 					updatedAt: new Date(),
 				})
 				.where(eq(users.id, context.session.user.id))
-				.returning()
-				.get();
+				.returning();
+			return updatedUser;
 		}),
 
 	getInitials: protectedProcedure
