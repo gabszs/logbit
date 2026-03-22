@@ -1,6 +1,4 @@
 import { createRoute, OpenAPIHono } from "@hono/zod-openapi";
-import { redis } from "@/lib/cache";
-import { logger } from "@/lib/telemetry";
 import {
 	ContentTypes,
 	HttpStatusCodes,
@@ -30,15 +28,13 @@ utilityRouter.openapi(
 			},
 		},
 	}),
-	async (c: AppContext) => {
-		return c.json(
+	async (c: AppContext) => c.json(
 			{
 				status: "ok",
 				timestamp: new Date().toISOString(),
 			},
 			HttpStatusCodes.OK,
-		);
-	},
+		),
 );
 
 export default utilityRouter;

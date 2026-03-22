@@ -1,4 +1,4 @@
-import { Attributes } from "@opentelemetry/api";
+import type { Attributes } from "@opentelemetry/api";
 
 // Semantic Conventions v1.40.0+
 export const ATTR_DB_SYSTEM_NAME = "db.system.name";

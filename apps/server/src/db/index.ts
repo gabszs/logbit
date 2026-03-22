@@ -1,10 +1,10 @@
+import { SQL } from "bun";
 import { settings } from "@/env";
 import "dotenv/config";
-import { SQL } from "bun";
 import { drizzle } from "drizzle-orm/bun-sql";
 import { models } from "./models";
 
-const client = new SQL({
+export const pgClient = new SQL({
 	url: settings.DATABASE_URL,
 	max: 10,
 	idleTimeout: 30,
@@ -12,13 +12,13 @@ const client = new SQL({
 	connectionTimeout: 10,
 });
 
-export const db = drizzle(client, {
+export const db = drizzle(pgClient, {
 	schema: models,
 	casing: "snake_case",
 });
 
 const shutdown = async () => {
-	await client.close(); // drena conexões ativas e fecha o pool
+	await pgClient.close(); // drena conexões ativas e fecha o pool
 	process.exit(0);
 };
 

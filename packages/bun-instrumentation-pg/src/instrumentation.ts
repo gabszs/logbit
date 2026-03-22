@@ -1,7 +1,7 @@
 import {
 	context,
 	diag,
-	Span,
+	type Span,
 	SpanKind,
 	SpanStatusCode,
 	trace,
@@ -11,7 +11,7 @@ import {
 	InstrumentationNodeModuleDefinition,
 	isWrapped,
 } from "@opentelemetry/instrumentation";
-import { PgInstrumentationConfig } from "./types";
+import type { PgInstrumentationConfig } from "./types";
 import {
 	ATTR_DB_OPERATION_NAME,
 	ATTR_DB_QUERY_TEXT,
@@ -186,7 +186,7 @@ export class BunPgInstrumentation extends InstrumentationBase {
 			}
 
 			// Extract query text for specific methods
-			let queryText: string | undefined = undefined;
+			let queryText: string | undefined;
 			let operationName: string | undefined = name;
 
 			if (name === "unsafe" && typeof args[0] === "string") {
@@ -244,8 +244,7 @@ export class BunPgInstrumentation extends InstrumentationBase {
 	}
 
 	private _handleQuery(originalInstance: any, args: any[]) {
-		const instrumentation = this;
-		const config = instrumentation._config as PgInstrumentationConfig;
+		const config = this._config as PgInstrumentationConfig;
 		const hasNoParentSpan = trace.getSpan(context.active()) === undefined;
 
 		if (config.requireParentSpan && hasNoParentSpan) {
@@ -253,7 +252,7 @@ export class BunPgInstrumentation extends InstrumentationBase {
 		}
 
 		// Detect if it's a tagged template call: args[0] is an array of strings
-		let queryText: string | undefined = undefined;
+		let queryText: string | undefined;
 		if (Array.isArray(args[0]) && (args[0] as any).raw) {
 			// Tagged template
 			const strings = args[0] as string[];
@@ -266,11 +265,7 @@ export class BunPgInstrumentation extends InstrumentationBase {
 			? parseNormalizedOperationName(queryText)
 			: undefined;
 
-		const span = instrumentation._startPgSpan(
-			originalInstance,
-			operation,
-			queryText,
-		);
+		const span = this._startPgSpan(originalInstance, operation, queryText);
 
 		return context.with(trace.setSpan(context.active(), span), () => {
 			try {
@@ -278,7 +273,7 @@ export class BunPgInstrumentation extends InstrumentationBase {
 
 				// Bun SQL queries return a Promise-like object (DirectQuery/PostgresSQLQuery)
 				if (result && typeof result.then === "function") {
-					return instrumentation._wrapQuery(result, span);
+					return this._wrapQuery(result, span);
 				}
 
 				span.end();
@@ -297,8 +292,7 @@ export class BunPgInstrumentation extends InstrumentationBase {
 	}
 
 	private _wrapQuery(query: any, span: any) {
-		const instrumentation = this;
-		const config = instrumentation._config as PgInstrumentationConfig;
+		const config = this._config as PgInstrumentationConfig;
 		let spanEnded = false;
 
 		const endSpan = (err?: any, res?: any) => {

@@ -1,18 +1,18 @@
 import {
-    context,
-    diag,
-    SpanKind,
-    SpanStatusCode,
-    trace,
+	context,
+	diag,
+	SpanKind,
+	SpanStatusCode,
+	trace,
 } from "@opentelemetry/api";
 import {
-    InstrumentationBase,
-    InstrumentationNodeModuleDefinition,
+	InstrumentationBase,
+	InstrumentationNodeModuleDefinition,
 } from "@opentelemetry/instrumentation";
 import { defaultDbStatementSerializer } from "@opentelemetry/redis-common";
 import {
-    ATTR_DB_OPERATION_NAME,
-    ATTR_DB_QUERY_TEXT,
+	ATTR_DB_OPERATION_NAME,
+	ATTR_DB_QUERY_TEXT,
 } from "@opentelemetry/semantic-conventions";
 import type { RedisInstrumentationConfig } from "./types";
 import { getClientAttributes } from "./utils";
@@ -282,7 +282,10 @@ export class BunRedisInstrumentation extends InstrumentationBase {
 				});
 
 				// Handle Lua scripts (EVAL/EVALSHA)
-				if (commandName.toLowerCase() === "eval" || commandName.toLowerCase() === "evalsha") {
+				if (
+					commandName.toLowerCase() === "eval" ||
+					commandName.toLowerCase() === "evalsha"
+				) {
 					if (args.length > 0 && typeof args[0] === "string") {
 						span.setAttribute(ATTR_DB_STORED_PROCEDURE_NAME, args[0]);
 					}
@@ -317,10 +320,10 @@ export class BunRedisInstrumentation extends InstrumentationBase {
 							},
 							(err) => {
 								span.recordException(err);
-								
+
 								// error.type SHOULD match the canonical name of exception or status code
 								span.setAttribute(ATTR_ERROR_TYPE, err.name || "Error");
-								
+
 								// Extract Redis error prefix if available (e.g., "ERR", "WRONGTYPE")
 								if (err.message && typeof err.message === "string") {
 									const match = err.message.match(/^([A-Z]+)\s/);
