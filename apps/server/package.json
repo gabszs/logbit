@@ -4,10 +4,12 @@
 	"type": "module",
 	"private": true,
 	"dependencies": {
+		"@better-auth/redis-storage": "^1.5.5",
 		"@hono-rate-limiter/redis": "^0.1.4",
 		"@hono/otel": "^1.1.0",
 		"@hono/zod-openapi": "^1.2.0",
 		"@opentelemetry/api": "^1.9.0",
+		"@loglog/bun-instrumentation-redis": "workspace:*",
 		"@opentelemetry/api-logs": "^0.213.0",
 		"@opentelemetry/auto-instrumentations-node": "^0.71.0",
 		"@opentelemetry/exporter-metrics-otlp-http": "^0.213.0",
@@ -46,11 +48,13 @@
 		"auth:generate": "npx auth@latest generate --config src/lib/auth.ts --output src/db/models/authModels.ts -y"
 	},
 	"devDependencies": {
-		"drizzle-kit": "^0.31.8",
-		"tsx": "^4.21.0",
 		"@types/node": "catalog:",
+		"bun": "^1.3.11",
+		"bunx": "^0.1.0",
 		"dotenv": "catalog:",
+		"drizzle-kit": "^0.31.8",
 		"tsdown": "catalog:",
+		"tsx": "^4.21.0",
 		"typescript": "catalog:",
 		"vitest": "catalog:"
 	}

@@ -1,12 +1,12 @@
-import { redis } from "bun";
-import { createMiddleware } from "hono/factory";
+import { settings } from "@/env";
+import { RedisClient } from "bun";
 import type {
 	ClientRateLimitInfo,
 	HonoConfigType,
 	Store,
 } from "hono-rate-limiter";
-import { rateLimiter } from "hono-rate-limiter";
-import { settings } from "@/env";
+
+export const redis = new RedisClient(settings.REDIS_URL);
 
 const INCREMENT_SCRIPT = `
   local hits = redis.call("INCR", KEYS[1])
@@ -26,7 +26,7 @@ const GET_SCRIPT = `
   return { hits, pttl }
 `;
 
-class BunRedisStore implements Store {
+export class BunRedisStore implements Store {
 	windowMs = 0;
 
 	constructor(
@@ -42,14 +42,14 @@ class BunRedisStore implements Store {
 		return `${this.prefix}${k}`;
 	}
 
-	async get(key: string): Promise<ClientRateLimitInfo | undefined> {
+	async get(key: string): Promise<ClientRateLimitInfo | null> {
 		const result = (await redis.send("EVAL", [
 			GET_SCRIPT,
 			"1",
 			this.key(key),
 		])) as [string, number] | null;
 
-		if (result === null) return undefined;
+		if (result === null) return null;
 
 		return {
 			totalHits: Number(result[0]),
@@ -58,18 +58,34 @@ class BunRedisStore implements Store {
 	}
 
 	async increment(key: string): Promise<ClientRateLimitInfo> {
-		const result = (await redis.send("EVAL", [
-			INCREMENT_SCRIPT,
-			"1",
-			this.key(key),
-			this.windowMs.toString(),
-			this.resetExpiryOnChange ? "1" : "0",
-		])) as [number, number];
+		return tracer.startActiveSpan(
+			"rate_limit.increment",
+			{
+				kind: SpanKind.INTERNAL,
+				attributes: {
+					"rate_limit.key": key,
+					"rate_limit.prefix": this.prefix,
+				},
+			},
+			async (span) => {
+				const result = (await redis.send("EVAL", [
+					INCREMENT_SCRIPT,
+					"1",
+					this.key(key),
+					this.windowMs.toString(),
+					this.resetExpiryOnChange ? "1" : "0",
+				])) as [number, number];
 
-		return {
-			totalHits: result[0],
-			resetTime: new Date(Date.now() + result[1]),
-		};
+				const info = {
+					totalHits: result[0],
+					resetTime: new Date(Date.now() + result[1]),
+				};
+
+				span.setAttribute("rate_limit.total_hits", info.totalHits);
+				span.end();
+				return info;
+			},
+		);
 	}
 
 	async decrement(key: string): Promise<void> {
@@ -80,10 +96,3 @@ class BunRedisStore implements Store {
 		await redis.del(this.key(key));
 	}
 }
-
-export const store = settings.REDIS_URL
-	? new BunRedisStore(
-			settings.RATE_LIMIT_PREFIX,
-			settings.RATE_LIMIT_SLIDING_WINDOW,
-		)
-	: undefined;

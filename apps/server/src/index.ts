@@ -1,21 +1,19 @@
 import { httpInstrumentationMiddleware } from "@hono/otel";
 import { OpenAPIHono } from "@hono/zod-openapi";
-import { migrate } from "drizzle-orm/postgres-js/migrator";
 import { showRoutes } from "hono/dev";
-import { rateLimiter } from "hono-rate-limiter";
-import { db } from "./db/index";
+import { MemoryStore, rateLimiter } from "hono-rate-limiter";
 import { settings } from "./env";
 import authRouter from "./features/auth/routes";
 import utilityRoutes from "./features/utils/routes";
-import { store } from "./lib/cache";
+import { BunRedisStore } from "./lib/cache";
 import { setupOpenApi } from "./lib/openapi";
 import { injectOtelTraceHeader, logger } from "./lib/telemetry";
 import type { AppContext } from "./types";
 
 // RUN MIGRATIONS
-if (settings.NODE_ENV !== "production") {
-	await migrate(db, { migrationsFolder: "./src/db/migrations" });
-}
+// if (settings.NODE_ENV !== "production") {
+// 	await migrate(db, { migrationsFolder: "./src/db/migrations" });
+// }
 
 const app = new OpenAPIHono<AppContext>();
 
@@ -43,8 +41,16 @@ if (settings.RATE_LIMIT_ENABLED) {
 			standardHeaders: settings.RATE_LIMIT_HEADERS,
 			windowMs: settings.RATE_LIMIT_WINDOW_SECONDS * 1000,
 			limit: settings.RATE_LIMIT_MAX_REQUESTS,
-			keyGenerator: (c) => c.req.header("x-forwarded-for") ?? "",
-			...(store && { store }),
+			keyGenerator: (c) =>
+				c.req.header("cf-connecting-ip") ||
+				c.req.header("x-forwarded-for")?.split(",")[0].trim() ||
+				"",
+			store: settings.REDIS_URL
+				? new BunRedisStore(
+						settings.RATE_LIMIT_PREFIX,
+						settings.RATE_LIMIT_SLIDING_WINDOW,
+					)
+				: new MemoryStore(),
 		}),
 	);
 }

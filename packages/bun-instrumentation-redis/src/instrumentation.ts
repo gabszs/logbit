@@ -32,7 +32,7 @@ export class BunRedisInstrumentation extends InstrumentationBase {
 	protected init() {
 		// Direct patch for Bun's global RedisClient if available
 		if (typeof Bun !== "undefined" && Bun.RedisClient) {
-			console.log("Bun.RedisClient found globally, patching directly...");
+			diag.debug("Bun.RedisClient found globally, patching directly...");
 			this._patchRedisClient(Bun.RedisClient);
 		}
 
@@ -41,9 +41,8 @@ export class BunRedisInstrumentation extends InstrumentationBase {
 				"bun",
 				["*"],
 				(moduleExports: any) => {
-					console.log("Bun module loaded, checking for RedisClient...");
 					if (moduleExports && moduleExports.RedisClient) {
-						console.log("RedisClient found in module exports, patching...");
+						diag.debug("RedisClient found in module exports, patching...");
 						this._patchRedisClient(moduleExports.RedisClient);
 					}
 					return moduleExports;
@@ -237,7 +236,7 @@ export class BunRedisInstrumentation extends InstrumentationBase {
 					// Since it's writable: true but configurable: false, we just assign it
 					proto[command] = wrapped;
 				} catch (e) {
-					console.error(`Failed to patch RedisClient.prototype.${command}:`, e);
+					diag.error(`Failed to patch RedisClient.prototype.${command}:`, e);
 				}
 			}
 		}
@@ -250,7 +249,7 @@ export class BunRedisInstrumentation extends InstrumentationBase {
 				try {
 					proto[key] = proto[key]._original;
 				} catch (e) {
-					console.error(`Failed to unpatch RedisClient.prototype.${key}:`, e);
+					diag.error(`Failed to unpatch RedisClient.prototype.${key}:`, e);
 				}
 			}
 		}
@@ -260,7 +259,6 @@ export class BunRedisInstrumentation extends InstrumentationBase {
 		const instrumentation = this;
 		return (original: Function) => {
 			return function (this: any, ...args: any[]) {
-				// console.log(`Executing wrapped command: ${commandName}`);
 				const config = instrumentation._config as RedisInstrumentationConfig;
 				const hasNoParentSpan = trace.getSpan(context.active()) === undefined;
 
