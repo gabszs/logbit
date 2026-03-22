@@ -21,14 +21,19 @@ export function getClientAttributes(sql: any): Attributes {
 	};
 }
 
-export function parseNormalizedOperationName(queryText: string): string {
-	if (!queryText) return "UNKNOWN";
+export function parseNormalizedOperationName(
+	queryText: string,
+): string | undefined {
+	if (!queryText) return undefined;
 	const trimmedQuery = queryText.trim();
+	if (!trimmedQuery) return undefined;
+
 	const indexOfFirstSpace = trimmedQuery.indexOf(" ");
 	let sqlCommand =
 		indexOfFirstSpace === -1
 			? trimmedQuery
 			: trimmedQuery.slice(0, indexOfFirstSpace);
+
 	sqlCommand = sqlCommand.toUpperCase();
 	return sqlCommand.endsWith(";") ? sqlCommand.slice(0, -1) : sqlCommand;
 }

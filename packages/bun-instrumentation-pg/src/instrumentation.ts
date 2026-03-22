@@ -1,6 +1,7 @@
 import {
 	context,
 	diag,
+	Span,
 	SpanKind,
 	SpanStatusCode,
 	trace,
@@ -28,6 +29,8 @@ declare const Bun: any;
 const WRAP_SYMBOL = Symbol("opentelemetry.bun-pg.wrapped");
 
 export class BunPgInstrumentation extends InstrumentationBase {
+	private _methodCache = new WeakMap<any, Map<string, Function>>();
+
 	constructor(config: PgInstrumentationConfig = {}) {
 		super(PACKAGE_NAME, PACKAGE_VERSION, config);
 	}
@@ -99,9 +102,41 @@ export class BunPgInstrumentation extends InstrumentationBase {
 		}
 	}
 
+	private _startPgSpan(
+		instance: any,
+		operation?: string,
+		queryText?: string,
+	): Span {
+		const dbName = extractDatabaseName(instance.options);
+		const baseName = operation || "query";
+		const spanName = dbName ? `${baseName} ${dbName}` : baseName;
+
+		const attributes: any = {
+			...getClientAttributes(instance),
+		};
+
+		if (operation) {
+			attributes[ATTR_DB_OPERATION_NAME] = operation;
+		}
+
+		if (queryText) {
+			attributes[ATTR_DB_QUERY_TEXT] = queryText;
+		}
+
+		return this.tracer.startSpan(spanName, {
+			kind: SpanKind.CLIENT,
+			attributes,
+		});
+	}
+
 	private _wrapSqlInstance(instance: any) {
 		const instrumentation = this;
 		const originalInstance = instance;
+
+		// Prevent double wrapping
+		if (originalInstance[WRAP_SYMBOL]) {
+			return originalInstance;
+		}
 
 		return new Proxy(originalInstance, {
 			apply(target, thisArg, argArray) {
@@ -114,7 +149,21 @@ export class BunPgInstrumentation extends InstrumentationBase {
 					if (prop === "then" || prop === "catch" || prop === "finally") {
 						return value.bind(target);
 					}
-					return instrumentation._patchMethod(prop, value, target);
+
+					// Use cache for patched methods
+					let instanceCache = instrumentation._methodCache.get(target);
+					if (!instanceCache) {
+						instanceCache = new Map();
+						instrumentation._methodCache.set(target, instanceCache);
+					}
+
+					let patchedMethod = instanceCache.get(prop);
+					if (!patchedMethod) {
+						patchedMethod = instrumentation._patchMethod(prop, value, target);
+						instanceCache.set(prop, patchedMethod);
+					}
+
+					return patchedMethod;
 				}
 				return value;
 			},
@@ -131,16 +180,14 @@ export class BunPgInstrumentation extends InstrumentationBase {
 				return original.apply(instance, args);
 			}
 
-			// For methods like 'begin', 'transaction', we might want specific spans
-			// but for now let's just trace them as generic PG operations if they are important.
 			// 'close' usually doesn't need a span unless specified.
 			if (name === "close") {
 				return original.apply(instance, args);
 			}
 
-			// Extract query text for unsafe method
-			let queryText = "UNKNOWN";
-			let operationName = name;
+			// Extract query text for specific methods
+			let queryText: string | undefined = undefined;
+			let operationName: string | undefined = name;
 
 			if (name === "unsafe" && typeof args[0] === "string") {
 				queryText = args[0];
@@ -156,18 +203,11 @@ export class BunPgInstrumentation extends InstrumentationBase {
 				operationName = "ROLLBACK";
 			}
 
-			// Get database name for span name
-			const dbName = extractDatabaseName(instance.options);
-			const spanName = dbName ? `${operationName} ${dbName}` : operationName;
-
-			const span = instrumentation.tracer.startSpan(spanName, {
-				kind: SpanKind.CLIENT,
-				attributes: {
-					...getClientAttributes(instance),
-					[ATTR_DB_OPERATION_NAME]: operationName,
-					[ATTR_DB_QUERY_TEXT]: queryText,
-				},
-			});
+			const span = instrumentation._startPgSpan(
+				instance,
+				operationName,
+				queryText,
+			);
 
 			if (name === "transaction" && typeof args[0] === "function") {
 				const originalCallback = args[0];
@@ -213,7 +253,7 @@ export class BunPgInstrumentation extends InstrumentationBase {
 		}
 
 		// Detect if it's a tagged template call: args[0] is an array of strings
-		let queryText = "UNKNOWN";
+		let queryText: string | undefined = undefined;
 		if (Array.isArray(args[0]) && (args[0] as any).raw) {
 			// Tagged template
 			const strings = args[0] as string[];
@@ -222,19 +262,15 @@ export class BunPgInstrumentation extends InstrumentationBase {
 			queryText = args[0];
 		}
 
-		const operation = parseNormalizedOperationName(queryText);
-		// Get database name for span name
-		const dbName = extractDatabaseName(originalInstance.options);
-		const spanName = dbName ? `${operation} ${dbName}` : operation;
+		const operation = queryText
+			? parseNormalizedOperationName(queryText)
+			: undefined;
 
-		const span = instrumentation.tracer.startSpan(spanName, {
-			kind: SpanKind.CLIENT,
-			attributes: {
-				...getClientAttributes(originalInstance),
-				[ATTR_DB_OPERATION_NAME]: operation,
-				[ATTR_DB_QUERY_TEXT]: queryText,
-			},
-		});
+		const span = instrumentation._startPgSpan(
+			originalInstance,
+			operation,
+			queryText,
+		);
 
 		return context.with(trace.setSpan(context.active(), span), () => {
 			try {
