@@ -28,13 +28,15 @@ utilityRouter.openapi(
 			},
 		},
 	}),
-	async (c: AppContext) => c.json(
+	async (c: AppContext) => {
+		return c.json(
 			{
 				status: "ok",
 				timestamp: new Date().toISOString(),
 			},
 			HttpStatusCodes.OK,
-		),
+		);
+	},
 );
 
 export default utilityRouter;
