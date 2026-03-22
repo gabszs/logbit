@@ -58,36 +58,20 @@ export class BunRedisStore implements Store {
 	}
 
 	async increment(key: string): Promise<ClientRateLimitInfo> {
-		return tracer.startActiveSpan(
-			"rate_limit.increment",
-			{
-				kind: SpanKind.INTERNAL,
-				attributes: {
-					"rate_limit.key": key,
-					"rate_limit.prefix": this.prefix,
-				},
-			},
-			async (span) => {
-				const result = (await redis.send("EVAL", [
-					INCREMENT_SCRIPT,
-					"1",
-					this.key(key),
-					this.windowMs.toString(),
-					this.resetExpiryOnChange ? "1" : "0",
-				])) as [number, number];
+		const result = (await redis.send("EVAL", [
+			INCREMENT_SCRIPT,
+			"1",
+			this.key(key),
+			this.windowMs.toString(),
+			this.resetExpiryOnChange ? "1" : "0",
+		])) as [number, number];
 
-				const info = {
-					totalHits: result[0],
-					resetTime: new Date(Date.now() + result[1]),
-				};
-
-				span.setAttribute("rate_limit.total_hits", info.totalHits);
-				span.end();
-				return info;
-			},
-		);
+		return {
+			totalHits: result[0],
+			resetTime: new Date(Date.now() + result[1]),
+		};
 	}
-
+	
 	async decrement(key: string): Promise<void> {
 		await redis.decr(this.key(key));
 	}

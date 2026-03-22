@@ -1,7 +1,9 @@
 import { httpInstrumentationMiddleware } from "@hono/otel";
 import { OpenAPIHono } from "@hono/zod-openapi";
+import { migrate } from "drizzle-orm/postgres-js/migrator";
 import { showRoutes } from "hono/dev";
 import { MemoryStore, rateLimiter } from "hono-rate-limiter";
+import { db } from "./db";
 import { settings } from "./env";
 import authRouter from "./features/auth/routes";
 import utilityRoutes from "./features/utils/routes";
@@ -9,11 +11,10 @@ import { BunRedisStore } from "./lib/cache";
 import { setupOpenApi } from "./lib/openapi";
 import { injectOtelTraceHeader, logger } from "./lib/telemetry";
 import type { AppContext } from "./types";
+import { authenticateSession, authMiddleware } from "./lib/middleware";
 
 // RUN MIGRATIONS
-// if (settings.NODE_ENV !== "production") {
-// 	await migrate(db, { migrationsFolder: "./src/db/migrations" });
-// }
+await migrate(db, { migrationsFolder: "./src/db/migrations" });
 
 const app = new OpenAPIHono<AppContext>();
 
@@ -42,6 +43,7 @@ if (settings.RATE_LIMIT_ENABLED) {
 			windowMs: settings.RATE_LIMIT_WINDOW_SECONDS * 1000,
 			limit: settings.RATE_LIMIT_MAX_REQUESTS,
 			keyGenerator: (c) =>
+				c.req.header("x-client-ip") ||
 				c.req.header("cf-connecting-ip") ||
 				c.req.header("x-forwarded-for")?.split(",")[0].trim() ||
 				"",

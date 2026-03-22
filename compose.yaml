@@ -5,7 +5,7 @@ services:
     image: postgres:15
     container_name: loglog-postgres
     environment:
-      POSTGRES_DB: loglog
+      POSTGRES_DB: app_db
       POSTGRES_USER: app_user
       POSTGRES_PASSWORD: app_password
     ports:

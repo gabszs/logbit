@@ -1,5 +1,5 @@
 import { createRoute, OpenAPIHono } from "@hono/zod-openapi";
-import { redis } from "bun";
+import { redis } from "@/lib/cache";
 import { logger } from "@/lib/telemetry";
 import {
 	ContentTypes,
@@ -31,10 +31,6 @@ utilityRouter.openapi(
 		},
 	}),
 	async (c: AppContext) => {
-		// redis.get("test");
-		await redis.set("test", "hello from node-redis");
-		await redis.get("test");
-		logger.warn("This is a warning message");
 		return c.json(
 			{
 				status: "ok",

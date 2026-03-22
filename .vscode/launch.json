@@ -1,0 +1,17 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+       {
+  "name": "Debug Server (Bun)",
+  "type": "node",
+  "request": "launch",
+  "runtimeExecutable": "bun",
+  "runtimeArgs": ["--inspect-wait", "--hot", "src/index.ts"],
+  "cwd": "${workspaceFolder}/apps/server",
+  "env": { "PORT": "4000" },
+  "envFile": "${workspaceFolder}/apps/server/.env",
+  "sourceMaps": true,
+  "console": "integratedTerminal"
+}
+  ]
+}

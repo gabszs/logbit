@@ -1,16 +1,16 @@
 {
-	"id": "03858c9b-7d1d-4ea7-b7ea-119195d86d8c",
+	"id": "b08b2d9b-4a1c-40d8-8fe7-fbbde62e528d",
 	"prevId": "00000000-0000-0000-0000-000000000000",
 	"version": "7",
 	"dialect": "postgresql",
 	"tables": {
-		"public.account": {
-			"name": "account",
+		"public.accounts": {
+			"name": "accounts",
 			"schema": "",
 			"columns": {
 				"id": {
 					"name": "id",
-					"type": "text",
+					"type": "uuid",
 					"primaryKey": true,
 					"notNull": true
 				},
@@ -28,7 +28,7 @@
 				},
 				"user_id": {
 					"name": "user_id",
-					"type": "text",
+					"type": "uuid",
 					"primaryKey": false,
 					"notNull": true
 				},
@@ -78,8 +78,7 @@
 					"name": "created_at",
 					"type": "timestamp",
 					"primaryKey": false,
-					"notNull": true,
-					"default": "now()"
+					"notNull": true
 				},
 				"updated_at": {
 					"name": "updated_at",
@@ -89,8 +88,8 @@
 				}
 			},
 			"indexes": {
-				"account_userId_idx": {
-					"name": "account_userId_idx",
+				"accounts_userId_idx": {
+					"name": "accounts_userId_idx",
 					"columns": [
 						{
 							"expression": "user_id",
@@ -106,10 +105,10 @@
 				}
 			},
 			"foreignKeys": {
-				"account_user_id_user_id_fk": {
-					"name": "account_user_id_user_id_fk",
-					"tableFrom": "account",
-					"tableTo": "user",
+				"accounts_user_id_users_id_fk": {
+					"name": "accounts_user_id_users_id_fk",
+					"tableFrom": "accounts",
+					"tableTo": "users",
 					"columnsFrom": ["user_id"],
 					"columnsTo": ["id"],
 					"onDelete": "cascade",
@@ -122,34 +121,122 @@
 			"checkConstraints": {},
 			"isRLSEnabled": false
 		},
-		"public.session": {
-			"name": "session",
+		"public.apikeys": {
+			"name": "apikeys",
 			"schema": "",
 			"columns": {
 				"id": {
 					"name": "id",
-					"type": "text",
+					"type": "uuid",
 					"primaryKey": true,
 					"notNull": true
+				},
+				"name": {
+					"name": "name",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"start": {
+					"name": "start",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"prefix": {
+					"name": "prefix",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"key": {
+					"name": "key",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"user_id": {
+					"name": "user_id",
+					"type": "uuid",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"refill_interval": {
+					"name": "refill_interval",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"refill_amount": {
+					"name": "refill_amount",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"last_refill_at": {
+					"name": "last_refill_at",
+					"type": "timestamp",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"enabled": {
+					"name": "enabled",
+					"type": "boolean",
+					"primaryKey": false,
+					"notNull": false,
+					"default": true
+				},
+				"rate_limit_enabled": {
+					"name": "rate_limit_enabled",
+					"type": "boolean",
+					"primaryKey": false,
+					"notNull": false,
+					"default": true
+				},
+				"rate_limit_time_window": {
+					"name": "rate_limit_time_window",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": false,
+					"default": 86400000
+				},
+				"rate_limit_max": {
+					"name": "rate_limit_max",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": false,
+					"default": 10
+				},
+				"request_count": {
+					"name": "request_count",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": false,
+					"default": 0
+				},
+				"remaining": {
+					"name": "remaining",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"last_request": {
+					"name": "last_request",
+					"type": "timestamp",
+					"primaryKey": false,
+					"notNull": false
 				},
 				"expires_at": {
 					"name": "expires_at",
 					"type": "timestamp",
 					"primaryKey": false,
-					"notNull": true
-				},
-				"token": {
-					"name": "token",
-					"type": "text",
-					"primaryKey": false,
-					"notNull": true
+					"notNull": false
 				},
 				"created_at": {
 					"name": "created_at",
 					"type": "timestamp",
 					"primaryKey": false,
-					"notNull": true,
-					"default": "now()"
+					"notNull": true
 				},
 				"updated_at": {
 					"name": "updated_at",
@@ -157,28 +244,37 @@
 					"primaryKey": false,
 					"notNull": true
 				},
-				"ip_address": {
-					"name": "ip_address",
+				"permissions": {
+					"name": "permissions",
 					"type": "text",
 					"primaryKey": false,
 					"notNull": false
 				},
-				"user_agent": {
-					"name": "user_agent",
+				"metadata": {
+					"name": "metadata",
 					"type": "text",
 					"primaryKey": false,
 					"notNull": false
-				},
-				"user_id": {
-					"name": "user_id",
-					"type": "text",
-					"primaryKey": false,
-					"notNull": true
 				}
 			},
 			"indexes": {
-				"session_userId_idx": {
-					"name": "session_userId_idx",
+				"apikeys_key_idx": {
+					"name": "apikeys_key_idx",
+					"columns": [
+						{
+							"expression": "key",
+							"isExpression": false,
+							"asc": true,
+							"nulls": "last"
+						}
+					],
+					"isUnique": false,
+					"concurrently": false,
+					"method": "btree",
+					"with": {}
+				},
+				"apikeys_userId_idx": {
+					"name": "apikeys_userId_idx",
 					"columns": [
 						{
 							"expression": "user_id",
@@ -194,10 +290,10 @@
 				}
 			},
 			"foreignKeys": {
-				"session_user_id_user_id_fk": {
-					"name": "session_user_id_user_id_fk",
-					"tableFrom": "session",
-					"tableTo": "user",
+				"apikeys_user_id_users_id_fk": {
+					"name": "apikeys_user_id_users_id_fk",
+					"tableFrom": "apikeys",
+					"tableTo": "users",
 					"columnsFrom": ["user_id"],
 					"columnsTo": ["id"],
 					"onDelete": "cascade",
@@ -205,24 +301,18 @@
 				}
 			},
 			"compositePrimaryKeys": {},
-			"uniqueConstraints": {
-				"session_token_unique": {
-					"name": "session_token_unique",
-					"nullsNotDistinct": false,
-					"columns": ["token"]
-				}
-			},
+			"uniqueConstraints": {},
 			"policies": {},
 			"checkConstraints": {},
 			"isRLSEnabled": false
 		},
-		"public.user": {
-			"name": "user",
+		"public.users": {
+			"name": "users",
 			"schema": "",
 			"columns": {
 				"id": {
 					"name": "id",
-					"type": "text",
+					"type": "uuid",
 					"primaryKey": true,
 					"notNull": true
 				},
@@ -255,38 +345,78 @@
 					"name": "created_at",
 					"type": "timestamp",
 					"primaryKey": false,
-					"notNull": true,
-					"default": "now()"
+					"notNull": true
 				},
 				"updated_at": {
 					"name": "updated_at",
 					"type": "timestamp",
 					"primaryKey": false,
-					"notNull": true,
-					"default": "now()"
+					"notNull": true
+				},
+				"phone_number": {
+					"name": "phone_number",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"phone_number_verified": {
+					"name": "phone_number_verified",
+					"type": "boolean",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"role": {
+					"name": "role",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"banned": {
+					"name": "banned",
+					"type": "boolean",
+					"primaryKey": false,
+					"notNull": false,
+					"default": false
+				},
+				"ban_reason": {
+					"name": "ban_reason",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"ban_expires": {
+					"name": "ban_expires",
+					"type": "timestamp",
+					"primaryKey": false,
+					"notNull": false
 				}
 			},
 			"indexes": {},
 			"foreignKeys": {},
 			"compositePrimaryKeys": {},
 			"uniqueConstraints": {
-				"user_email_unique": {
-					"name": "user_email_unique",
+				"users_email_unique": {
+					"name": "users_email_unique",
 					"nullsNotDistinct": false,
 					"columns": ["email"]
+				},
+				"users_phone_number_unique": {
+					"name": "users_phone_number_unique",
+					"nullsNotDistinct": false,
+					"columns": ["phone_number"]
 				}
 			},
 			"policies": {},
 			"checkConstraints": {},
 			"isRLSEnabled": false
 		},
-		"public.verification": {
-			"name": "verification",
+		"public.verifications": {
+			"name": "verifications",
 			"schema": "",
 			"columns": {
 				"id": {
 					"name": "id",
-					"type": "text",
+					"type": "uuid",
 					"primaryKey": true,
 					"notNull": true
 				},
@@ -312,20 +442,18 @@
 					"name": "created_at",
 					"type": "timestamp",
 					"primaryKey": false,
-					"notNull": true,
-					"default": "now()"
+					"notNull": true
 				},
 				"updated_at": {
 					"name": "updated_at",
 					"type": "timestamp",
 					"primaryKey": false,
-					"notNull": true,
-					"default": "now()"
+					"notNull": true
 				}
 			},
 			"indexes": {
-				"verification_identifier_idx": {
-					"name": "verification_identifier_idx",
+				"verifications_identifier_idx": {
+					"name": "verifications_identifier_idx",
 					"columns": [
 						{
 							"expression": "identifier",
