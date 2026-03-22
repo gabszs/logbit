@@ -13,12 +13,7 @@
 		},
 		"outDir": "./dist",
 		"types": [
-			"@cloudflare/workers-types",
-			"node",
-			"./worker-configuration.d.ts",
-			// "@types/node",
-			"@types/service-worker-mock",
-			"@cloudflare/vitest-pool-workers"
+			"node"
 		],
 		"composite": true,
 		"jsx": "preserve",
