@@ -8,10 +8,10 @@ import { settings } from "./env";
 import authRouter from "./features/auth/routes";
 import utilityRoutes from "./features/utils/routes";
 import { BunRedisStore } from "./lib/cache";
+import { authenticateSession, authMiddleware } from "./lib/middleware";
 import { setupOpenApi } from "./lib/openapi";
 import { injectOtelTraceHeader, logger } from "./lib/telemetry";
 import type { AppContext } from "./types";
-import { authenticateSession, authMiddleware } from "./lib/middleware";
 
 // RUN MIGRATIONS
 await migrate(db, { migrationsFolder: "./src/db/migrations" });

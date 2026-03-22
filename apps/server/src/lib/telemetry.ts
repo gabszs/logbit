@@ -192,10 +192,6 @@ export function buildOtelQueryAttributeMap(
 	);
 }
 
-interface TraceIdMiddlewareOptions {
-	headerName?: string;
-}
-
 function buildUserAgentAttributes(userAgent: string | undefined) {
 	if (!userAgent) return {};
 
@@ -281,9 +277,8 @@ async function extractErrorAttributes(response: Response) {
 	};
 }
 
-export const otelConfig = (options: TraceIdMiddlewareOptions = {}) =>
+export const otelConfig = () =>
 	createMiddleware(async (c: AppContext, next: Next) => {
-		const { headerName = "otel-trace-id" } = options;
 		const startTime = Date.now();
 		const span = trace.getSpan(otelContext.active());
 		const traceId = span?.spanContext().traceId;
@@ -349,5 +344,4 @@ export const otelConfig = (options: TraceIdMiddlewareOptions = {}) =>
 		// }
 		// }
 		span.setAttributes(event);
-		c.res.headers.set(headerName, traceId);
 	});

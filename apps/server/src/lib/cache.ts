@@ -1,10 +1,10 @@
-import { settings } from "@/env";
 import { RedisClient } from "bun";
 import type {
 	ClientRateLimitInfo,
 	HonoConfigType,
 	Store,
 } from "hono-rate-limiter";
+import { settings } from "@/env";
 
 export const redis = new RedisClient(settings.REDIS_URL);
 
@@ -71,7 +71,7 @@ export class BunRedisStore implements Store {
 			resetTime: new Date(Date.now() + result[1]),
 		};
 	}
-	
+
 	async decrement(key: string): Promise<void> {
 		await redis.decr(this.key(key));
 	}

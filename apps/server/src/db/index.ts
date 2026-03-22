@@ -1,18 +1,16 @@
 import { settings } from "@/env";
 import "dotenv/config";
+import { SQL } from "bun";
 import { drizzle } from "drizzle-orm/bun-sql";
 import { models } from "./models";
-import { SQL } from "bun";
-
 
 const client = new SQL({
-  url: settings.DATABASE_URL,
-  max: 10,
-  idleTimeout: 30,
-  maxLifetime: 300,
-  connectionTimeout: 10,
+	url: settings.DATABASE_URL,
+	max: 10,
+	idleTimeout: 30,
+	maxLifetime: 300,
+	connectionTimeout: 10,
 });
-
 
 export const db = drizzle(client, {
 	schema: models,
@@ -20,10 +18,10 @@ export const db = drizzle(client, {
 });
 
 const shutdown = async () => {
-  await client.close(); // drena conexões ativas e fecha o pool
-  process.exit(0);
+	await client.close(); // drena conexões ativas e fecha o pool
+	process.exit(0);
 };
 
 process.on("SIGTERM", shutdown); // kill do pod (Kubernetes, Docker)
-process.on("SIGINT", shutdown);  // Ctrl+C
+process.on("SIGINT", shutdown); // Ctrl+C
 process.on("beforeExit", shutdown);
