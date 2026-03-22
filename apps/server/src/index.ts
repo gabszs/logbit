@@ -98,4 +98,7 @@ if (settings.ENABLE_OPEN_API) {
 showRoutes(app);
 
 export type AppType = typeof app;
-export default app;
+export default {
+	port: settings.PORT,
+	fetch: app.fetch,
+};
