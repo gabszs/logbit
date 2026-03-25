@@ -16,12 +16,3 @@ export const db = drizzle(pgClient, {
 	schema: models,
 	casing: "snake_case",
 });
-
-const shutdown = async () => {
-	await pgClient.close(); // drena conexões ativas e fecha o pool
-	process.exit(0);
-};
-
-process.on("SIGTERM", shutdown); // kill do pod (Kubernetes, Docker)
-process.on("SIGINT", shutdown); // Ctrl+C
-process.on("beforeExit", shutdown);

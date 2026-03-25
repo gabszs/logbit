@@ -1,155 +1,190 @@
-import { HTTPException } from "hono/http-exception";
-import type { ContentfulStatusCode } from "hono/utils/http-status";
-import { HttpStatusCodes, HttpStatusPhrases } from "./constants";
+import type { ProblemDetailsInput } from "hono-problem-details";
+import { problemDetails } from "hono-problem-details";
+import { status } from "./constants";
 
-type ErrorOptions = Partial<{
-	success: boolean;
-	code: string;
-	message: string;
-	status: string;
-}>;
+type HttpErrorDefaults = {
+	status: number;
+	title: string;
+	detail: string;
+};
 
-function createHttpException(
-	defaultCode: string,
-	defaultMessage: string,
-	defaultStatus: ContentfulStatusCode,
-	opts: ErrorOptions = {},
-) {
-	const errorResponse = new Response(
-		JSON.stringify({
-			code: opts.code || defaultCode,
-			message: opts.message || defaultMessage,
-			status: defaultStatus,
-		}),
+export type ErrorOptions = {
+	status?: number;
+	title?: string;
+	detail?: string;
+	type?: string;
+	instance?: string;
+	extensions?: ProblemDetailsInput["extensions"];
+};
+
+const createHttpError = (
+	defaults: HttpErrorDefaults,
+	options: ErrorOptions = {},
+) => {
+	const payload: ProblemDetailsInput = {
+		type: options.type ?? "about:blank",
+		status: options.status ?? defaults.status,
+		title: options.title ?? defaults.title,
+		detail: options.detail ?? defaults.detail,
+		...(options.instance !== undefined && { instance: options.instance }),
+		...(options.extensions !== undefined && { extensions: options.extensions }),
+	};
+
+	return problemDetails(payload);
+};
+
+const createStatusError = (
+	statusEntry: { code: number; title: string; detail: string },
+	defaultDetail: string = statusEntry.detail,
+	options: ErrorOptions = {},
+) =>
+	createHttpError(
 		{
-			status: defaultStatus,
-			headers: {
-				"Content-Type": "application/json",
-			},
+			status: statusEntry.code,
+			title: statusEntry.title,
+			detail: defaultDetail,
 		},
+		options,
 	);
-	return new HTTPException(defaultStatus, { res: errorResponse });
-}
 
-export const httpErrors = {
-	invalidAuthorizationHeader: (opts?: ErrorOptions) =>
-		createHttpException(
-			HttpStatusPhrases.UNAUTHORIZED,
+const resolveBadRequestArgs = (
+	arg1?: string | ErrorOptions,
+	arg2?: ErrorOptions,
+): { defaultDetail: string; options: ErrorOptions } => {
+	if (typeof arg1 === "string") {
+		return {
+			defaultDetail: arg1,
+			options: arg2 ?? {},
+		};
+	}
+
+	return {
+		defaultDetail: status.HTTP_400_BAD_REQUEST.detail,
+		options: arg1 ?? {},
+	};
+};
+
+export const error = {
+	tooManyRequests: (options: ErrorOptions = {}) =>
+		createStatusError(status.HTTP_429_TOO_MANY_REQUESTS, undefined, options),
+
+	invalidAuthorizationHeader: (options: ErrorOptions = {}) =>
+		createStatusError(
+			status.HTTP_401_UNAUTHORIZED,
 			"The 'Authorization' header must be provided in the format: 'Bearer <token>'",
-			HttpStatusCodes.UNAUTHORIZED,
-			opts,
-		),
-	duplicateField: (entity: string, field: string, opts?: ErrorOptions) =>
-		createHttpException(
-			HttpStatusPhrases.CONFLICT,
-			`A ${entity} with this ${field} already exists.`,
-			HttpStatusCodes.CONFLICT,
-			opts,
+			options,
 		),
 
-	noChangesDetected: (opts?: ErrorOptions) =>
-		createHttpException(
-			HttpStatusPhrases.UNPROCESSABLE_ENTITY,
-			"No changes were detected in the webhook payload",
-			HttpStatusCodes.UNPROCESSABLE_ENTITY,
-			opts,
+	duplicateField: (entity: string, field: string, options: ErrorOptions = {}) =>
+		createStatusError(
+			status.HTTP_409_CONFLICT,
+			`A ${entity} with this ${field} already exists.`,
+			options,
 		),
+
+	noChangesDetected: (options: ErrorOptions = {}) =>
+		createStatusError(
+			status.HTTP_422_UNPROCESSABLE_ENTITY,
+			"No changes were detected in the webhook payload",
+			options,
+		),
+
 	expressionEvaluationFailed: (
 		engine: string,
 		errMsg: string,
-		opts?: ErrorOptions,
+		options: ErrorOptions = {},
 	) =>
-		createHttpException(
-			HttpStatusPhrases.BAD_REQUEST,
+		createStatusError(
+			status.HTTP_400_BAD_REQUEST,
 			`Failed to evaluate expression with engine "${engine}": "${errMsg}"`,
-			HttpStatusCodes.BAD_REQUEST,
-			opts,
+			options,
 		),
-	missingRedirectUrl: (opts?: ErrorOptions) =>
-		createHttpException(
-			HttpStatusPhrases.BAD_REQUEST,
+
+	missingRedirectUrl: (options: ErrorOptions = {}) =>
+		createStatusError(
+			status.HTTP_400_BAD_REQUEST,
 			"The 'redirect_url' query parameter is required",
-			HttpStatusCodes.BAD_REQUEST,
-			opts,
+			options,
 		),
 
-	userMismatch: (opts?: ErrorOptions) =>
-		createHttpException(
-			HttpStatusPhrases.FORBIDDEN,
+	userMismatch: (options: ErrorOptions = {}) =>
+		createStatusError(
+			status.HTTP_403_FORBIDDEN,
 			"The userId does not match the provided entity id",
-			HttpStatusCodes.FORBIDDEN,
-			opts,
+			options,
 		),
 
-	entityInactive: (entityName: string, opts?: ErrorOptions) =>
-		createHttpException(
-			HttpStatusPhrases.FORBIDDEN,
+	entityInactive: (entityName: string, options: ErrorOptions = {}) =>
+		createStatusError(
+			status.HTTP_403_FORBIDDEN,
 			`The requested ${entityName} is inactive`,
-			HttpStatusCodes.FORBIDDEN,
-			opts,
+			options,
 		),
 
-	missingRequiredField: (fieldName: string, opts?: ErrorOptions) =>
-		createHttpException(
-			HttpStatusPhrases.BAD_REQUEST,
+	missingRequiredField: (fieldName: string, options: ErrorOptions = {}) =>
+		createStatusError(
+			status.HTTP_400_BAD_REQUEST,
 			`The '${fieldName}' field is required`,
-			HttpStatusCodes.BAD_REQUEST,
-			opts,
+			options,
 		),
 
-	missingApiKey: (opts?: ErrorOptions) =>
-		createHttpException(
-			HttpStatusPhrases.BAD_REQUEST,
+	missingApiKey: (options: ErrorOptions = {}) =>
+		createStatusError(
+			status.HTTP_400_BAD_REQUEST,
 			"The 'api_key' query parameter is required",
-			HttpStatusCodes.BAD_REQUEST,
-			opts,
+			options,
 		),
 
-	apiKeyNotFound: (opts?: ErrorOptions) =>
-		createHttpException(
-			HttpStatusPhrases.UNAUTHORIZED,
+	apiKeyNotFound: (options: ErrorOptions = {}) =>
+		createStatusError(
+			status.HTTP_401_UNAUTHORIZED,
 			"The provided API key was not found",
-			HttpStatusCodes.UNAUTHORIZED,
-			opts,
+			options,
 		),
 
-	apiKeyInactive: (opts?: ErrorOptions) =>
-		createHttpException(
-			HttpStatusPhrases.FORBIDDEN,
+	apiKeyInactive: (options: ErrorOptions = {}) =>
+		createStatusError(
+			status.HTTP_403_FORBIDDEN,
 			"The provided API key is not active or has been disabled",
-			HttpStatusCodes.FORBIDDEN,
-			opts,
+			options,
 		),
 
-	badRequest: (message: string, opts?: ErrorOptions) =>
-		createHttpException(
-			HttpStatusPhrases.BAD_REQUEST,
-			message,
-			HttpStatusCodes.BAD_REQUEST,
-			opts,
-		),
+	badRequest: (arg1?: string | ErrorOptions, arg2?: ErrorOptions) => {
+		const { defaultDetail, options } = resolveBadRequestArgs(arg1, arg2);
+		return createStatusError(
+			status.HTTP_400_BAD_REQUEST,
+			defaultDetail,
+			options,
+		);
+	},
 
-	unauthorized: (opts?: ErrorOptions) =>
-		createHttpException(
-			HttpStatusPhrases.UNAUTHORIZED,
+	unauthorized: (options: ErrorOptions = {}) =>
+		createStatusError(
+			status.HTTP_401_UNAUTHORIZED,
 			"You must be authenticated to access this resource",
-			HttpStatusCodes.UNAUTHORIZED,
-			opts,
+			options,
 		),
 
-	forbidden: (opts?: ErrorOptions) =>
-		createHttpException(
-			HttpStatusPhrases.FORBIDDEN,
+	forbidden: (options: ErrorOptions = {}) =>
+		createStatusError(
+			status.HTTP_403_FORBIDDEN,
 			"You do not have permission to access this resource",
-			HttpStatusCodes.FORBIDDEN,
-			opts,
+			options,
 		),
 
-	custom: (opts: ErrorOptions & { status: number }) =>
-		createHttpException(
-			HttpStatusPhrases.BAD_REQUEST,
-			opts.message || "An error occurred",
-			opts.status,
-			opts,
+	custom: (
+		statusCode: number,
+		defaultDetail: string = status.HTTP_400_BAD_REQUEST.detail,
+		options: ErrorOptions = {},
+	) =>
+		createHttpError(
+			{
+				status: statusCode,
+				title: status.HTTP_400_BAD_REQUEST.title,
+				detail: defaultDetail,
+			},
+			options,
 		),
 };
+
+export const httpErrors = error;

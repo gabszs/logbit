@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { HttpStatusCodes, HttpStatusPhrases } from "../../lib/constants";
+import { status } from "../../lib/constants";
 
 export const searchOptionsSchema = z.object({
 	page: z
@@ -106,7 +106,7 @@ export function createNotFoundSchema(resourceName: string) {
 		.object({
 			code: z.string().openapi({
 				description: "RFC Status phrase",
-				example: HttpStatusPhrases.NOT_FOUND,
+				example: status.HTTP_404_NOT_FOUND.title,
 			}),
 			message: z.string().openapi({
 				description: "Detailed error message",
@@ -114,7 +114,7 @@ export function createNotFoundSchema(resourceName: string) {
 			}),
 			status: z.string().openapi({
 				description: "RFC Status phrase",
-				example: HttpStatusCodes.NOT_FOUND,
+				example: status.HTTP_404_NOT_FOUND.code,
 			}),
 		})
 		.openapi({
@@ -126,7 +126,7 @@ export function createNoChangesSchema(resourceName: string) {
 		.object({
 			error: z.string().openapi({
 				description: "RFC Status phrase",
-				example: HttpStatusPhrases.UNPROCESSABLE_ENTITY,
+				example: status.HTTP_422_UNPROCESSABLE_ENTITY.title,
 			}),
 			message: z.string().openapi({
 				description: "Detailed error message",
@@ -134,7 +134,7 @@ export function createNoChangesSchema(resourceName: string) {
 			}),
 			code: z.string().openapi({
 				description: "RFC Status phrase",
-				example: HttpStatusCodes.UNPROCESSABLE_ENTITY,
+				example: status.HTTP_422_UNPROCESSABLE_ENTITY.code,
 			}),
 		})
 		.openapi({

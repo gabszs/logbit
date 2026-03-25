@@ -71,55 +71,7 @@ export function checkForChanges(
 			return;
 		}
 	}
-	throw httpErrors.noChangesDetected(c);
-}
-
-export const toArray = (val: unknown) => {
-	if (val === undefined || val === null || val === "") return undefined;
-	if (Array.isArray(val)) return val;
-	if (typeof val === "string") {
-		// If it contains a comma, split. Otherwise return as array of 1 element
-		return val.includes(",") ? val.split(",").map((v) => v.trim()) : [val];
-	}
-	return undefined;
-};
-
-/**
- * Hashes a string using SHA-256 and returns the hex digest
- * Used for hashing PII data (email, phone) before sending to CAPI platforms
- */
-export async function sha256Hash(text: string): Promise<string> {
-	const encoder = new TextEncoder();
-	const data = encoder.encode(text.toLowerCase().trim());
-	const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-	const hashArray = Array.from(new Uint8Array(hashBuffer));
-	return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
-}
-
-/**
- * Removes all null and undefined values from an object recursively
- * Used to clean payloads before sending to CAPI platforms
- */
-export function removeNullFields<T>(obj: T): T {
-	if (obj === null || obj === undefined) {
-		return obj;
-	}
-
-	if (Array.isArray(obj)) {
-		return obj.map((item) => removeNullFields(item)) as T;
-	}
-
-	if (typeof obj === "object") {
-		const cleaned: Record<string, unknown> = {};
-		for (const [key, value] of Object.entries(obj)) {
-			if (value !== null && value !== undefined) {
-				cleaned[key] = removeNullFields(value);
-			}
-		}
-		return cleaned as T;
-	}
-
-	return obj;
+	throw httpErrors.noChangesDetected();
 }
 
 /**
