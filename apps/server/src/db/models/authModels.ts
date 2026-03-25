@@ -29,6 +29,28 @@ export const users = pgTable("users", {
 	banExpires: timestamp("ban_expires"),
 });
 
+export const sessions = pgTable(
+	"sessions",
+	{
+		id: uuid("id")
+			.primaryKey()
+			.$defaultFn(() => Bun.randomUUIDv7()),
+		expiresAt: timestamp("expires_at").notNull(),
+		token: text("token").notNull().unique(),
+		createdAt: timestamp("created_at").notNull(),
+		updatedAt: timestamp("updated_at")
+			.$onUpdate(() => new Date())
+			.notNull(),
+		ipAddress: text("ip_address"),
+		userAgent: text("user_agent"),
+		userId: uuid("user_id")
+			.notNull()
+			.references(() => users.id, { onDelete: "cascade" }),
+		impersonatedBy: uuid("impersonated_by").references(() => users.id),
+	},
+	(table) => [index("sessions_userId_idx").on(table.userId)],
+);
+
 export const accounts = pgTable(
 	"accounts",
 	{
@@ -81,7 +103,7 @@ export const apikeys = pgTable(
 		name: text("name"),
 		start: text("start"),
 		prefix: text("prefix"),
-		key: text("key").notNull(),
+		key: text("key").notNull().unique(),
 		userId: uuid("user_id")
 			.notNull()
 			.references(() => users.id, { onDelete: "cascade" }),
@@ -108,8 +130,16 @@ export const apikeys = pgTable(
 );
 
 export const userRelations = relations(users, ({ many }) => ({
+	sessions: many(sessions),
 	accounts: many(accounts),
 	apikeys: many(apikeys),
+}));
+
+export const sessionRelations = relations(sessions, ({ one }) => ({
+	users: one(users, {
+		fields: [sessions.userId],
+		references: [users.id],
+	}),
 }));
 
 export const accountRelations = relations(accounts, ({ one }) => ({

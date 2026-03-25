@@ -123,11 +123,9 @@ export const shutdownDependencies = async () => {
 	process.exit(0);
 };
 
-["SIGTERM", "SIGINT", "beforeExit", "SIGQUIT"].forEach(
-	(event) => {
-		process.on(event, shutdownDependencies);
-	},
-);
+["SIGTERM", "SIGINT", "beforeExit", "SIGQUIT"].forEach((event) => {
+	process.on(event, shutdownDependencies);
+});
 
 export type AppType = typeof app;
 export default {

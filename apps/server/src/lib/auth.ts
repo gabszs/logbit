@@ -6,7 +6,6 @@ import { redis } from "@/lib/cache";
 import "dotenv/config";
 import { db } from "../db";
 import { models } from "../db/models";
-import { logger } from "./telemetry";
 
 export const auth = betterAuth({
 	basePath: settings.AUTH_BASE_PATH,
