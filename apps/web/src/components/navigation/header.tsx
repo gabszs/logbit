@@ -1,5 +1,4 @@
 import { useRouterState } from "@tanstack/react-router";
-import { Menu } from "lucide-react";
 import { Button } from "@/web/components/ui/button";
 import { useIsMobile } from "@/web/hooks/use-mobile";
 import { useUserSettings } from "@/web/hooks/use-user-settings";
@@ -45,7 +44,7 @@ export default function Header() {
 						onClick={handleToggleSidebar}
 						className="md:hidden"
 					>
-						<Menu className="size-5" />
+						<img src="/logo.svg" alt="Toggle sidebar" className="size-6" />
 					</Button>
 				)}
 			</nav>

@@ -1,24 +1,24 @@
-import {
-	createFileRoute,
-	Link,
-	Outlet,
-	redirect,
-	useRouterState,
-} from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
 import { AppShellSkeleton } from "@/web/components/skeletons/app-skeleton";
 import {
-	Sheet,
-	SheetContent,
-	SheetDescription,
-	SheetHeader,
-	SheetTitle,
+    Sheet,
+    SheetContent,
+    SheetDescription,
+    SheetHeader,
+    SheetTitle,
 } from "@/web/components/ui/sheet";
 import { useIsMobile } from "@/web/hooks/use-mobile";
 import { useUserSettings } from "@/web/hooks/use-user-settings";
 import { SETTINGS_NAV_ITEMS } from "@/web/lib/constants";
 import { requireAuthenticated } from "@/web/lib/route-guards";
 import { cn } from "@/web/utils/cn";
+import {
+    createFileRoute,
+    Link,
+    Outlet,
+    redirect,
+    useRouterState,
+} from "@tanstack/react-router";
+import { useEffect, useMemo, useState } from "react";
 import { SettingsError } from "./-components/settings-error";
 
 export const Route = createFileRoute("/settings")({
