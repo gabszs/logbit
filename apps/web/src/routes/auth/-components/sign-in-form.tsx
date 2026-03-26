@@ -6,7 +6,7 @@ import { authClient } from "@/web/lib/auth-client";
 import { SIGN_IN_FORM } from "@/web/lib/constants";
 import { signInSchema } from "@/web/lib/validators";
 import { useMutation } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
+import { useNavigate, useRouter } from "@tanstack/react-router";
 import { Eye, EyeOff, Lock, Mail } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -17,6 +17,7 @@ interface SignInFormProps {
 
 export function SignInForm({ redirectPath }: SignInFormProps) {
 	const navigate = useNavigate();
+	const router = useRouter();
 	const auth = useAuth();
 
 	useEffect(() => {
@@ -35,8 +36,9 @@ export function SignInForm({ redirectPath }: SignInFormProps) {
 				password,
 			});
 		},
-		onSuccess: () => {
+		onSuccess: async () => {
 			toast.success(SIGN_IN_FORM.SUCCESS_MESSAGES.SIGN_IN_SUCCESS);
+			await router.invalidate();
 			navigate({
 				to: redirectPath,
 				replace: true,

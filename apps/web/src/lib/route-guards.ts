@@ -13,8 +13,8 @@ export async function redirectIfAuthenticated({
 	queryClient,
 	to,
 }: RedirectIfAuthenticatedOptions) {
-	// Wrap in React Query for deduplication
-	const session = await queryClient.ensureQueryData({
+	// Always fetch fresh session to detect login state changes
+	const session = await queryClient.fetchQuery({
 		queryKey: ["auth", "session"],
 		queryFn: async () => {
 			const { data, error } = await authClient.getSession();
@@ -23,7 +23,6 @@ export async function redirectIfAuthenticated({
 			}
 			return data;
 		},
-		staleTime: 5 * 60 * 1000, // 5 minutes
 	});
 
 	if (session) {

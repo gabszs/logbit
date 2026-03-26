@@ -3,14 +3,14 @@ import { useTheme } from "@/web/components/theme-provider"
 import { Avatar, AvatarFallback, AvatarImage } from "@/web/components/ui/avatar"
 import { Button } from "@/web/components/ui/button"
 import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuSeparator,
-    DropdownMenuSub,
-    DropdownMenuSubContent,
-    DropdownMenuSubTrigger,
-    DropdownMenuTrigger,
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuSeparator,
+	DropdownMenuSub,
+	DropdownMenuSubContent,
+	DropdownMenuSubTrigger,
+	DropdownMenuTrigger,
 } from "@/web/components/ui/dropdown-menu"
 import { useContentSidebar } from "@/web/hooks/use-content-sidebar"
 import { useProfile } from "@/web/hooks/use-profile"
@@ -18,15 +18,15 @@ import { authClient } from "@/web/lib/auth-client"
 import { cn } from "@/web/utils/cn"
 import { Link, useNavigate } from "@tanstack/react-router"
 import {
-    BookText,
-    CircleHelp,
-    LogOut,
-    Monitor,
-    Moon,
-    PanelLeftClose,
-    PanelLeftOpen,
-    Settings,
-    Sun,
+	BookText,
+	CircleHelp,
+	LogOut,
+	Monitor,
+	Moon,
+	PanelLeftClose,
+	PanelLeftOpen,
+	Settings,
+	Sun,
 } from "lucide-react"
 
 function getInitial(user: { name?: string | null; email?: string | null } | null | undefined) {

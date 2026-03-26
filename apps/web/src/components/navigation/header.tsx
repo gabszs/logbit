@@ -1,8 +1,8 @@
-import { useRouterState } from "@tanstack/react-router";
 import { Button } from "@/web/components/ui/button";
 import { useIsMobile } from "@/web/hooks/use-mobile";
 import { useUserSettings } from "@/web/hooks/use-user-settings";
 import { cn } from "@/web/utils/cn";
+import { useRouterState } from "@tanstack/react-router";
 
 const CHAT_SIDEBAR_EVENT = "better-chat:open-history";
 const SETTINGS_SIDEBAR_EVENT = "better-chat:open-settings";
