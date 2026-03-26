@@ -88,7 +88,7 @@ export type AppRouter = typeof OrpcRouter;
 export type RouterOutputs = InferRouterOutputs<AppRouter>;
 export type RouterInputs = InferRouterInputs<AppRouter>;
 
-app.use("/v1/orpc/*", async (c) => {
+app.use("/orpc/*", async (c) => {
 	const { matched, response } = await rpcHandler.handle(c.req.raw, {
 		prefix: "/api/orpc",
 		context: await createContext({ context: c }),
