@@ -10,27 +10,16 @@ export const PORTFOLIO_SITE = "https://oscargabriel.dev";
 export const SITE_URL = "https://chat.oscargabriel.dev";
 export const SITE_GITHUB = "https://github.com/oscabriel/better-chat";
 
-export const SOCIAL_PROVIDERS = {
-	GOOGLE: "google",
-	GITHUB: "github",
-} as const;
-
-export type SocialProvider =
-	(typeof SOCIAL_PROVIDERS)[keyof typeof SOCIAL_PROVIDERS];
-
 export const SIGN_IN_FORM = {
-	OTP_LENGTH: 6,
 	VALIDATION_MESSAGES: {
 		EMAIL_INVALID: "Invalid email address",
-		OTP_INVALID: "OTP must be at least 6 characters",
+		PASSWORD_REQUIRED: "Password is required",
 	},
 	SUCCESS_MESSAGES: {
-		OTP_SENT: "Verification code sent to your email",
 		SIGN_IN_SUCCESS: "Sign in successful",
 	},
 	LOADING_MESSAGES: {
-		SENDING_OTP: "Sending code...",
-		VERIFYING_OTP: "Verifying...",
+		SIGNING_IN: "Signing in...",
 	},
 } as const;
 
@@ -69,26 +58,6 @@ export const SETTINGS_NAV_ITEMS = [
 		to: "/settings/profile",
 		label: "Profile",
 		description: "View session details",
-	},
-	{
-		to: "/settings/usage",
-		label: "Usage",
-		description: "Limit & token insights",
-	},
-	{
-		to: "/settings/providers",
-		label: "Providers",
-		description: "Manage provider API Keys",
-	},
-	{
-		to: "/settings/models",
-		label: "Models",
-		description: "Enable preferred models",
-	},
-	{
-		to: "/settings/tools",
-		label: "Tools",
-		description: "Manage tool integrations",
 	},
 	{
 		to: "/settings/appearance",

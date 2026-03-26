@@ -82,7 +82,7 @@ function SettingsLayout() {
 					key={item.to}
 					to={item.to}
 					className={cn(
-						"block border px-3 py-3 transition",
+						"block rounded-lg border px-3 py-3 transition",
 						item.isActive
 							? "border-primary bg-primary/10 text-primary"
 							: "border-transparent bg-muted/40 text-foreground hover:border-muted hover:bg-muted",
@@ -133,7 +133,7 @@ function SettingsLayout() {
 				)}
 			>
 				<aside className="relative hidden w-64 shrink-0 md:block">
-					<div className="sticky top-13 flex h-[calc(100svh-3.25rem-1.5rem)] flex-col overflow-hidden border bg-card p-3 shadow-sm sm:p-4 md:h-[calc(100svh-3.25rem-0.5rem)]">
+					<div className="sticky top-13 flex h-[calc(100svh-3.25rem-1.5rem)] flex-col overflow-hidden rounded-lg border bg-card p-3 shadow-sm sm:p-4 md:h-[calc(100svh-3.25rem-0.5rem)]">
 						<div className="mb-4">
 							<h2 className="font-semibold text-muted-foreground text-sm uppercase tracking-wide">
 								Settings
@@ -145,7 +145,7 @@ function SettingsLayout() {
 					</div>
 				</aside>
 				<section className="min-w-0 flex-1 basis-0">
-					<div className="sticky top-13 flex h-[calc(100svh-3.25rem-1.5rem)] max-w-[100vw] flex-col overflow-hidden border bg-card shadow-sm md:h-[calc(100svh-3.25rem-0.5rem)]">
+					<div className="sticky top-13 flex h-[calc(100svh-3.25rem-1.5rem)] max-w-[100vw] flex-col overflow-hidden rounded-lg border bg-card shadow-sm md:h-[calc(100svh-3.25rem-0.5rem)]">
 						<div className="flex-1 overflow-y-auto px-4 py-6 sm:px-6">
 							<Outlet />
 						</div>

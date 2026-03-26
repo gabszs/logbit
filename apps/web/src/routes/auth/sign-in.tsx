@@ -7,7 +7,7 @@ interface SignInSearch {
 	redirect?: string;
 }
 
-const FALLBACK_REDIRECT = "/chat";
+const FALLBACK_REDIRECT = "/";
 
 function sanitizeRedirect(rawRedirect: string | undefined): string {
 	if (!rawRedirect || typeof rawRedirect !== "string") {

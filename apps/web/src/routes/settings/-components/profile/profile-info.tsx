@@ -1,7 +1,7 @@
 import { useForm } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Pencil } from "lucide-react";
-import React, { useState } from "react";
+import { Pencil, Trash2 } from "lucide-react";
+import React, { useRef, useState } from "react";
 import { toast } from "sonner";
 import {
 	Avatar,
@@ -25,6 +25,7 @@ import { orpc } from "@/web/lib/orpc";
 export function ProfileInfo() {
 	const [isEditOpen, setIsEditOpen] = useState(false);
 	const queryClient = useQueryClient();
+	const fileInputRef = useRef<HTMLInputElement>(null);
 
 	const user = useProfile();
 
@@ -54,6 +55,29 @@ export function ProfileInfo() {
 			},
 		}),
 	);
+
+	const handleImageDelete = () => {
+		if (!user.data) return;
+		updateProfileMutation.mutate({
+			name: user.data.name || "",
+			image: "",
+		});
+	};
+
+	const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+		const file = e.target.files?.[0];
+		if (!file || !user.data) return;
+
+		const reader = new FileReader();
+		reader.onload = () => {
+			const dataUrl = reader.result as string;
+			updateProfileMutation.mutate({
+				name: user.data!.name || "",
+				image: dataUrl,
+			});
+		};
+		reader.readAsDataURL(file);
+	};
 
 	const form = useForm({
 		defaultValues: {
@@ -89,15 +113,52 @@ export function ProfileInfo() {
 			<div className="flex flex-col space-y-4 sm:flex-row sm:items-start sm:justify-between sm:space-y-0">
 				<div className="space-y-3">
 					<div className="flex items-center space-x-3 sm:space-x-4">
-						<Avatar className="size-12 sm:size-16">
-							<AvatarImage
-								src={user.data.image || undefined}
-								alt={user.data.name || "User avatar"}
-							/>
-							<AvatarFallback className="text-sm sm:text-lg">
-								{initials.data || user.data.email?.charAt(0).toUpperCase()}
-							</AvatarFallback>
-						</Avatar>
+						<div className="group relative">
+							<Avatar className="size-12 sm:size-16">
+								<AvatarImage
+									src={user.data.image || undefined}
+									alt={user.data.name || "User avatar"}
+								/>
+								<AvatarFallback className="text-sm sm:text-lg">
+									{initials.data || user.data.email?.charAt(0).toUpperCase()}
+								</AvatarFallback>
+							</Avatar>
+							{user.data.image ? (
+								<div className="absolute inset-0 flex overflow-hidden rounded-full opacity-0 transition group-hover:opacity-100">
+									<label className="flex flex-1 cursor-pointer items-center justify-center bg-black/50 hover:bg-foreground/70 transition">
+										<Pencil className="size-4 text-white" />
+										<input
+											ref={fileInputRef}
+											type="file"
+											accept="image/*"
+											className="hidden"
+											onChange={handleImageUpload}
+											aria-label="Upload profile image"
+										/>
+									</label>
+									<button
+										type="button"
+										title="Remove image"
+										onClick={handleImageDelete}
+										className="flex flex-1 cursor-pointer items-center justify-center bg-black/50 hover:bg-destructive transition"
+									>
+										<Trash2 className="size-4 text-white" />
+									</button>
+								</div>
+							) : (
+								<label className="absolute inset-0 flex cursor-pointer items-center justify-center rounded-full bg-black/50 opacity-0 transition group-hover:opacity-100">
+									<Pencil className="size-5 text-white" />
+									<input
+										ref={fileInputRef}
+										type="file"
+										accept="image/*"
+										className="hidden"
+										onChange={handleImageUpload}
+										aria-label="Upload profile image"
+									/>
+								</label>
+							)}
+						</div>
 
 						<div className="space-y-1">
 							<h2 className="font-bold text-lg sm:text-xl">

@@ -4,8 +4,6 @@ import { Button } from "@/web/components/ui/button";
 import { useIsMobile } from "@/web/hooks/use-mobile";
 import { useUserSettings } from "@/web/hooks/use-user-settings";
 import { cn } from "@/web/utils/cn";
-import { ModeToggle } from "./mode-toggle";
-import UserMenu from "./user-menu";
 
 const CHAT_SIDEBAR_EVENT = "better-chat:open-history";
 const SETTINGS_SIDEBAR_EVENT = "better-chat:open-settings";
@@ -60,8 +58,6 @@ export default function Header() {
 						</Link>
 					</div>
 					<div className="flex items-center gap-2">
-						<UserMenu />
-						<ModeToggle />
 					</div>
 				</nav>
 			</header>

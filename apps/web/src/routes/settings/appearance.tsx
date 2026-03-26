@@ -1,7 +1,6 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { toast } from "sonner";
-import { ModeToggle } from "@/web/components/navigation/mode-toggle";
+import { Monitor, Moon, Sun } from "lucide-react";
+import { useTheme } from "@/web/components/theme-provider";
 import {
 	Card,
 	CardContent,
@@ -9,20 +8,25 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/web/components/ui/card";
-import { useUserSettings } from "@/web/hooks/use-user-settings";
-import { orpc } from "@/web/lib/orpc";
-import { setStoredChatWidth } from "@/web/lib/user-preferences";
 
-const chatWidthOptions = [
+const themeOptions = [
 	{
-		id: "cozy",
-		label: "Cozy",
-		description: "Focused, centered conversation layout",
+		id: "light",
+		label: "Light",
+		description: "Clean and bright appearance",
+		icon: Sun,
 	},
 	{
-		id: "comfortable",
-		label: "Comfortable",
-		description: "Full-width layout for spacious conversations",
+		id: "dark",
+		label: "Dark",
+		description: "Easy on the eyes in low light",
+		icon: Moon,
+	},
+	{
+		id: "system",
+		label: "System",
+		description: "Follows your operating system preference",
+		icon: Monitor,
 	},
 ] as const;
 
@@ -30,74 +34,40 @@ export const Route = createFileRoute("/settings/appearance")({
 	component: AppearanceSettings,
 });
 
-type ChatWidthOptionId = (typeof chatWidthOptions)[number]["id"];
-
 function AppearanceSettings() {
-	const queryClient = useQueryClient();
-	const settingsQuery = useUserSettings();
-
-	const updateChatWidthMutation = useMutation(
-		orpc.settings.update.mutationOptions({
-			onSuccess: () => {
-				queryClient.invalidateQueries({
-					queryKey: orpc.settings.get.key(),
-				});
-				toast.success("Chat width updated");
-			},
-			onError: (error) => {
-				toast.error(error.message);
-			},
-		}),
-	);
-
-	const handleChatWidthChange = (width: ChatWidthOptionId) => {
-		setStoredChatWidth(width);
-		updateChatWidthMutation.mutate({ chatWidth: width });
-	};
-
-	const chatWidth = settingsQuery.data?.chatWidth || "cozy";
+	const { theme, setTheme } = useTheme();
 
 	return (
 		<div className="space-y-6">
 			<Card>
-				<CardHeader className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-					<div>
-						<CardTitle className="mb-1.5">Theme</CardTitle>
-						<CardDescription>
-							Toggle between light and dark mode.
-						</CardDescription>
-					</div>
-					<ModeToggle />
-				</CardHeader>
-			</Card>
-
-			<Card>
 				<CardHeader>
-					<CardTitle>Chat Width</CardTitle>
+					<CardTitle>Theme</CardTitle>
 					<CardDescription>
-						Control how wide the main interface appears (sidebar width remains
-						constant).
+						Choose how the app looks for you.
 					</CardDescription>
 				</CardHeader>
 				<CardContent className="space-y-3">
-					{chatWidthOptions.map((option) => {
-						const isActive = chatWidth === option.id;
+					{themeOptions.map((option) => {
+						const isActive = theme === option.id;
+						const Icon = option.icon;
 						return (
 							<button
 								key={option.id}
 								type="button"
-								className={`flex w-full cursor-pointer flex-col gap-2 p-4 text-left ${
+								className={`flex w-full cursor-pointer items-center gap-3 rounded-lg p-4 text-left transition ${
 									isActive
-										? "border bg-background/60 hover:bg-background/80"
-										: "hover:border hover:bg-muted/50"
+										? "border border-primary bg-primary/10 text-primary"
+										: "border border-transparent bg-muted/40 hover:border-muted hover:bg-muted"
 								}`}
-								onClick={() => handleChatWidthChange(option.id)}
-								disabled={updateChatWidthMutation.isPending}
+								onClick={() => setTheme(option.id)}
 							>
-								<span className="font-medium text-sm">{option.label}</span>
-								<span className="text-muted-foreground text-xs">
-									{option.description}
-								</span>
+								<Icon className="size-5 shrink-0" />
+								<div className="flex flex-col gap-0.5">
+									<span className="font-medium text-sm">{option.label}</span>
+									<span className="text-muted-foreground text-xs">
+										{option.description}
+									</span>
+								</div>
 							</button>
 						);
 					})}

@@ -1,15 +1,13 @@
 import type { QueryClient } from "@tanstack/react-query";
-import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import {
 	createRootRouteWithContext,
 	Outlet,
 	useRouterState,
 } from "@tanstack/react-router";
-import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 import type { AuthContextValue } from "@/web/components/auth-provider";
 import { BackgroundLayout } from "@/web/components/background";
 import { ErrorBoundary } from "@/web/components/error-boundary";
-import Header from "@/web/components/navigation/header";
+import { AppSidebar } from "@/web/components/navigation/app-sidebar";
 import { NotFound } from "@/web/components/not-found";
 import { ThemeProvider } from "@/web/components/theme-provider";
 import { Toaster } from "@/web/components/ui/sonner";
@@ -42,14 +40,12 @@ function RootComponent() {
 	return (
 		<>
 			<ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
-				<BackgroundLayout contentClassName="flex min-h-svh max-w-[100vw] flex-col overflow-x-hidden">
-					<Header />
+				<AppSidebar />
+				<BackgroundLayout contentClassName="ml-12 flex min-h-svh max-w-[calc(100vw-3rem)] flex-col overflow-x-hidden">
 					<Outlet />
 				</BackgroundLayout>
 				<Toaster richColors />
 			</ThemeProvider>
-			<TanStackRouterDevtools position="bottom-left" />
-			<ReactQueryDevtools position="bottom" buttonPosition="bottom-right" />
 		</>
 	);
 }
