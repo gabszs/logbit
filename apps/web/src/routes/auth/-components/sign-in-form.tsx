@@ -7,8 +7,8 @@ import { SIGN_IN_FORM } from "@/web/lib/constants";
 import { signInSchema } from "@/web/lib/validators";
 import { useMutation } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { ExternalLink } from "lucide-react";
-import { useEffect } from "react";
+import { Eye, EyeOff, Lock, Mail } from "lucide-react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 interface SignInFormProps {
@@ -60,12 +60,14 @@ export function SignInForm({ redirectPath }: SignInFormProps) {
 		},
 	});
 
+	const [showPassword, setShowPassword] = useState(false);
+
 	return (
-		<div className="mx-auto mt-10 w-full max-w-md p-6">
-			<h1 className="mb-2 text-center font-bold text-3xl">Welcome 👋</h1>
-			<p className="mb-6 text-center text-muted-foreground">
-				Enter your credentials to sign in.
-			</p>
+		<div className="w-full max-w-md">
+			<h1 className="mb-1 text-center font-bold text-3xl">
+				Login to <span className="text-primary">LogBit</span>
+			</h1>
+			<p className="mb-8 text-center text-muted-foreground">Welcome back!</p>
 
 			<form.AppForm>
 				<form
@@ -74,80 +76,87 @@ export function SignInForm({ redirectPath }: SignInFormProps) {
 						e.stopPropagation();
 						void form.handleSubmit();
 					}}
-					className="space-y-4"
+					className="space-y-5"
 				>
-					<form.AppField name="email">
-						{(field) => (
-							<field.FormItem>
-								<field.FormLabel>Email</field.FormLabel>
-								<field.FormControl>
-									<Input
-										type="email"
-										value={field.state.value}
-										onChange={(e) => field.handleChange(e.target.value)}
-										onBlur={field.handleBlur}
-										disabled={signInMutation.isPending}
-										placeholder="you@example.com"
-									/>
-								</field.FormControl>
-								<field.FormMessage />
-							</field.FormItem>
-						)}
-					</form.AppField>
+					<div className="rounded-lg border border-border bg-card p-5 space-y-4">
+						<form.AppField name="email">
+							{(field) => (
+								<field.FormItem>
+									<field.FormLabel>Email</field.FormLabel>
+									<field.FormControl>
+										<div className="relative">
+											<Mail className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+											<Input
+												type="email"
+												value={field.state.value}
+												onChange={(e) => field.handleChange(e.target.value)}
+												onBlur={field.handleBlur}
+												disabled={signInMutation.isPending}
+												placeholder="you@example.com"
+												className="pl-9"
+											/>
+										</div>
+									</field.FormControl>
+									<field.FormMessage />
+								</field.FormItem>
+							)}
+						</form.AppField>
 
-					<form.AppField name="password">
-						{(field) => (
-							<field.FormItem>
-								<field.FormLabel>Password</field.FormLabel>
-								<field.FormControl>
-									<Input
-										type="password"
-										value={field.state.value}
-										onChange={(e) => field.handleChange(e.target.value)}
-										onBlur={field.handleBlur}
-										disabled={signInMutation.isPending}
-										placeholder="••••••••"
-									/>
-								</field.FormControl>
-								<field.FormMessage />
-							</field.FormItem>
-						)}
-					</form.AppField>
+						<form.AppField name="password">
+							{(field) => (
+								<field.FormItem>
+									<field.FormLabel>Password</field.FormLabel>
+									<field.FormControl>
+										<div className="relative">
+											<Lock className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+											<Input
+												type={showPassword ? "text" : "password"}
+												value={field.state.value}
+												onChange={(e) => field.handleChange(e.target.value)}
+												onBlur={field.handleBlur}
+												disabled={signInMutation.isPending}
+												placeholder="••••••••"
+												className="pl-9 pr-9"
+											/>
+											<button
+												type="button"
+												onClick={() => setShowPassword((v) => !v)}
+												className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+												tabIndex={-1}
+											>
+												{showPassword ? (
+													<EyeOff className="size-4" />
+												) : (
+													<Eye className="size-4" />
+												)}
+											</button>
+										</div>
+									</field.FormControl>
+									<field.FormMessage />
+								</field.FormItem>
+							)}
+						</form.AppField>
 
-					<form.Subscribe>
-						{(state) => (
-							<Button
-								type="submit"
-								className="w-full text-base"
-								disabled={
-									!state.canSubmit ||
-									state.isSubmitting ||
-									signInMutation.isPending
-								}
-							>
-								{signInMutation.isPending
-									? SIGN_IN_FORM.LOADING_MESSAGES.SIGNING_IN
-									: "Sign In"}
-							</Button>
-						)}
-					</form.Subscribe>
+						<form.Subscribe>
+							{(state) => (
+								<Button
+									type="submit"
+									className="w-full text-base"
+									disabled={
+										!state.canSubmit ||
+										state.isSubmitting ||
+										signInMutation.isPending
+									}
+								>
+									{signInMutation.isPending
+										? SIGN_IN_FORM.LOADING_MESSAGES.SIGNING_IN
+										: "Login"}
+								</Button>
+							)}
+						</form.Subscribe>
+					</div>
 				</form>
 			</form.AppForm>
-
-			<div className="mt-8 text-center text-muted-foreground text-sm italic">
-				Authentication powered by{" "}
-				<a
-					href="https://better-auth.com"
-					target="_blank"
-					rel="noopener noreferrer"
-					className="inline-flex items-center gap-1 text-muted-foreground underline hover:text-muted-foreground/80"
-				>
-					Better Auth
-					<ExternalLink className="h-3 w-3" />
-				</a>
-				<br />
-				and Cloudflare D1+KV
-			</div>
 		</div>
 	);
 }

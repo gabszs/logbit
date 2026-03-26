@@ -35,7 +35,7 @@ export function AppSidebar() {
 	const navigate = useNavigate()
 	const auth = useAuth()
 	const profile = useProfile()
-	const { theme, setTheme } = useTheme()
+	const { setTheme } = useTheme()
 
 	const user = profile.data
 	const isAuthenticated = Boolean(auth.session?.user)

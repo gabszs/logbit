@@ -1,4 +1,4 @@
-import { Link, useRouterState } from "@tanstack/react-router";
+import { useRouterState } from "@tanstack/react-router";
 import { Menu } from "lucide-react";
 import { Button } from "@/web/components/ui/button";
 import { useIsMobile } from "@/web/hooks/use-mobile";
@@ -29,38 +29,26 @@ export default function Header() {
 	};
 
 	return (
-		<div className="bg-background">
-			<header className="fixed top-0 z-50 w-full bg-background/80 px-4 backdrop-blur-sm">
-				<nav
-					className={cn(
-						"mx-auto flex items-center justify-between py-1.5",
-						settingsQuery.data?.chatWidth === "comfortable"
-							? "max-w-7xl"
-							: "max-w-5xl",
-					)}
-				>
-					<div className="flex items-center gap-2">
-						{showSidebarToggle && (
-							<Button
-								variant="ghost"
-								size="icon"
-								onClick={handleToggleSidebar}
-								className="md:hidden"
-							>
-								<Menu className="size-5" />
-							</Button>
-						)}
-						<Link
-							to="/"
-							className="flex items-center gap-2 font-semibold text-lg text-primary"
-						>
-							<span className="text-3xl">☁️</span>
-						</Link>
-					</div>
-					<div className="flex items-center gap-2">
-					</div>
-				</nav>
-			</header>
-		</div>
+		<header className="fixed top-0 z-50 h-13 w-full border-b bg-background/80 px-4 backdrop-blur-sm">
+			<nav
+				className={cn(
+					"mx-auto flex items-center py-1.5",
+					settingsQuery.data?.chatWidth === "comfortable"
+						? "max-w-7xl"
+						: "max-w-5xl",
+				)}
+			>
+				{showSidebarToggle && (
+					<Button
+						variant="ghost"
+						size="icon"
+						onClick={handleToggleSidebar}
+						className="md:hidden"
+					>
+						<Menu className="size-5" />
+					</Button>
+				)}
+			</nav>
+		</header>
 	);
 }

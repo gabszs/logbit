@@ -4,11 +4,11 @@ import type { QuickPrompt } from "@/web/types/chat";
  * Application-wide constants
  */
 
-export const SITE_NAME = "better-chat";
+export const SITE_NAME = "logbit";
 export const SITE_DESCRIPTION = "better chat through durable objects";
-export const PORTFOLIO_SITE = "https://oscargabriel.dev";
-export const SITE_URL = "https://chat.oscargabriel.dev";
-export const SITE_GITHUB = "https://github.com/oscabriel/better-chat";
+export const PORTFOLIO_SITE = "https://logbit.dev";
+export const SITE_URL = "https://chat.logbit.dev";
+export const SITE_GITHUB = "https://github.com/logbit/better-chat";
 
 export const SIGN_IN_FORM = {
 	VALIDATION_MESSAGES: {
