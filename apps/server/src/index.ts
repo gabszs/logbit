@@ -17,12 +17,22 @@ import { setupOpenApi } from "./lib/openapi";
 import { createContext } from "./lib/orpc";
 import { injectOtelTraceHeader, logger } from "./lib/telemetry";
 import type { AppContext } from "./types";
+import { cors } from 'hono/cors'
 
 // RUN MIGRATIONS
 await migrate(db, { migrationsFolder: "./src/db/migrations" });
 
 // create app
 const app = new OpenAPIHono<AppContext>();
+
+// cors
+app.use(cors({
+	origin: settings.CORS_ORIGIN,
+	methods: ["GET", "POST", "OPTIONS"],
+	allowedHeaders: ["Content-Type", "Authorization", "x-client-ip", "cf-connecting-ip", "x-forwarded-for"],
+	maxAge: 86400, // 24 hours
+	credentials: true,
+}))
 
 // on-error handler
 app.onError(
@@ -90,7 +100,7 @@ export type RouterInputs = InferRouterInputs<AppRouter>;
 
 app.use("/orpc/*", async (c) => {
 	const { matched, response } = await rpcHandler.handle(c.req.raw, {
-		prefix: "/api/orpc",
+		prefix: "/orpc",
 		context: await createContext({ context: c }),
 	});
 
@@ -129,6 +139,6 @@ export const shutdownDependencies = async () => {
 
 export type AppType = typeof app;
 export default {
-	port: settings.PORT,
+	port: settings.API_PORT,
 	fetch: app.fetch,
 };

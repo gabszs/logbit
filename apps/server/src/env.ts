@@ -2,10 +2,11 @@ import z from "zod";
 
 const envSchema = z.object({
 	// GENERAL SETTINGS
-	PORT: z.coerce.number().default(4000),
+	API_PORT: z.coerce.number().default(5151),
 	REDIS_URL: z.string().startsWith("redis://").optional(),
 	DATABASE_URL: z.string().startsWith("postgresql://"),
-	CORS_ORIGIN: z.string().transform((val) => val.split(",")),
+	CORS_ORIGIN: z.string().transform((val) => val.split(","))
+		.default(["http://localhost:5152"]),
 	NODE_ENV: z
 		.enum(["development", "production", "test"])
 		.default("development"),
@@ -20,6 +21,7 @@ const envSchema = z.object({
 	AUTH_SESSION_MAX_AGE: z.string().default("7d"),
 	AUTH_BASE_PATH: z.string().default("/v1/auth"),
 	AUTH_OPEN_API_PATH: z.string().default("/docs"),
+	AUTH_ENABLE_DELETE_ACCOUNT: z.coerce.boolean().default(true),
 
 	// rate-limit
 	RATE_LIMIT_ENABLED: z.coerce.boolean().default(true),

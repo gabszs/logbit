@@ -1,8 +1,8 @@
+import { settings } from "@/env";
+import { redis } from "@/lib/cache";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { admin, apiKey, openAPI, phoneNumber } from "better-auth/plugins";
-import { settings } from "@/env";
-import { redis } from "@/lib/cache";
 import "dotenv/config";
 import { db } from "../db";
 import { models } from "../db/models";
@@ -15,6 +15,11 @@ export const auth = betterAuth({
 		database: {
 			generateId: false,
 		},
+	},
+	user: {
+		deleteUser: {
+			enabled: settings.AUTH_ENABLE_DELETE_ACCOUNT,
+		}
 	},
 	database: drizzleAdapter(db, {
 		provider: "pg",
@@ -30,7 +35,7 @@ export const auth = betterAuth({
 				await redis.set(key, value);
 				if (ttl) await redis.expire(key, ttl);
 			},
-			del: async (key: string): Promise<void> => {
+			delete: async (key: string): Promise<void> => {
 				await redis.del(key);
 			},
 		},
@@ -46,10 +51,10 @@ export const auth = betterAuth({
 	},
 	session: {
 		expiresIn: 60 * 60 * 24 * 7,
-		cookieCache: {
-			enabled: true,
-			maxAge: 60 * 5,
-		},
+		// cookieCache: {
+		// 	enabled: true,
+		// 	maxAge: 60 * 5,
+		// },
 	},
 	plugins: [
 		apiKey({
