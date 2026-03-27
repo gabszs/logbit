@@ -18,6 +18,7 @@ import { createContext } from "./lib/orpc";
 import { injectOtelTraceHeader, logger } from "./lib/telemetry";
 import type { AppContext } from "./types";
 import { cors } from 'hono/cors'
+import { settingsRouter } from "./features/settings/routes";
 
 // RUN MIGRATIONS
 await migrate(db, { migrationsFolder: "./src/db/migrations" });
@@ -39,7 +40,7 @@ app.onError(
 	problemDetailsHandler({
 		// includeStack: settings.NODE_ENV === "development",
 		mapError: (err) => {
-			if (settings.NODE_ENV === "development") console.error(err);
+			console.error(err);
 			return undefined; // undefined = segue o comportamento padrão
 		},
 	}),
@@ -90,24 +91,41 @@ if (settings.RATE_LIMIT_ENABLED) {
 // ORPC - Profile routes
 export const OrpcRouter = {
 	profile: profileRouter,
+	settings: settingsRouter,
 } as const;
 
-const rpcHandler = new RPCHandler(OrpcRouter);
+const rpcHandler = new RPCHandler(OrpcRouter, {
+	interceptors: [
+		async ({ next, ...rest }) => {
+			try {
+				return await next(rest);
+			} catch (error) {
+				console.error("[orpc] Error in procedure:", error);
+				throw error;
+			}
+		},
+	],
+});
 
 export type AppRouter = typeof OrpcRouter;
 export type RouterOutputs = InferRouterOutputs<AppRouter>;
 export type RouterInputs = InferRouterInputs<AppRouter>;
 
 app.use("/orpc/*", async (c) => {
-	const { matched, response } = await rpcHandler.handle(c.req.raw, {
-		prefix: "/orpc",
-		context: await createContext({ context: c }),
-	});
+	try {
+		const { matched, response } = await rpcHandler.handle(c.req.raw, {
+			prefix: "/orpc",
+			context: await createContext({ context: c }),
+		});
 
-	if (!matched || !response) {
-		return c.notFound();
+		if (!matched || !response) {
+			return c.notFound();
+		}
+		return response;
+	} catch (error) {
+		console.error("[orpc] Unhandled error:", error);
+		throw error;
 	}
-	return response;
 });
 
 // V1 Routes

@@ -63,7 +63,7 @@ export function AppSidebar() {
 			)}
 		>
 			{/* Top: App logo + toggle */}
-			<div className={cn("mb-4 flex w-full items-center", isExpanded ? "justify-between px-1" : "justify-center")}>
+			<div className={cn("mb-2 flex w-full items-center", isExpanded ? "justify-between px-1" : "justify-center")}>
 				<Link to="/" className="flex items-center gap-2 text-primary">
 					<img src="/logo.svg" alt="logbit" className="size-8 shrink-0" />
 					{isExpanded && <span className="font-semibold text-sm">logbit</span>}
@@ -76,7 +76,7 @@ export function AppSidebar() {
 						onClick={toggleSidebar}
 						title="Collapse sidebar"
 					>
-						<PanelLeftClose className="size-5" />
+						<PanelLeftClose className="size-4" />
 					</Button>
 				)}
 			</div>
@@ -90,7 +90,7 @@ export function AppSidebar() {
 					onClick={toggleSidebar}
 					title="Expand sidebar"
 				>
-					<PanelLeftOpen className="size-5" />
+					<PanelLeftOpen className="size-4" />
 				</Button>
 			)}
 
@@ -105,7 +105,7 @@ export function AppSidebar() {
 				<DropdownMenu>
 					<DropdownMenuTrigger asChild>
 						<Button variant="ghost" size={isExpanded ? "default" : "icon"} className={cn("size-9", isExpanded && "h-9 w-full justify-start gap-2")}>
-							<CircleHelp className="size-5 shrink-0" />
+							<CircleHelp className="size-4 shrink-0" />
 							{isExpanded && <span className="text-sm">Help</span>}
 						</Button>
 					</DropdownMenuTrigger>
