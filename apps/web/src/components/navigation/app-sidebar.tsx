@@ -165,7 +165,7 @@ export function AppSidebar() {
 									<Moon className="hidden size-4 shrink-0 dark:block" />
 									<span>Theme</span>
 								</DropdownMenuSubTrigger>
-								<DropdownMenuSubContent>
+								<DropdownMenuSubContent sideOffset={8} className="-translate-y-1/6">
 									<DropdownMenuItem onClick={() => setTheme("light")}>
 										<Sun className="size-4" />
 										<span>Light</span>
