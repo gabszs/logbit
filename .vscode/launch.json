@@ -4,23 +4,25 @@
     {
       "type": "bun",
       "request": "launch",
-      "name": "Debug Server (Hono)",
+      "name": "Debug Server (OTel)",
       "program": "${workspaceFolder}/apps/server/src/index.ts",
       "cwd": "${workspaceFolder}/apps/server",
-      "watchMode": "hot"
-    },
-    {
-      "type": "bun",
-      "request": "launch",
-      "name": "Debug Server (no hot reload)",
-      "program": "${workspaceFolder}/apps/server/src/index.ts",
-      "cwd": "${workspaceFolder}/apps/server"
-    },
-    {
-      "type": "bun",
-      "request": "attach",
-      "name": "Attach to Bun Server",
-      "url": "ws://localhost:6499/"
+      "watchMode": "hot",
+      "runtimeArgs": ["--preload", "./src/otel.ts"]
     }
+    // {
+    //   "type": "bun",
+    //   "request": "launch",
+    //   "name": "Debug Server (Hono)",
+    //   "program": "${workspaceFolder}/apps/server/src/index.ts",
+    //   "cwd": "${workspaceFolder}/apps/server",
+    //   "watchMode": "hot"
+    // },
+    // {
+    //   "type": "bun",
+    //   "request": "attach",
+    //   "name": "Attach to Bun Server",
+    //   "url": "ws://localhost:6499/"
+    // }
   ]
 }
