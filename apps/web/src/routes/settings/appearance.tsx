@@ -42,9 +42,7 @@ function AppearanceSettings() {
 			<Card>
 				<CardHeader>
 					<CardTitle>Theme</CardTitle>
-					<CardDescription>
-						Choose how the app looks for you.
-					</CardDescription>
+					<CardDescription>Choose how the app looks for you.</CardDescription>
 				</CardHeader>
 				<CardContent className="space-y-3">
 					{themeOptions.map((option) => {

@@ -8,6 +8,8 @@ export const GITHUB_REPO_URL = "https://github.com/imob";
 export const MAIN_SITE_URL = "https://imob.io";
 
 export const ContentTypes: Record<string, string> = {
+	X_PROTOBUF: "application/x-protobuf",
+	PROTOBUF: "application/protobuf",
 	JSON: "application/json",
 	PROBLEM_JSON: PROBLEM_JSON_CONTENT_TYPE,
 	FORM_URLENCODED: "application/x-www-form-urlencoded",
@@ -133,6 +135,15 @@ export const status = {
 			schema: TSchema,
 			description = "Request completed successfully.",
 		) => createHttpResponse(schema, description),
+	},
+	OK_PROTOBUF: {
+		code: 200,
+		title: "OK",
+		detail: "Request completed successfully.",
+		response: <TSchema>(
+			schema: TSchema,
+			description = "Request completed successfully.",
+		) => createHttpResponse(schema, description, ContentTypes.X_PROTOBUF),
 	},
 	CREATED: {
 		code: 201,

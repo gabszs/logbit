@@ -5,6 +5,7 @@
 	"private": true,
 	"dependencies": {
 		"@better-auth/redis-storage": "^1.5.5",
+		"@bufbuild/protobuf": "^2.11.0",
 		"@hono-rate-limiter/redis": "^0.1.4",
 		"@hono/otel": "^1.1.0",
 		"@hono/zod-openapi": "^1.2.0",
@@ -47,10 +48,14 @@
 		"db:migrate": "drizzle-kit migrate --config=./drizzle.config.ts",
 		"db:studio": "drizzle-kit studio --config=./drizzle.config.ts",
 		"db:studio:prod": "drizzle-kit studio --config=./drizzle.config.ts",
-		"auth:generate": "bunx --bun @better-auth/cli@1.4.2 generate --config src/lib/auth.ts --output src/db/models/authModels.ts -y"
+		"auth:generate": "bunx --bun @better-auth/cli@1.4.2 generate --config src/lib/auth.ts --output src/db/models/authModels.ts -y",
+		"proto:gen": "buf generate"
 	},
 	"devDependencies": {
+		"@bufbuild/buf": "^1.66.1",
+		"@bufbuild/protoc-gen-es": "^2.11.0",
 		"@types/node": "catalog:",
+		"bun-types": "^1.3.11",
 		"dotenv": "catalog:",
 		"drizzle-kit": "^0.31.8",
 		"tsdown": "catalog:",

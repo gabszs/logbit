@@ -59,32 +59,32 @@ const resolveBadRequestArgs = (
 	}
 
 	return {
-		defaultDetail: status.HTTP_400_BAD_REQUEST.detail,
+		defaultDetail: status.BAD_REQUEST.detail,
 		options: arg1 ?? {},
 	};
 };
 
 export const error = {
 	tooManyRequests: (options: ErrorOptions = {}) =>
-		createStatusError(status.HTTP_429_TOO_MANY_REQUESTS, undefined, options),
+		createStatusError(status.TOO_MANY_REQUESTS, undefined, options),
 
 	invalidAuthorizationHeader: (options: ErrorOptions = {}) =>
 		createStatusError(
-			status.HTTP_401_UNAUTHORIZED,
+			status.UNAUTHORIZED,
 			"The 'Authorization' header must be provided in the format: 'Bearer <token>'",
 			options,
 		),
 
 	duplicateField: (entity: string, field: string, options: ErrorOptions = {}) =>
 		createStatusError(
-			status.HTTP_409_CONFLICT,
+			status.CONFLICT,
 			`A ${entity} with this ${field} already exists.`,
 			options,
 		),
 
 	noChangesDetected: (options: ErrorOptions = {}) =>
 		createStatusError(
-			status.HTTP_422_UNPROCESSABLE_ENTITY,
+			status.UNPROCESSABLE_ENTITY,
 			"No changes were detected in the webhook payload",
 			options,
 		),
@@ -95,92 +95,95 @@ export const error = {
 		options: ErrorOptions = {},
 	) =>
 		createStatusError(
-			status.HTTP_400_BAD_REQUEST,
+			status.BAD_REQUEST,
 			`Failed to evaluate expression with engine "${engine}": "${errMsg}"`,
 			options,
 		),
 
 	missingRedirectUrl: (options: ErrorOptions = {}) =>
 		createStatusError(
-			status.HTTP_400_BAD_REQUEST,
+			status.BAD_REQUEST,
 			"The 'redirect_url' query parameter is required",
 			options,
 		),
 
 	userMismatch: (options: ErrorOptions = {}) =>
 		createStatusError(
-			status.HTTP_403_FORBIDDEN,
+			status.FORBIDDEN,
 			"The userId does not match the provided entity id",
 			options,
 		),
 
 	entityInactive: (entityName: string, options: ErrorOptions = {}) =>
 		createStatusError(
-			status.HTTP_403_FORBIDDEN,
+			status.FORBIDDEN,
 			`The requested ${entityName} is inactive`,
 			options,
 		),
 
 	missingRequiredField: (fieldName: string, options: ErrorOptions = {}) =>
 		createStatusError(
-			status.HTTP_400_BAD_REQUEST,
+			status.BAD_REQUEST,
 			`The '${fieldName}' field is required`,
 			options,
 		),
 
 	missingApiKey: (options: ErrorOptions = {}) =>
 		createStatusError(
-			status.HTTP_400_BAD_REQUEST,
+			status.BAD_REQUEST,
 			"The 'api_key' query parameter is required",
 			options,
 		),
 
 	apiKeyNotFound: (options: ErrorOptions = {}) =>
 		createStatusError(
-			status.HTTP_401_UNAUTHORIZED,
+			status.UNAUTHORIZED,
 			"The provided API key was not found",
 			options,
 		),
 
 	apiKeyInactive: (options: ErrorOptions = {}) =>
 		createStatusError(
-			status.HTTP_403_FORBIDDEN,
+			status.FORBIDDEN,
 			"The provided API key is not active or has been disabled",
+			options,
+		),
+
+	unsupportedMediaType: (options: ErrorOptions = {}) =>
+		createStatusError(
+			status.UNSUPPORTED_MEDIA_TYPE,
+			"The request's Content-Type is not supported.",
 			options,
 		),
 
 	badRequest: (arg1?: string | ErrorOptions, arg2?: ErrorOptions) => {
 		const { defaultDetail, options } = resolveBadRequestArgs(arg1, arg2);
-		return createStatusError(
-			status.HTTP_400_BAD_REQUEST,
-			defaultDetail,
-			options,
-		);
+		return createStatusError(status.BAD_REQUEST, defaultDetail, options);
 	},
 
 	unauthorized: (options: ErrorOptions = {}) =>
 		createStatusError(
-			status.HTTP_401_UNAUTHORIZED,
+			status.UNAUTHORIZED,
 			"You must be authenticated to access this resource",
 			options,
 		),
 
 	forbidden: (options: ErrorOptions = {}) =>
 		createStatusError(
-			status.HTTP_403_FORBIDDEN,
+			status.FORBIDDEN,
 			"You do not have permission to access this resource",
 			options,
 		),
 
 	custom: (
 		statusCode: number,
-		defaultDetail: string = status.HTTP_400_BAD_REQUEST.detail,
+		defaultDetail: string = status.BAD_REQUEST.detail,
 		options: ErrorOptions = {},
 	) =>
 		createHttpError(
 			{
 				status: statusCode,
-				title: status.HTTP_400_BAD_REQUEST.title,
+				title: status.BAD_REQUEST.title,
 				detail: defaultDetail,
 			},
 			options,

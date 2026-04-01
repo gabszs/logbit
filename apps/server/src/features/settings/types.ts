@@ -1,7 +1,7 @@
 export type UserSettingsRecord = {
-	theme: string
-}
+	theme: string;
+};
 
 export const DEFAULT_SETTINGS: UserSettingsRecord = {
 	theme: "system",
-}
+};

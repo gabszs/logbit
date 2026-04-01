@@ -1,8 +1,8 @@
-import { settings } from "@/env";
-import { redis } from "@/lib/cache";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { admin, apiKey, openAPI, phoneNumber } from "better-auth/plugins";
+import { settings } from "@/env";
+import { redis } from "@/lib/cache";
 import "dotenv/config";
 import { db } from "../db";
 import { models } from "../db/models";
@@ -19,7 +19,7 @@ export const auth = betterAuth({
 	user: {
 		deleteUser: {
 			enabled: settings.AUTH_ENABLE_DELETE_ACCOUNT,
-		}
+		},
 	},
 	database: drizzleAdapter(db, {
 		provider: "pg",

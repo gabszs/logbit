@@ -125,7 +125,7 @@ export function ProfileInfo() {
 							</Avatar>
 							{user.data.image ? (
 								<div className="absolute inset-0 flex overflow-hidden rounded-full opacity-0 transition group-hover:opacity-100">
-									<label className="flex flex-1 cursor-pointer items-center justify-center bg-black/50 hover:bg-foreground/70 transition">
+									<label className="flex flex-1 cursor-pointer items-center justify-center bg-black/50 transition hover:bg-foreground/70">
 										<Pencil className="size-4 text-white" />
 										<input
 											ref={fileInputRef}
@@ -140,7 +140,7 @@ export function ProfileInfo() {
 										type="button"
 										title="Remove image"
 										onClick={handleImageDelete}
-										className="flex flex-1 cursor-pointer items-center justify-center bg-black/50 hover:bg-destructive transition"
+										className="flex flex-1 cursor-pointer items-center justify-center bg-black/50 transition hover:bg-destructive"
 									>
 										<Trash2 className="size-4 text-white" />
 									</button>

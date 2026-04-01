@@ -12,7 +12,7 @@
 			"@/root/*": ["../../*"]
 		},
 		"outDir": "./dist",
-		"types": ["node"],
+		"types": ["bun-types"],
 		"composite": true,
 		"jsx": "preserve",
 		"experimentalDecorators": true,

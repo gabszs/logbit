@@ -1,0 +1,77 @@
+{
+  "instanceUid": "QC+PWNH0Q+CNw2lr5SYC+Q==",
+  "agentDescription": {
+    "identifyingAttributes": [
+      {
+        "key": "service.instance.id",
+        "value": {
+          "stringValue": "402f8f58-d1f4-43e0-8dc3-696be52602f9"
+        }
+      },
+      {
+        "key": "service.name",
+        "value": {
+          "stringValue": "otelcol-contrib"
+        }
+      },
+      {
+        "key": "service.version",
+        "value": {
+          "stringValue": "0.148.0"
+        }
+      }
+    ],
+    "nonIdentifyingAttributes": [
+      {
+        "key": "host.arch",
+        "value": {
+          "stringValue": "amd64"
+        }
+      },
+      {
+        "key": "host.name",
+        "value": {
+          "stringValue": "gabriel-ntt"
+        }
+      },
+      {
+        "key": "os.description",
+        "value": {
+          "stringValue": "Ubuntu 24.04"
+        }
+      },
+      {
+        "key": "os.type",
+        "value": {
+          "stringValue": "linux"
+        }
+      }
+    ]
+  },
+  "capabilities": "18437",
+  "health": {
+    "status": "StatusStarting",
+    "statusTimeUnixNano": "1774840467610940828",
+    "componentHealthMap": {
+      "extensions": {
+        "status": "StatusStarting",
+        "statusTimeUnixNano": "1774840467610940828",
+        "componentHealthMap": {
+          "extension:opamp": {
+            "status": "StatusStarting",
+            "statusTimeUnixNano": "1774840467610940828"
+          },
+          "extension:health_check": {
+            "status": "StatusStarting",
+            "statusTimeUnixNano": "1774840467607895825"
+          }
+        }
+      }
+    }
+  },
+  "remoteConfigStatus": {},
+  "packageStatuses": {},
+  "availableComponents": {
+    "hash": "aVZwcm/R6q9EKl9GY+imOa8S8KUHCAdnA+AhOE5q9ME="
+  }
+}

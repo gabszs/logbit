@@ -4,21 +4,22 @@ import type { InferRouterInputs, InferRouterOutputs } from "@orpc/server";
 import { RPCHandler } from "@orpc/server/fetch";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
 import { compress } from "hono/compress";
+import { cors } from "hono/cors";
 import { showRoutes } from "hono/dev";
 import { problemDetailsHandler } from "hono-problem-details";
 import { MemoryStore, rateLimiter } from "hono-rate-limiter";
 import { db, pgClient } from "./db";
 import { settings } from "./env";
 import authRouter from "./features/auth/routes";
+import opampRouter from "./features/opamp/routes";
 import { profileRouter } from "./features/profile/routes";
+import { settingsRouter } from "./features/settings/routes";
 import utilityRoutes from "./features/utils/routes";
 import { BunRedisStore, redis } from "./lib/cache";
 import { setupOpenApi } from "./lib/openapi";
 import { createContext } from "./lib/orpc";
 import { injectOtelTraceHeader, logger } from "./lib/telemetry";
 import type { AppContext } from "./types";
-import { cors } from 'hono/cors'
-import { settingsRouter } from "./features/settings/routes";
 
 // RUN MIGRATIONS
 await migrate(db, { migrationsFolder: "./src/db/migrations" });
@@ -27,13 +28,21 @@ await migrate(db, { migrationsFolder: "./src/db/migrations" });
 const app = new OpenAPIHono<AppContext>();
 
 // cors
-app.use(cors({
-	origin: settings.CORS_ORIGIN,
-	methods: ["GET", "POST", "OPTIONS"],
-	allowedHeaders: ["Content-Type", "Authorization", "x-client-ip", "cf-connecting-ip", "x-forwarded-for"],
-	maxAge: 86400, // 24 hours
-	credentials: true,
-}))
+app.use(
+	cors({
+		origin: settings.CORS_ORIGIN,
+		methods: ["GET", "POST", "OPTIONS"],
+		allowedHeaders: [
+			"Content-Type",
+			"Authorization",
+			"x-client-ip",
+			"cf-connecting-ip",
+			"x-forwarded-for",
+		],
+		maxAge: 86400, // 24 hours
+		credentials: true,
+	}),
+);
 
 // on-error handler
 app.onError(
@@ -129,11 +138,8 @@ app.use("/orpc/*", async (c) => {
 });
 
 // V1 Routes
-const v1Routes = [authRouter] as const;
-
-v1Routes.forEach((route) => {
-	app.basePath("/v1").route("/", route);
-});
+app.route("/v1", authRouter);
+app.route("/v1", opampRouter);
 
 // utilities routes
 app.route("/", utilityRoutes);

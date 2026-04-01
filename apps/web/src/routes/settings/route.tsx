@@ -1,23 +1,23 @@
+import {
+	createFileRoute,
+	Link,
+	Outlet,
+	redirect,
+	useRouterState,
+} from "@tanstack/react-router";
+import { useEffect, useMemo, useState } from "react";
 import { AppShellSkeleton } from "@/web/components/skeletons/app-skeleton";
 import {
-    Sheet,
-    SheetContent,
-    SheetDescription,
-    SheetHeader,
-    SheetTitle,
+	Sheet,
+	SheetContent,
+	SheetDescription,
+	SheetHeader,
+	SheetTitle,
 } from "@/web/components/ui/sheet";
 import { useIsMobile } from "@/web/hooks/use-mobile";
 import { SETTINGS_NAV_ITEMS } from "@/web/lib/constants";
 import { requireAuthenticated } from "@/web/lib/route-guards";
 import { cn } from "@/web/utils/cn";
-import {
-    createFileRoute,
-    Link,
-    Outlet,
-    redirect,
-    useRouterState,
-} from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
 import { SettingsError } from "./-components/settings-error";
 
 export const Route = createFileRoute("/settings")({
@@ -121,9 +121,7 @@ function SettingsLayout() {
 					</SheetContent>
 				</Sheet>
 			)}
-			<div
-				className="mx-auto flex max-w-5xl min-h-[calc(100svh-4rem-1.5rem)] w-full min-w-0 gap-2 px-1 sm:gap-4 sm:px-0 md:min-h-[calc(100svh-4rem-0.5rem)]"
-			>
+			<div className="mx-auto flex min-h-[calc(100svh-4rem-1.5rem)] w-full min-w-0 max-w-5xl gap-2 px-1 sm:gap-4 sm:px-0 md:min-h-[calc(100svh-4rem-0.5rem)]">
 				<aside className="relative hidden w-64 shrink-0 md:block">
 					<div className="sticky top-16 flex h-[calc(100svh-4rem-1.5rem)] flex-col overflow-hidden rounded-lg border bg-card p-3 shadow-sm sm:p-4 md:h-[calc(100svh-4rem-0.5rem)]">
 						<div className="mb-4">

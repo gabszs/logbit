@@ -5,7 +5,9 @@ const envSchema = z.object({
 	API_PORT: z.coerce.number().default(5151),
 	REDIS_URL: z.string().startsWith("redis://").optional(),
 	DATABASE_URL: z.string().startsWith("postgresql://"),
-	CORS_ORIGIN: z.string().transform((val) => val.split(","))
+	CORS_ORIGIN: z
+		.string()
+		.transform((val) => val.split(","))
 		.default(["http://localhost:5152"]),
 	NODE_ENV: z
 		.enum(["development", "production", "test"])

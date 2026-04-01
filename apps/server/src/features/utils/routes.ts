@@ -23,13 +23,10 @@ utilityRouter.openapi(
 		},
 	}),
 	async (c) => {
-		return c.json(
-			{
-				status: "ok",
-				timestamp: new Date().toISOString(),
-			},
-			status.HTTP_200_OK.code,
-		);
+		return c.json({
+			status: "ok",
+			timestamp: new Date().toISOString(),
+		});
 	},
 );
 
