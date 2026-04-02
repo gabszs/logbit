@@ -109,11 +109,6 @@ function SettingsLayout() {
 							</SheetDescription>
 						</SheetHeader>
 						<div className="flex h-full flex-col gap-4 overflow-hidden bg-card p-4">
-							<div className="space-y-3">
-								<h2 className="font-semibold text-muted-foreground text-sm uppercase tracking-wide">
-									Settings
-								</h2>
-							</div>
 							<div className="-mx-1 flex-1 overflow-y-auto px-1">
 								{renderNavigation(() => setMobileSidebarOpen(false))}
 							</div>
@@ -124,11 +119,6 @@ function SettingsLayout() {
 			<div className="mx-auto flex min-h-[calc(100svh-4rem-1.5rem)] w-full min-w-0 max-w-5xl gap-2 px-1 sm:gap-4 sm:px-0 md:min-h-[calc(100svh-4rem-0.5rem)]">
 				<aside className="relative hidden w-64 shrink-0 md:block">
 					<div className="sticky top-16 flex h-[calc(100svh-4rem-1.5rem)] flex-col overflow-hidden rounded-lg border bg-card p-3 shadow-sm sm:p-4 md:h-[calc(100svh-4rem-0.5rem)]">
-						<div className="mb-4">
-							<h2 className="font-semibold text-muted-foreground text-sm uppercase tracking-wide">
-								Settings
-							</h2>
-						</div>
 						<div className="-mx-1 flex-1 overflow-y-auto px-1">
 							{renderNavigation()}
 						</div>

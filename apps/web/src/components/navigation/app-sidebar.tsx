@@ -68,6 +68,12 @@ export function AppSidebar() {
 				isExpanded ? "w-48 items-start px-3" : "w-12 items-center",
 			)}
 		>
+			<button
+				type="button"
+				aria-label="Toggle Sidebar"
+				onClick={toggleSidebar}
+				className="absolute inset-y-0 -right-2 w-4 cursor-col-resize transition-colors after:absolute after:inset-y-0 after:left-1/2 after:w-0.5 after:bg-border/40 after:transition-colors hover:after:bg-border"
+			/>
 			{/* Top: App logo + toggle */}
 			<div
 				className={cn(

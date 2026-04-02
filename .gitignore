@@ -3,7 +3,8 @@ node_modules
 .alchemy
 .env*
 !.env.example
-
+apps/server/src/features/opamp/collector/
+apps/server/src/features/opamp/payloads/
 # AI rules
 .cursor
 AGENTS.md
@@ -13,7 +14,7 @@ AGENTS.md
 .codex/
 /otel
 plans/
-
+apps/server/src/features/opamp/save-payload.ts
 .DS_Store
 
 # START Ruler Generated Files
@@ -136,3 +137,8 @@ npm-debug.log*
 # OS-generated files
 .DS_Store # macOS
 Thumbs.db # Windows
+apps/server/src/features/opamp/payloads/
+apps/server/src/features/opamp/payloads/*
+apps/server/src/features/opamp/payloads/9005424412783783.json
+apps/server/src/features/opamp/payloads/9005424414183302.json
+apps/server/src/features/opamp/payloads/9005424414213311.json
