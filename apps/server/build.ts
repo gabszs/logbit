@@ -1,6 +1,6 @@
 /// <reference types="bun-types" />
 
-const isContainer = process.argv.includes("--container")
+const isContainer = process.argv.includes("--container");
 
 if (isContainer) {
 	// Container build: both entrypoints bundled separately
@@ -12,7 +12,7 @@ if (isContainer) {
 		minify: true,
 		sourcemap: "external",
 		naming: "otel.js",
-	})
+	});
 
 	await Bun.build({
 		entrypoints: ["./src/index.ts"],
@@ -21,7 +21,7 @@ if (isContainer) {
 		minify: true,
 		sourcemap: "external",
 		naming: "index.js",
-	})
+	});
 } else {
 	await Bun.build({
 		entrypoints: ["./src/index.ts"],
@@ -29,7 +29,7 @@ if (isContainer) {
 		target: "bun",
 		minify: true,
 		sourcemap: "external",
-	})
+	});
 }
 
-export {}
+export {};
