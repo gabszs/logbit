@@ -95,7 +95,7 @@ function SettingsLayout() {
 	);
 
 	return (
-		<div className="max-w-[100vw] overflow-x-hidden px-2 pt-16 sm:px-4">
+		<div className="max-w-[100vw] overflow-x-hidden px-2 pt-19 sm:px-4">
 			{isMobile && (
 				<Sheet open={mobileSidebarOpen} onOpenChange={setMobileSidebarOpen}>
 					<SheetContent
@@ -116,7 +116,7 @@ function SettingsLayout() {
 					</SheetContent>
 				</Sheet>
 			)}
-			<div className="mx-auto flex min-h-[calc(100svh-4rem-1.5rem)] w-full min-w-0 max-w-5xl gap-2 px-1 sm:gap-4 sm:px-0 md:min-h-[calc(100svh-4rem-0.5rem)]">
+			<div className="mx-auto flex min-h-[calc(100svh-4rem-1.5rem)] w-full min-w-0 max-w-5xl gap-4 px-1 sm:gap-6 sm:px-0 md:min-h-[calc(100svh-4rem-0.5rem)]">
 				<aside className="relative hidden w-64 shrink-0 md:block">
 					<div className="sticky top-16 flex h-[calc(100svh-4rem-1.5rem)] flex-col overflow-hidden rounded-lg border bg-card p-3 shadow-sm sm:p-4 md:h-[calc(100svh-4rem-0.5rem)]">
 						<div className="-mx-1 flex-1 overflow-y-auto px-1">
