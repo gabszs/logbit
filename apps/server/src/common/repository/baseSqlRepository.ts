@@ -11,12 +11,7 @@ import {
 	type SQL,
 	sql,
 } from "drizzle-orm";
-import type {
-	AnyPgSelect,
-	PgColumn,
-	PgTable,
-	PgTableWithColumns,
-} from "drizzle-orm/pg-core";
+import type { AnyPgSelect, PgColumn, PgTable } from "drizzle-orm/pg-core";
 import type { z } from "zod";
 import type { dbType } from "@/db";
 import type { searchOptionsSchema } from "../schemas/baseSchemas";
@@ -25,13 +20,6 @@ import type { IRepository } from "./IRepository";
 type FilterValue = string | number | boolean | Date | null;
 type Filters = Record<string, FilterValue>;
 
-interface SearchOptionsWithFilters extends z.infer<typeof searchOptionsSchema> {
-	createdBefore?: Date;
-	createdOnOrBefore?: Date;
-	createdAfter?: Date;
-	createdOnOrAfter?: Date;
-	pageSize?: number | "all";
-}
 
 /**
  * Minimal structural type for any Drizzle query builder that accepts a where clause.
@@ -44,7 +32,7 @@ type DrizzleQuery = {
 
 type ApplyQueryOptionsArgs<Q extends DrizzleQuery> = {
 	query: Q;
-	searchOptions?: SearchOptionsWithFilters | null;
+	searchOptions?: searchOptionsSchema | null;
 	filters?: Filters | null;
 };
 
@@ -54,7 +42,7 @@ export abstract class BaseSqlRepository<Model extends PgTable>
 			InferInsertModel<Model>,
 			InferInsertModel<Model>,
 			Partial<InferInsertModel<Model>>,
-			SearchOptionsWithFilters,
+			searchOptionsSchema,
 			Filters,
 			object,
 			object
@@ -94,26 +82,18 @@ export abstract class BaseSqlRepository<Model extends PgTable>
 		}
 
 		if (searchOptions) {
-			const createdBefore =
-				searchOptions.createdBefore ??
-				(searchOptions.created_before
-					? new Date(searchOptions.created_before)
-					: undefined);
-			const createdOnOrBefore =
-				searchOptions.createdOnOrBefore ??
-				(searchOptions.created_on_or_before
-					? new Date(searchOptions.created_on_or_before)
-					: undefined);
-			const createdAfter =
-				searchOptions.createdAfter ??
-				(searchOptions.created_after
-					? new Date(searchOptions.created_after)
-					: undefined);
-			const createdOnOrAfter =
-				searchOptions.createdOnOrAfter ??
-				(searchOptions.created_on_or_after
-					? new Date(searchOptions.created_on_or_after)
-					: undefined);
+			const createdBefore = searchOptions.created_before
+				? new Date(searchOptions.created_before)
+				: undefined;
+			const createdOnOrBefore = searchOptions.created_on_or_before
+				? new Date(searchOptions.created_on_or_before)
+				: undefined;
+			const createdAfter = searchOptions.created_after
+				? new Date(searchOptions.created_after)
+				: undefined;
+			const createdOnOrAfter = searchOptions.created_on_or_after
+				? new Date(searchOptions.created_on_or_after)
+				: undefined;
 
 			const createdAtColumn =
 				"created_at" in this.model
@@ -157,7 +137,7 @@ export abstract class BaseSqlRepository<Model extends PgTable>
 				) as AnyPgSelect;
 			}
 
-			const pageSize = searchOptions.pageSize ?? searchOptions.page_size;
+			const pageSize = searchOptions.page_size;
 			if (pageSize !== "all") {
 				const offset = (searchOptions.page - 1) * pageSize;
 				sq = (sq.limit(pageSize) as AnyPgSelect).offset(offset) as AnyPgSelect;
@@ -176,7 +156,7 @@ export abstract class BaseSqlRepository<Model extends PgTable>
 	// 	return this.model as PgTable;
 	// }
 
-	async getAll(searchOptions: SearchOptionsWithFilters, filters?: Filters) {
+	async getAll(searchOptions: searchOptionsSchema, filters?: Filters) {
 		const query = this.applyQueryOptions({
 			query: this.db.select().from(this.table),
 			searchOptions,
