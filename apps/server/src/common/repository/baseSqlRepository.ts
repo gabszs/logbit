@@ -11,9 +11,14 @@ import {
 	type SQL,
 	sql,
 } from "drizzle-orm";
-import type { DrizzleD1Database } from "drizzle-orm/d1";
-import type { SQLiteTable } from "drizzle-orm/sqlite-core";
+import type {
+	AnyPgSelect,
+	PgColumn,
+	PgTable,
+	PgTableWithColumns,
+} from "drizzle-orm/pg-core";
 import type { z } from "zod";
+import type { dbType } from "@/db";
 import type { searchOptionsSchema } from "../schemas/baseSchemas";
 import type { IRepository } from "./IRepository";
 
@@ -25,9 +30,25 @@ interface SearchOptionsWithFilters extends z.infer<typeof searchOptionsSchema> {
 	createdOnOrBefore?: Date;
 	createdAfter?: Date;
 	createdOnOrAfter?: Date;
+	pageSize?: number | "all";
 }
 
-export class BaseSqlRepository<Model extends SQLiteTable>
+/**
+ * Minimal structural type for any Drizzle query builder that accepts a where clause.
+ * Returns `unknown` so that all variants (select, update, delete — dynamic or not)
+ * satisfy the constraint regardless of their individual chain-return types.
+ */
+type DrizzleQuery = {
+	where(condition: SQL | undefined): unknown;
+};
+
+type ApplyQueryOptionsArgs<Q extends DrizzleQuery> = {
+	query: Q;
+	searchOptions?: SearchOptionsWithFilters | null;
+	filters?: Filters | null;
+};
+
+export abstract class BaseSqlRepository<Model extends PgTable>
 	implements
 		IRepository<
 			InferInsertModel<Model>,
@@ -40,98 +61,137 @@ export class BaseSqlRepository<Model extends SQLiteTable>
 		>
 {
 	protected model: Model;
-	public db: DrizzleD1Database;
+	public db: dbType;
+	protected table: PgTable;
 
-	constructor(model: Model, db: DrizzleD1Database) {
+	constructor(model: Model, db: dbType) {
 		this.model = model;
 		this.db = db;
+		this.table = model as PgTable; // Cast to concrete PgTable to satisfy Drizzle's type constraints
 	}
 
-	protected applyFilters(filters?: Filters): SQL<unknown> | undefined {
-		if (!filters || Object.keys(filters).length === 0) {
-			return undefined;
-		}
-
+	/**
+	 * Applies filters, date ranges, ordering, and pagination to any Drizzle query builder.
+	 * Returns the same type `Q` that was passed in so callers retain full type information.
+	 * `searchOptions` must only be passed for select queries — ordering and pagination are
+	 * not available on update/delete builders.
+	 */
+	protected applyQueryOptions<Q extends DrizzleQuery>({
+		query,
+		searchOptions,
+		filters,
+	}: ApplyQueryOptionsArgs<Q>): Q {
 		const conditions: SQL<unknown>[] = [];
 
-		for (const [key, value] of Object.entries(filters)) {
-			if (key in this.model && value !== undefined && value !== null) {
-				conditions.push(eq(this.model[key as keyof Model], value));
+		if (filters && Object.keys(filters).length > 0) {
+			for (const [key, value] of Object.entries(filters)) {
+				if (key in this.model && value !== undefined && value !== null) {
+					conditions.push(
+						eq(this.model[key as keyof Model] as PgColumn, value),
+					);
+				}
 			}
 		}
 
-		return conditions.length > 0 ? and(...conditions) : undefined;
-	}
+		if (searchOptions) {
+			const createdBefore =
+				searchOptions.createdBefore ??
+				(searchOptions.created_before
+					? new Date(searchOptions.created_before)
+					: undefined);
+			const createdOnOrBefore =
+				searchOptions.createdOnOrBefore ??
+				(searchOptions.created_on_or_before
+					? new Date(searchOptions.created_on_or_before)
+					: undefined);
+			const createdAfter =
+				searchOptions.createdAfter ??
+				(searchOptions.created_after
+					? new Date(searchOptions.created_after)
+					: undefined);
+			const createdOnOrAfter =
+				searchOptions.createdOnOrAfter ??
+				(searchOptions.created_on_or_after
+					? new Date(searchOptions.created_on_or_after)
+					: undefined);
 
-	protected applySearchOptions(
-		query: any,
-		searchOptions: SearchOptionsWithFilters,
-	) {
-		const ordering = searchOptions.ordering || "createdAt";
-		const column = ordering.startsWith("-") ? ordering.slice(1) : ordering;
-		const direction = ordering.startsWith("-") ? "desc" : "asc";
+			const createdAtColumn =
+				"created_at" in this.model
+					? (this.model as unknown as { created_at: PgColumn }).created_at
+					: undefined;
+			if (createdAtColumn) {
+				if (createdBefore) conditions.push(lt(createdAtColumn, createdBefore));
+				if (createdOnOrBefore)
+					conditions.push(lte(createdAtColumn, createdOnOrBefore));
+				if (createdAfter) conditions.push(gt(createdAtColumn, createdAfter));
+				if (createdOnOrAfter)
+					conditions.push(gte(createdAtColumn, createdOnOrAfter));
+			}
+		}
 
-		if (column in this.model) {
-			query = query.orderBy(
-				direction === "desc"
-					? desc(this.model[column as keyof Model])
-					: asc(this.model[column as keyof Model]),
+		// `unknown` lets us freely reassign across the different chain-return types
+		// produced by each Drizzle builder without fighting their Omit<> exclusion pattern.
+		let nextQuery: unknown = query;
+
+		if (conditions.length > 0) {
+			nextQuery = (nextQuery as DrizzleQuery).where(
+				and(...conditions) as SQL<unknown>,
 			);
 		}
-		const dateConditions: SQL<unknown>[] = [];
-		const createdAtColumn = this.model.createdAt;
 
-		if (createdAtColumn) {
-			if (searchOptions.createdBefore) {
-				dateConditions.push(lt(createdAtColumn, searchOptions.createdBefore));
-			}
-			if (searchOptions.createdOnOrBefore) {
-				dateConditions.push(
-					lte(createdAtColumn, searchOptions.createdOnOrBefore),
-				);
-			}
-			if (searchOptions.createdAfter) {
-				dateConditions.push(gt(createdAtColumn, searchOptions.createdAfter));
-			}
-			if (searchOptions.createdOnOrAfter) {
-				dateConditions.push(
-					gte(createdAtColumn, searchOptions.createdOnOrAfter),
-				);
+		if (searchOptions) {
+			// searchOptions is only passed for select queries — the cast to AnyPgSelect is safe.
+			// Each chained call (orderBy, limit, offset) is re-cast to keep the chain going,
+			// because Drizzle's non-dynamic builders return Omit<..., method> which breaks
+			// reassignment. Using `as AnyPgSelect` is the explicit escape hatch.
+			let sq = nextQuery as AnyPgSelect;
+
+			const ordering = searchOptions.ordering || "-created_at";
+			const column = ordering.startsWith("-") ? ordering.slice(1) : ordering;
+			const direction = ordering.startsWith("-") ? "desc" : "asc";
+
+			if (column in this.model) {
+				const orderColumn = this.model[column as keyof Model] as PgColumn;
+				sq = sq.orderBy(
+					direction === "desc" ? desc(orderColumn) : asc(orderColumn),
+				) as AnyPgSelect;
 			}
 
-			if (dateConditions.length > 0) {
-				query = query.where(and(...dateConditions) as SQL<unknown>);
+			const pageSize = searchOptions.pageSize ?? searchOptions.page_size;
+			if (pageSize !== "all") {
+				const offset = (searchOptions.page - 1) * pageSize;
+				sq = (sq.limit(pageSize) as AnyPgSelect).offset(offset) as AnyPgSelect;
 			}
-		}
-		if (searchOptions.pageSize !== "all") {
-			const offset = (searchOptions.page - 1) * searchOptions.pageSize;
-			query = query.limit(searchOptions.pageSize).offset(offset);
+
+			nextQuery = sq;
 		}
 
-		return query;
+		return nextQuery as Q;
 	}
 
-	async getAll(searchOptions: SearchOptionsWithFilters, filters?: Filters) {
-		let query = this.db.select().from(this.model);
-		const filterConditions = this.applyFilters(filters);
-		if (filterConditions) {
-			query = query.where(filterConditions as any);
-		}
-		query = this.applySearchOptions(query, searchOptions);
+	// TypeScript cannot evaluate the deferred conditional type
+	// `TableLikeHasEmptySelection<Model>` for any generic Model — even with `extends PgTable`.
+	// Casting to the concrete `PgTable` resolves it for the `.from()` call site.
+	// private get table(): PgTable {
+	// 	return this.model as PgTable;
+	// }
 
-		return await query.all();
+	async getAll(searchOptions: SearchOptionsWithFilters, filters?: Filters) {
+		const query = this.applyQueryOptions({
+			query: this.db.select().from(this.table),
+			searchOptions,
+			filters,
+		});
+		return (await query) as InferInsertModel<Model>[];
 	}
 
 	async getById(id: string, filters?: Filters) {
-		let query = this.db.select().from(this.model).where(eq(this.model.id, id));
-
-		const filterConditions = this.applyFilters(filters);
-		if (filterConditions) {
-			query = query.where(and(eq(this.model.id, id), filterConditions) as any);
-		}
-
+		const query = this.applyQueryOptions({
+			query: this.db.select().from(this.table),
+			filters: { id, ...filters },
+		});
 		const result = await query.limit(1);
-		return result[0] ?? null;
+		return (result[0] ?? null) as InferInsertModel<Model> | null;
 	}
 
 	async create(schema: InferInsertModel<Model>) {
@@ -144,48 +204,39 @@ export class BaseSqlRepository<Model extends SQLiteTable>
 		schema: Partial<InferInsertModel<Model>>,
 		filters?: Filters,
 	) {
-		let query = this.db
-			.update(this.model)
-			.set(schema)
-			.where(eq(this.model.id, id));
-
-		const filterConditions = this.applyFilters(filters);
-		if (filterConditions) {
-			query = query.where(and(eq(this.model.id, id), filterConditions) as any);
-		}
-
+		const query = this.applyQueryOptions({
+			query: this.db.update(this.model).set(schema),
+			filters: { id, ...filters },
+		});
 		return await query;
 	}
 
 	async delete(id: string, filters?: Filters) {
-		let query = this.db.delete(this.model).where(eq(this.model.id, id));
-
-		const filterConditions = this.applyFilters(filters);
-		if (filterConditions) {
-			query = query.where(and(eq(this.model.id, id), filterConditions) as any);
-		}
-
+		const query = this.applyQueryOptions({
+			query: this.db.delete(this.model),
+			filters: { id, ...filters },
+		});
 		return await query;
 	}
 
 	async count(filters?: Filters): Promise<number> {
-		let query = this.db
-			.select({ count: sql<number>`count(*)` })
-			.from(this.model);
-
-		const filterConditions = this.applyFilters(filters);
-		if (filterConditions) {
-			query = query.where(filterConditions as any);
-		}
-
-		const result = await query.get();
-		return result?.count ?? 0;
+		const query = this.applyQueryOptions({
+			query: this.db.select({ count: sql<number>`count(*)` }).from(this.table),
+			filters,
+		});
+		const result = await query;
+		return result[0]?.count ?? 0;
 	}
 
+	/**
+	 * Required by IRepository but intentionally not implemented.
+	 * Raw SQL strings are a SQL injection risk — use typed repository methods instead.
+	 */
 	async query<T = Record<string, string | number | boolean | Date | null>>(
-		queryString: string,
+		_queryString: string,
 	): Promise<T[]> {
-		const result = await this.db.execute(sql.raw(queryString));
-		return result.results as T[];
+		throw new Error(
+			"Raw query is not supported. Use typed repository methods instead.",
+		);
 	}
 }
