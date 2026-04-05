@@ -1,10 +1,20 @@
+import type { AnyProcedure } from "@orpc/server";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { users } from "../../db/models/authModels";
 import { protectedProcedure } from "../../lib/orpc";
 
-export const profileRouter = {
-	getProfile: protectedProcedure.handler(async ({ context }) => {
+type ProfileRouter = {
+	get: AnyProcedure;
+	update: AnyProcedure;
+	getInitials: AnyProcedure;
+	getDeviceInfo: AnyProcedure;
+	listSessions: AnyProcedure;
+	revokeSession: AnyProcedure;
+};
+
+export const profileRouter: ProfileRouter = {
+	get: protectedProcedure.handler(async ({ context }) => {
 		const [user] = await context.db
 			.select()
 			.from(users)
@@ -13,7 +23,7 @@ export const profileRouter = {
 		return user;
 	}),
 
-	updateProfile: protectedProcedure
+	update: protectedProcedure
 		.input(
 			z.object({
 				name: z.string().min(1),
@@ -115,4 +125,4 @@ export const profileRouter = {
 				throw new Error("Failed to revoke session");
 			}
 		}),
-} as const;
+};

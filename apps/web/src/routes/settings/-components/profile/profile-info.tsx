@@ -1,8 +1,3 @@
-import { useForm } from "@tanstack/react-form";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Pencil, Trash2 } from "lucide-react";
-import React, { useRef, useState } from "react";
-import { toast } from "sonner";
 import {
 	Avatar,
 	AvatarFallback,
@@ -21,6 +16,11 @@ import { Input } from "@/web/components/ui/input";
 import { Label } from "@/web/components/ui/label";
 import { useProfile } from "@/web/hooks/use-profile";
 import { orpc } from "@/web/lib/orpc";
+import { useForm } from "@tanstack/react-form";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Pencil, Trash2 } from "lucide-react";
+import React, { useRef, useState } from "react";
+import { toast } from "sonner";
 
 export function ProfileInfo() {
 	const [isEditOpen, setIsEditOpen] = useState(false);
@@ -39,13 +39,13 @@ export function ProfileInfo() {
 		enabled: !!user.data?.email,
 	});
 
-	const updateProfileMutation = useMutation(
-		orpc.profile.updateProfile.mutationOptions({
+	const updateMutation = useMutation(
+		orpc.profile.update.mutationOptions({
 			onSuccess: () => {
 				toast.success("Profile updated successfully");
 				setIsEditOpen(false);
 				queryClient.invalidateQueries({
-					queryKey: orpc.profile.getProfile.key(),
+					queryKey: orpc.profile.get.key(),
 				});
 				user.refetch();
 				initials.refetch();
@@ -58,7 +58,7 @@ export function ProfileInfo() {
 
 	const handleImageDelete = () => {
 		if (!user.data) return;
-		updateProfileMutation.mutate({
+		updateMutation.mutate({
 			name: user.data.name || "",
 			image: "",
 		});
@@ -71,7 +71,7 @@ export function ProfileInfo() {
 		const reader = new FileReader();
 		reader.onload = () => {
 			const dataUrl = reader.result as string;
-			updateProfileMutation.mutate({
+			updateMutation.mutate({
 				name: user.data!.name || "",
 				image: dataUrl,
 			});
@@ -85,7 +85,7 @@ export function ProfileInfo() {
 		},
 		onSubmit: async ({ value }) => {
 			if (!user.data) return;
-			updateProfileMutation.mutate({
+			updateMutation.mutate({
 				name: value.name,
 				image: user.data.image || undefined,
 			});
@@ -209,7 +209,7 @@ export function ProfileInfo() {
 												onChange={(e) => field.handleChange(e.target.value)}
 												onBlur={field.handleBlur}
 												placeholder="Enter your display name"
-												disabled={updateProfileMutation.isPending}
+												disabled={updateMutation.isPending}
 												autoComplete="name"
 											/>
 										</div>
@@ -220,12 +220,12 @@ export function ProfileInfo() {
 									<Button
 										variant="outline"
 										onClick={() => setIsEditOpen(false)}
-										disabled={updateProfileMutation.isPending}
+										disabled={updateMutation.isPending}
 									>
 										Cancel
 									</Button>
-									<Button disabled={updateProfileMutation.isPending}>
-										{updateProfileMutation.isPending
+									<Button disabled={updateMutation.isPending}>
+										{updateMutation.isPending
 											? "Saving..."
 											: "Save Changes"}
 									</Button>

@@ -16,7 +16,9 @@ AGENTS.md
 plans/
 apps/server/src/features/opamp/save-payload.ts
 .DS_Store
-
+/otel
+otel/
+/otel/*
 # START Ruler Generated Files
 /.mcp.json
 /.mcp.json.bak

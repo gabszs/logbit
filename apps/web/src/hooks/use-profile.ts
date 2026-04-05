@@ -18,7 +18,7 @@ export function useProfile() {
 	const isAuthenticated = Boolean(auth.session?.user);
 
 	return useQuery(
-		orpc.profile.getProfile.queryOptions({
+		orpc.profile.get.queryOptions({
 			enabled: isAuthenticated,
 			staleTime: 5 * 60 * 1000, // 5 minutes
 			refetchOnMount: false,
