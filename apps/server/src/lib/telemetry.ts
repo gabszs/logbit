@@ -1,13 +1,11 @@
 import { context as otelContext, trace } from "@opentelemetry/api";
 import type { LogAttributes } from "@opentelemetry/api-logs";
 import { logs, SeverityNumber } from "@opentelemetry/api-logs";
-import type { MiddlewareHandler, Next } from "hono";
+import type { Context as HonoContext, MiddlewareHandler, Next } from "hono";
 import { createMiddleware } from "hono/factory";
 import pino from "pino";
 import { UAParser } from "ua-parser-js";
 import { settings } from "@/env";
-import type { AppContext } from "../types";
-import { buildOtelQueryAttributeMap } from "./telemetry";
 
 const consoleLogger = pino(
 	{},
@@ -75,17 +73,51 @@ function createLogger(name: string, version?: string) {
 
 export const logger = createLogger("loglog.api", "1.0.0");
 
-interface InjectOtelTraceHeaderOptions {
-	headerName?: string;
+type OtelPrimitive = string | number | boolean;
+type OtelValue = OtelPrimitive | OtelPrimitive[] | undefined;
+
+function normalizeAttributes(
+	obj: Record<string, unknown>,
+): Record<string, OtelValue> {
+	return Object.fromEntries(
+		Object.entries(obj).map(([key, value]) => {
+			if (
+				typeof value === "string" ||
+				typeof value === "number" ||
+				typeof value === "boolean"
+			) {
+				return [key, value];
+			}
+
+			if (value == null) return [key, undefined];
+
+			if (Array.isArray(value)) {
+				return [key, value.map((v) => String(v)).join(",")];
+			}
+
+			return [key, safeJsonStringify(value)];
+		}),
+	);
 }
 
-export const injectOtelTraceHeader = (
-	options: InjectOtelTraceHeaderOptions = {},
-): MiddlewareHandler => {
-	const { headerName = settings.OTEL_TRACE_HEADER_NAME } = options;
+function safeJsonStringify(value: unknown, maxLength = 2000) {
+	try {
+		const str = JSON.stringify(value);
+		if (!str) return undefined;
+		return str.length > maxLength ? str.slice(0, maxLength) + "..." : str;
+	} catch {
+		return undefined;
+	}
+}
+
+export const injectOtelTraceHeader = (): MiddlewareHandler => {
+	const headerName = settings.OTEL_TRACE_HEADER_NAME;
+
 	return async (c, next) => {
 		await next();
+
 		const traceId = trace.getActiveSpan()?.spanContext().traceId;
+
 		if (traceId) {
 			c.header(headerName, traceId);
 		}
@@ -96,19 +128,13 @@ export function InstrumentClass(): ClassDecorator {
 	return (target: Function) => {
 		let currentProto = target.prototype;
 
-		// Percorre a árvore de herança
 		while (currentProto && currentProto !== Object.prototype) {
-			const propertyNames = Object.getOwnPropertyNames(currentProto);
-
-			for (const propertyName of propertyNames) {
-				// 1. Pula o constructor
-				// 2. SÓ decora se for função
-				// 3. EVITA decorar métodos internos do Drizzle/Helpers (importante!)
+			for (const propertyName of Object.getOwnPropertyNames(currentProto)) {
 				if (
 					propertyName === "constructor" ||
 					typeof currentProto[propertyName] !== "function" ||
-					propertyName.startsWith("apply") || // Ignora applyFilters, applySearchOptions
-					propertyName.startsWith("_") // Ignora métodos privados por convenção
+					propertyName.startsWith("_") ||
+					propertyName.startsWith("apply")
 				) {
 					continue;
 				}
@@ -117,14 +143,13 @@ export function InstrumentClass(): ClassDecorator {
 					currentProto,
 					propertyName,
 				);
+
 				if (!descriptor || descriptor.get || descriptor.set) continue;
 
 				const originalMethod = descriptor.value;
-
-				// Verifica se já não decoramos este método (evita duplicidade na herança)
 				if (originalMethod.__isInstrumented) continue;
 
-				const instrumentedMethod = function (this: any, ...args: any[]) {
+				const instrumented = function (this: any, ...args: any[]) {
 					const tracer = trace.getTracer("default");
 					const spanName = `${target.name}.${propertyName}`;
 
@@ -134,9 +159,9 @@ export function InstrumentClass(): ClassDecorator {
 
 							if (result instanceof Promise) {
 								return result
-									.then((value) => {
+									.then((res) => {
 										span.end();
-										return value;
+										return res;
 									})
 									.catch((err) => {
 										span.recordException(err);
@@ -157,11 +182,11 @@ export function InstrumentClass(): ClassDecorator {
 					});
 				};
 
-				// Marca como instrumentado e substitui
-				(instrumentedMethod as any).__isInstrumented = true;
+				(instrumented as any).__isInstrumented = true;
+
 				Object.defineProperty(currentProto, propertyName, {
 					...descriptor,
-					value: instrumentedMethod,
+					value: instrumented,
 				});
 			}
 
@@ -170,178 +195,98 @@ export function InstrumentClass(): ClassDecorator {
 	};
 }
 
-export function buildOtelQueryAttributeMap(
-	queryParams: QueryParams,
-	options?: {
-		denylist?: string[];
-		prefix?: string;
-		maxParams?: number;
-	},
-): Record<string, string> {
-	const { denylist = [], prefix = "url.query", maxParams = 20 } = options ?? {};
-
-	return Object.fromEntries(
-		Object.entries(queryParams)
-			.filter(([, value]) => value !== undefined)
-			.filter(([key]) => !denylist.includes(key.toLowerCase()))
-			.slice(0, maxParams)
-			.map(([key, value]) => [
-				`${prefix}.${key}`,
-				Array.isArray(value) ? value.join(",") : String(value),
-			]),
+function getClientAddress(c: HonoContext) {
+	return (
+		c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ||
+		c.req.header("x-real-ip") ||
+		c.req.header("x-client-ip")
 	);
 }
 
-function buildUserAgentAttributes(userAgent: string | undefined) {
+function buildUserAgentAttributes(userAgent?: string) {
 	if (!userAgent) return {};
 
 	const ua = new UAParser(userAgent).getResult();
+
 	return {
 		"user_agent.original": userAgent,
-		"user_agent.device.model": ua.device.model,
-		"user_agent.device.type": ua.device.type,
-		"user_agent.device.vendor": ua.device.vendor,
 		"user_agent.os": ua.os.name,
 		"user_agent.os.version": ua.os.version,
 		"user_agent.browser": ua.browser.name,
 		"user_agent.browser_version": ua.browser.version,
-		"user_agent.browser_major": ua.browser.major,
-		"user_agent.browser.type": ua.browser.type,
-		"user_agent.cpu.architecture": ua.cpu.architecture,
-		"user_agent.engine": ua.engine.name,
-		"user_agent.engine.version": ua.engine.version,
 	};
 }
 
-function buildServiceAttributes(c: AppContext) {
+function buildBrowserAttributes(c: HonoContext) {
+	return {
+		"browser.brands": c.req.header("sec-ch-ua"),
+		"browser.mobile": c.req.header("sec-ch-ua-mobile") === "?1",
+		"browser.platform": c.req.header("sec-ch-ua-platform")?.replace(/"/g, ""),
+	};
+}
+
+function buildServiceAttributes(c: HonoContext) {
 	return {
 		"service.environment": c.env.ENVIRONMENT,
-		"deployment.environment": c.env.ENVIRONMENT,
-		"service.team": "gabrielcarvalho",
-		"service.owner": "gabrielcarvalho",
 		"service.version": c.env.SERVICE_VERSION,
-		"service.discord": "kali9849",
 		"service.build.git_hash": c.env.commitHash,
 		"service.build.git_branch": c.env.commitBranch,
-		"service.build.deployment.user": c.env.deploymentUser,
-		// "service.build.deployment.email": c.env.deploymentEmail,
-		"service.build.deployment.trigger": c.env.deploymentTrigger,
-		"service.build.deployment.id": c.env.VERSION_METADATA.id,
-		"service.build.deployment.timestamp": c.env.VERSION_METADATA.timestamp,
+		"deployment.id": c.env.VERSION_METADATA?.id,
+		"deployment.timestamp": c.env.VERSION_METADATA?.timestamp,
 	};
 }
 
-function buildClientGeoAttributes(cf: Record<string, unknown> | undefined) {
-	if (!cf) return {};
-	return {
-		// Geo location
-		"client.geo.country.iso_code": cf.country,
-		"client.geo.continent.code": cf.continent,
-		"client.geo.region.iso_code": cf.regionCode,
-		"client.geo.locality.name": cf.city,
-		"client.geo.postal_code": cf.postalCode,
-		"client.geo.location.lat": cf.latitude,
-		"client.geo.location.lon": cf.longitude,
-		// Network/Cloud
-		"cloud.availability_zone": cf.colo,
-		"http.flavor": cf.httpProtocol,
-		"network.tls.protocol.version": cf.tlsVersion,
-		"network.tls.cipher": cf.tlsCipher,
-	};
-}
-
-function buildBrowserAttributes(c: AppContext) {
-	const secChUa = c.req.header("sec-ch-ua");
-	const secChUaMobile = c.req.header("sec-ch-ua-mobile");
-	const secChUaPlatform = c.req.header("sec-ch-ua-platform");
-
-	return {
-		"browser.brands": secChUa,
-		"browser.mobile": secChUaMobile === "?1",
-		"browser.platform": secChUaPlatform?.replace(/"/g, ""),
-	};
-}
-
-async function extractErrorAttributes(response: Response) {
-	const clonedResponse = response.clone();
-	const body = (await clonedResponse.json()) as {
-		error?: string;
-		message?: string;
-		code?: string;
-	};
-	return {
-		"error.status": body.status,
-		"error.message": body.message,
-		"error.code": body.code,
-		outcome: "error",
-	};
+function buildQueryAttributes(query: Record<string, string | string[]>) {
+	return Object.fromEntries(
+		Object.entries(query).map(([k, v]) => [
+			`url.query.${k}`,
+			Array.isArray(v) ? v.join(",") : v,
+		]),
+	);
 }
 
 export const otelConfig = () =>
-	createMiddleware(async (c: AppContext, next: Next) => {
-		const startTime = Date.now();
+	createMiddleware(async (c: HonoContext, next: Next) => {
+		const start = Date.now();
+
 		const span = trace.getSpan(otelContext.active());
 		const traceId = span?.spanContext().traceId;
 
-		const client_address = c.req.header("cf-connecting-ip");
 		const userAgent = c.req.header("user-agent");
+		const clientAddress = getClientAddress(c);
 
-		// Extrai o body se existir
-		let requestBody: unknown;
+		let body: unknown;
 		try {
-			requestBody = await c.req.json();
-		} catch {
-			// Não há body ou não é JSON
-		}
+			if (c.req.header("content-type")?.includes("application/json")) {
+				body = await c.req.json();
+			}
+		} catch {}
 
-		const event: Record<string, unknown> = {
+		const rawEvent = {
 			...buildServiceAttributes(c),
-			...buildClientGeoAttributes(c.req.raw.cf),
 			...buildUserAgentAttributes(userAgent),
 			...buildBrowserAttributes(c),
-			"http.request.id": c.req.header("cf-ray"),
-			"deployment.id": c.env.VERSION_METADATA.id,
-			timestamp: new Date(startTime).toISOString(),
-			"client.address": client_address,
-			...(requestBody !== undefined && { "http.request.body": requestBody }),
+
+			"http.request.id": c.req.header("x-request-id") || traceId,
+			"client.address": clientAddress,
+			timestamp: new Date(start).toISOString(),
+
+			...(body != null && {
+				"http.request.body": safeJsonStringify(body),
+			}),
 		};
 
+		const event = normalizeAttributes(rawEvent);
 		c.set("wideEvent", event);
 
-		if (span) {
-			span.setAttribute("client.address", client_address);
-			span.setAttributes(buildOtelQueryAttributeMap(c.req.query()));
-		}
-
 		await next();
+		const status = c.res.status;
+		event["http.response.status_code"] = status;
+		event["duration_ms"] = Date.now() - start;
+		event["outcome"] = status >= 400 ? "error" : "success";
+		event["ratelimit.triggered"] = status === 429;
 
-		const status_code = c.res.status;
-		const isError = status_code >= 400;
-		const isRateLimit = status_code === 429;
-		const isJsonError =
-			isError &&
-			!isRateLimit &&
-			c.res.headers.get("content-type")?.includes("application/json");
-
-		event["http.response.status_code"] = status_code;
-		event["duration_ms"] = Date.now() - startTime;
-		event["ratelimit.triggered"] = isRateLimit;
-
-		if (isJsonError) {
-			// Object.assign(event, await extractErrorAttributes(c.res));
-			event["outcome"] = "error";
-		} else {
-			event["outcome"] = "success";
+		if (span) {
+			span.setAttributes(event);
 		}
-
-		// if (span && traceId) {
-		// span.addEvent("wideEvent", event);
-		// span.setAttributes(event);
-		// if (isError) {
-		// 	span.setStatus({ code: SpanStatusCode.ERROR, message: `HTTP ${status_code}` });
-		// } else {
-		// 	span.setStatus({ code: SpanStatusCode.OK });
-		// }
-		// }
-		span.setAttributes(event);
 	});

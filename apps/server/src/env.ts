@@ -14,7 +14,23 @@ const envSchema = z.object({
 		.default("development"),
 
 	// EPHEMERAL
-	SCALAR_THEME: z.string().default("deepSpace"),
+	SCALAR_THEME: z
+		.enum([
+			"deepSpace",
+			"default",
+			"alternate",
+			"moon",
+			"purple",
+			"solarized",
+			"bluePlanet",
+			"saturn",
+			"kepler",
+			"mars",
+			"laserwave",
+			"elysiajs",
+			"fastify",
+		])
+		.default("deepSpace"), // TODO: migrate to settings.SCALAR_THEME
 	ENABLE_OPEN_API: z.coerce.boolean().default(true),
 
 	// Auth settings
