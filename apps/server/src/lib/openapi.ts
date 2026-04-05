@@ -387,24 +387,28 @@ function mapBetterAuthRequestBody(
 		return undefined;
 	}
 
-	const content = requestBody.content as Record<
+	const content = (requestBody.content ?? {}) as Record<
 		string,
 		Record<string, unknown> & { schema?: unknown }
 	>;
 
 	return {
 		...requestBody,
-		content: Object.fromEntries(
-			Object.entries(content).map(([contentType, mediaType]) => [
-				contentType,
-				{
-					...mediaType,
-					schema: mediaType.schema
-						? normalizeSchemaObject(mediaType.schema)
-						: undefined,
-				},
-			]),
-		),
+		...(Object.keys(content).length > 0
+			? {
+					content: Object.fromEntries(
+						Object.entries(content).map(([contentType, mediaType]) => [
+							contentType,
+							{
+								...mediaType,
+								schema: mediaType.schema
+									? normalizeSchemaObject(mediaType.schema)
+									: undefined,
+							},
+						]),
+					),
+				}
+			: {}),
 	};
 }
 
@@ -423,24 +427,28 @@ function mapBetterAuthResponses(
 		Object.entries(responses).map(([status, response]) => [
 			status,
 			(() => {
-				const content = response.content as Record<
+				const content = (response.content ?? {}) as Record<
 					string,
 					Record<string, unknown> & { schema?: unknown }
 				>;
 
 				return {
 					description: response.description ?? "Response",
-					content: Object.fromEntries(
-						Object.entries(content).map(([contentType, mediaType]) => [
-							contentType,
-							{
-								...mediaType,
-								schema: mediaType.schema
-									? normalizeSchemaObject(mediaType.schema)
-									: undefined,
-							},
-						]),
-					),
+					...(Object.keys(content).length > 0
+						? {
+								content: Object.fromEntries(
+									Object.entries(content).map(([contentType, mediaType]) => [
+										contentType,
+										{
+											...mediaType,
+											schema: mediaType.schema
+												? normalizeSchemaObject(mediaType.schema)
+												: undefined,
+										},
+									]),
+								),
+							}
+						: {}),
 				} satisfies ResponseObject;
 			})(),
 		]),
