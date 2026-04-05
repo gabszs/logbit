@@ -32,6 +32,6 @@ COPY --from=builder /app/apps/server/dist/index.js ./index.js
 COPY --from=builder /app/apps/server/dist/otel.js ./otel.js
 COPY --from=builder /app/apps/server/src/db/migrations ./src/db/migrations
 
-EXPOSE 5151
+EXPOSE 5051
 
 CMD ["bun", "--preload", "./otel.js", "run", "./index.js"]

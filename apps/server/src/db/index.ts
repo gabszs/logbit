@@ -16,3 +16,5 @@ export const db = drizzle(pgClient, {
 	schema: models,
 	casing: "snake_case",
 });
+
+export type dbType = ReturnType<typeof drizzle>;

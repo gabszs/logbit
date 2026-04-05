@@ -10,7 +10,7 @@ const msg = create(AgentToServerSchema, {
 const body = toBinary(AgentToServerSchema, msg);
 
 // Faz a request
-const res = await fetch("http://localhost:5151/v1/opamp", {
+const res = await fetch("http://localhost:5051/v1/opamp", {
 	method: "POST",
 	headers: { "Content-Type": "application/x-protobuf" },
 	body,

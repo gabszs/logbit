@@ -10,9 +10,14 @@ export const searchOptionsSchema = z.object({
 		.default(1)
 		.describe("Page number"),
 	page_size: z
-		.preprocess((val) => (val ? Number(val) : 50), z.number().int())
+		.preprocess(
+			(val) => (val === "all" ? "all" : val ? Number(val) : 50),
+			z.union([z.number().int(), z.literal("all")]),
+		)
 		.default(100)
-		.describe("Number of items per page"),
+		.describe(
+			'Number of items per page (integer or "all" to return all records)',
+		),
 	ordering: z.string().default("-created_at").describe("Ordering field"),
 	created_before: z.iso
 		.datetime()
@@ -31,6 +36,8 @@ export const searchOptionsSchema = z.object({
 		.optional()
 		.describe("Filter by creation date on or after (ISO 8601)"),
 });
+
+export type searchOptionsSchema = z.infer<typeof searchOptionsSchema>;
 
 const errorItemSchema = z.object({
 	code: z.string().describe("Error code"),

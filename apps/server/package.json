@@ -6,6 +6,8 @@
 	"dependencies": {
 		"@better-auth/redis-storage": "^1.5.5",
 		"@bufbuild/protobuf": "^2.11.0",
+		"@clickhouse/client": "^1.18.2",
+		"@founderpath/kysely-clickhouse": "^1.7.0",
 		"@hono-rate-limiter/redis": "^0.1.4",
 		"@hono/otel": "^1.1.0",
 		"@hono/zod-openapi": "^1.2.0",
