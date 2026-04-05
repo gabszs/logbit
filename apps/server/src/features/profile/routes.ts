@@ -1,128 +1,141 @@
-import type { AnyProcedure } from "@orpc/server";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { users } from "../../db/models/authModels";
 import { protectedProcedure } from "../../lib/orpc";
 
+const getProfile = protectedProcedure.handler(async ({ context }) => {
+	const [user] = await context.db
+		.select()
+		.from(users)
+		.where(eq(users.id, context.session.user.id))
+		.limit(1);
+
+	return user;
+});
+
+const updateProfile = protectedProcedure
+	.input(
+		z.object({
+			name: z.string().min(1),
+			image: z.string().optional(),
+		}),
+	)
+	.handler(async ({ context, input }) => {
+		const [updatedUser] = await context.db
+			.update(users)
+			.set({
+				name: input.name,
+				image: input.image,
+				updatedAt: new Date(),
+			})
+			.where(eq(users.id, context.session.user.id))
+			.returning();
+
+		return updatedUser;
+	});
+
+const getInitials = protectedProcedure
+	.input(
+		z.object({
+			name: z.string().nullable(),
+			email: z.string(),
+		}),
+	)
+	.handler(async ({ input }) => {
+		if (input.name) {
+			return input.name
+				.split(" ")
+				.map((part) => part.charAt(0))
+				.join("")
+				.toUpperCase()
+				.slice(0, 2);
+		}
+
+		return input.email.charAt(0).toUpperCase();
+	});
+
+const getDeviceInfo = protectedProcedure
+	.input(
+		z.object({
+			userAgent: z.string().nullable(),
+		}),
+	)
+	.handler(async ({ input }) => {
+		if (!input.userAgent) return "Unknown Device";
+
+		let browser = "Unknown Browser";
+		let os = "Unknown OS";
+
+		if (input.userAgent.includes("Chrome")) browser = "Chrome";
+		else if (input.userAgent.includes("Firefox")) browser = "Firefox";
+		else if (input.userAgent.includes("Safari")) browser = "Safari";
+		else if (input.userAgent.includes("Edge")) browser = "Edge";
+
+		if (input.userAgent.includes("Windows")) os = "Windows";
+		else if (
+			input.userAgent.includes("iPhone") ||
+			input.userAgent.includes("iPad") ||
+			input.userAgent.includes("iPod")
+		) {
+			os = "iOS";
+		} else if (input.userAgent.includes("Android")) {
+			os = "Android";
+		} else if (input.userAgent.includes("Mac")) {
+			os = "macOS";
+		} else if (input.userAgent.includes("Linux")) {
+			os = "Linux";
+		}
+
+		return `${browser}, ${os}`;
+	});
+
+const listSessions = protectedProcedure.handler(async ({ context }) => {
+	try {
+		const sessions = await context.auth.api.listSessions({
+			headers: context.headers,
+		});
+
+		return Array.isArray(sessions) ? sessions : [];
+	} catch (error) {
+		console.error("Error listing sessions:", error);
+		return [];
+	}
+});
+
+const revokeSession = protectedProcedure
+	.input(z.object({ token: z.string() }))
+	.handler(async ({ context, input }) => {
+		try {
+			const result = await context.auth.api.revokeSession({
+				headers: context.headers,
+				body: { token: input.token },
+			});
+
+			if (!result) {
+				throw new Error("Failed to revoke session");
+			}
+
+			return { success: true };
+		} catch (error) {
+			console.error("Error revoking session:", error);
+			throw new Error("Failed to revoke session");
+		}
+	});
+
 type ProfileRouter = {
-	get: AnyProcedure;
-	update: AnyProcedure;
-	getInitials: AnyProcedure;
-	getDeviceInfo: AnyProcedure;
-	listSessions: AnyProcedure;
-	revokeSession: AnyProcedure;
+	getProfile: typeof getProfile;
+	updateProfile: typeof updateProfile;
+	getInitials: typeof getInitials;
+	getDeviceInfo: typeof getDeviceInfo;
+	listSessions: typeof listSessions;
+	revokeSession: typeof revokeSession;
 };
 
 export const profileRouter: ProfileRouter = {
-	get: protectedProcedure.handler(async ({ context }) => {
-		const [user] = await context.db
-			.select()
-			.from(users)
-			.where(eq(users.id, context.session.user.id))
-			.limit(1);
-		return user;
-	}),
-
-	update: protectedProcedure
-		.input(
-			z.object({
-				name: z.string().min(1),
-				image: z.string().optional(),
-			}),
-		)
-		.handler(async ({ context, input }) => {
-			const [updatedUser] = await context.db
-				.update(users)
-				.set({
-					name: input.name,
-					image: input.image,
-					updatedAt: new Date(),
-				})
-				.where(eq(users.id, context.session.user.id))
-				.returning();
-			return updatedUser;
-		}),
-
-	getInitials: protectedProcedure
-		.input(
-			z.object({
-				name: z.string().nullable(),
-				email: z.string(),
-			}),
-		)
-		.handler(async ({ input }) => {
-			if (input.name) {
-				return input.name
-					.split(" ")
-					.map((part) => part.charAt(0))
-					.join("")
-					.toUpperCase()
-					.slice(0, 2);
-			}
-			return input.email.charAt(0).toUpperCase();
-		}),
-
-	getDeviceInfo: protectedProcedure
-		.input(
-			z.object({
-				userAgent: z.string().nullable(),
-			}),
-		)
-		.handler(async ({ input }) => {
-			if (!input.userAgent) return "Unknown Device";
-
-			let browser = "Unknown Browser";
-			let os = "Unknown OS";
-
-			if (input.userAgent.includes("Chrome")) browser = "Chrome";
-			else if (input.userAgent.includes("Firefox")) browser = "Firefox";
-			else if (input.userAgent.includes("Safari")) browser = "Safari";
-			else if (input.userAgent.includes("Edge")) browser = "Edge";
-
-			if (input.userAgent.includes("Windows")) os = "Windows";
-			else if (
-				input.userAgent.includes("iPhone") ||
-				input.userAgent.includes("iPad") ||
-				input.userAgent.includes("iPod")
-			)
-				os = "iOS";
-			else if (input.userAgent.includes("Android")) os = "Android";
-			else if (input.userAgent.includes("Mac")) os = "macOS";
-			else if (input.userAgent.includes("Linux")) os = "Linux";
-
-			return `${browser}, ${os}`;
-		}),
-
-	listSessions: protectedProcedure.handler(async ({ context }) => {
-		try {
-			const sessions = await context.auth.api.listSessions({
-				headers: context.headers,
-			});
-
-			return Array.isArray(sessions) ? sessions : [];
-		} catch (error) {
-			console.error("Error listing sessions:", error);
-			return [];
-		}
-	}),
-
-	revokeSession: protectedProcedure
-		.input(z.object({ token: z.string() }))
-		.handler(async ({ context, input }) => {
-			try {
-				const result = await context.auth.api.revokeSession({
-					headers: context.headers,
-					body: { token: input.token },
-				});
-
-				if (!result) {
-					throw new Error("Failed to revoke session");
-				}
-
-				return { success: true };
-			} catch (error) {
-				console.error("Error revoking session:", error);
-				throw new Error("Failed to revoke session");
-			}
-		}),
+	getProfile,
+	updateProfile,
+	getInitials,
+	getDeviceInfo,
+	listSessions,
+	revokeSession,
 };

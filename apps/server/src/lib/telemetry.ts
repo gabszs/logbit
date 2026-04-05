@@ -29,45 +29,65 @@ type LogOptions = {
 	printConsole?: boolean;
 };
 
+function serializeLogBody(body: unknown): string {
+	if (typeof body === "string") {
+		return body;
+	}
+
+	if (body instanceof Error) {
+		return body.stack ?? body.message;
+	}
+
+	const serialized = safeJsonStringify(body);
+	return serialized ?? String(body);
+}
+
 function createLogger(name: string, version?: string) {
 	const otelLogger = logs.getLogger(name, version);
 
 	function emit(
 		severityNumber: SeverityNumber,
 		severityText: string,
-		body: string,
+		body: unknown,
 		{ attributes, severity, printConsole }: LogOptions = {},
 	) {
+		const serializedBody = serializeLogBody(body);
+
 		otelLogger.emit({
 			severityNumber: severity ?? severityNumber,
 			severityText,
-			body,
+			body: serializedBody,
 			...(attributes ? { attributes } : {}),
 		});
 
 		if (printConsole) {
 			const level = severityText.toLowerCase() as pino.Level;
-			consoleLogger[level](attributes ?? {}, body);
+			if (body instanceof Error) {
+				consoleLogger[level]({ ...(attributes ?? {}), err: body }, body.message);
+				return;
+			}
+
+			consoleLogger[level](attributes ?? {}, serializedBody);
 		}
 	}
 
 	return {
-		trace: (body: string, options?: LogOptions) =>
+		trace: (body: unknown, options?: LogOptions) =>
 			emit(SeverityNumber.TRACE, "TRACE", body, options),
 
-		debug: (body: string, options?: LogOptions) =>
+		debug: (body: unknown, options?: LogOptions) =>
 			emit(SeverityNumber.DEBUG, "DEBUG", body, options),
 
-		info: (body: string, options?: LogOptions) =>
+		info: (body: unknown, options?: LogOptions) =>
 			emit(SeverityNumber.INFO, "INFO", body, options),
 
-		warn: (body: string, options?: LogOptions) =>
+		warn: (body: unknown, options?: LogOptions) =>
 			emit(SeverityNumber.WARN, "WARN", body, options),
 
-		error: (body: string, options?: LogOptions) =>
+		error: (body: unknown, options?: LogOptions) =>
 			emit(SeverityNumber.ERROR, "ERROR", body, options),
 
-		fatal: (body: string, options?: LogOptions) =>
+		fatal: (body: unknown, options?: LogOptions) =>
 			emit(SeverityNumber.FATAL, "FATAL", body, options),
 	};
 }

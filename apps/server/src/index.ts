@@ -98,23 +98,17 @@ if (settings.RATE_LIMIT_ENABLED) {
 }
 
 // ORPC - Profile routes
-export const OrpcRouter = {
+type OrpcRouterType = {
+	profile: typeof profileRouter;
+	settings: typeof settingsRouter;
+};
+
+export const OrpcRouter: OrpcRouterType = {
 	profile: profileRouter,
 	settings: settingsRouter,
-} as const;
+};
 
-const rpcHandler = new RPCHandler(OrpcRouter, {
-	interceptors: [
-		async ({ next, ...rest }) => {
-			try {
-				return await next(rest);
-			} catch (error) {
-				console.error("[orpc] Error in procedure:", error);
-				throw error;
-			}
-		},
-	],
-});
+const rpcHandler = new RPCHandler(OrpcRouter);
 
 export type AppRouter = typeof OrpcRouter;
 export type RouterOutputs = InferRouterOutputs<AppRouter>;
@@ -132,7 +126,7 @@ app.use("/orpc/*", async (c) => {
 		}
 		return response;
 	} catch (error) {
-		console.error("[orpc] Unhandled error:", error);
+		logger.error(error, { printConsole: true });
 		throw error;
 	}
 });

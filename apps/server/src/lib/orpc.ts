@@ -2,6 +2,7 @@ import { ORPCError, os } from "@orpc/server";
 import type { Context as HonoContext } from "hono";
 import { db } from "../db";
 import { auth } from "./auth";
+import type { profileRouter } from "@/features/profile/routes";
 
 export type CreateContextOptions = {
 	context: HonoContext;
@@ -46,3 +47,4 @@ export const protectedProcedure = publicProcedure.use(({ context, next }) => {
 });
 
 export type { ProtectedContext };
+
