@@ -63,7 +63,10 @@ function createLogger(name: string, version?: string) {
 		if (printConsole) {
 			const level = severityText.toLowerCase() as pino.Level;
 			if (body instanceof Error) {
-				consoleLogger[level]({ ...(attributes ?? {}), err: body }, body.message);
+				consoleLogger[level](
+					{ ...(attributes ?? {}), err: body },
+					body.message,
+				);
 				return;
 			}
 
@@ -122,7 +125,7 @@ function safeJsonStringify(value: unknown, maxLength = 2000) {
 	try {
 		const str = JSON.stringify(value);
 		if (!str) return undefined;
-		return str.length > maxLength ? str.slice(0, maxLength) + "..." : str;
+		return str.length > maxLength ? `${str.slice(0, maxLength)}...` : str;
 	} catch {
 		return undefined;
 	}
@@ -300,8 +303,8 @@ export const otelConfig = () =>
 		await next();
 		const status = c.res.status;
 		event["http.response.status_code"] = status;
-		event["duration_ms"] = Date.now() - start;
-		event["outcome"] = status >= 400 ? "error" : "success";
+		event.duration_ms = Date.now() - start;
+		event.outcome = status >= 400 ? "error" : "success";
 		event["ratelimit.triggered"] = status === 429;
 
 		if (span) {

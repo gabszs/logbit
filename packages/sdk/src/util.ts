@@ -107,7 +107,7 @@ export function loadGitignorePatterns(repoPath: string): GitignorePattern[] {
 		}
 
 		if (line.endsWith("/")) {
-			line = line.slice(0, -1) + "/**";
+			line = `${line.slice(0, -1)}/**`;
 		}
 
 		if (rawLine.trim().endsWith("/") && !negation) {

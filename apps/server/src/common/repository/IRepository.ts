@@ -1,8 +1,8 @@
-import type { z } from "zod";
+import type { ZodUUID, z } from "zod";
 import type { searchOptionsSchema } from "../schemas/baseSchemas";
 
 type SearchOptions = z.infer<typeof searchOptionsSchema>;
-type FilterValue = string | number | boolean | Date | null;
+type FilterValue = string | number | boolean | Date | ZodUUID | null;
 export type Filters = Record<string, FilterValue>;
 
 type JsonPrimitive = string | number | boolean | null;

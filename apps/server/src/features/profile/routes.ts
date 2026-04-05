@@ -123,8 +123,8 @@ const revokeSession = protectedProcedure
 	});
 
 type ProfileRouter = {
-	getProfile: typeof getProfile;
-	updateProfile: typeof updateProfile;
+	get: typeof getProfile;
+	update: typeof updateProfile;
 	getInitials: typeof getInitials;
 	getDeviceInfo: typeof getDeviceInfo;
 	listSessions: typeof listSessions;
@@ -132,8 +132,8 @@ type ProfileRouter = {
 };
 
 export const profileRouter: ProfileRouter = {
-	getProfile,
-	updateProfile,
+	get: getProfile,
+	update: updateProfile,
 	getInitials,
 	getDeviceInfo,
 	listSessions,

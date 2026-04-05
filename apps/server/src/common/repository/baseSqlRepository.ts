@@ -14,11 +14,12 @@ import {
 	sql,
 } from "drizzle-orm";
 import type { AnyPgSelect, PgColumn, PgTable } from "drizzle-orm/pg-core";
+import type { ZodUUID } from "zod";
 import type { dbType } from "@/db";
 import type { searchOptionsSchema } from "../schemas/baseSchemas";
 import type { IRepository } from "./IRepository";
 
-type FilterValue = string | number | boolean | Date | null;
+type FilterValue = string | number | boolean | Date | ZodUUID | null;
 type Filters = Record<string, FilterValue>;
 
 export abstract class BaseSqlRepository<Model extends PgTable>
@@ -65,7 +66,7 @@ export abstract class BaseSqlRepository<Model extends PgTable>
 		}
 
 		if (searchOptions) {
-			const createdAtColumn = columns["created_at"];
+			const createdAtColumn = columns.created_at;
 			if (createdAtColumn) {
 				if (searchOptions.created_before)
 					conditions.push(
@@ -143,7 +144,7 @@ export abstract class BaseSqlRepository<Model extends PgTable>
 	}
 
 	async getById(
-		id: string,
+		id: string | number | ZodUUID,
 		filters?: Filters,
 	): Promise<InferSelectModel<Model> | null> {
 		const query = this.applySelectOptions(
@@ -163,7 +164,7 @@ export abstract class BaseSqlRepository<Model extends PgTable>
 	}
 
 	async update(
-		id: string,
+		id: string | number | ZodUUID,
 		data: Partial<InferInsertModel<Model>>,
 		filters?: Filters,
 	): Promise<InferSelectModel<Model> | null> {
@@ -176,7 +177,10 @@ export abstract class BaseSqlRepository<Model extends PgTable>
 		return (result[0] ?? null) as InferSelectModel<Model> | null;
 	}
 
-	async delete(id: string, filters?: Filters): Promise<void> {
+	async delete(
+		id: string | number | ZodUUID,
+		filters?: Filters,
+	): Promise<void> {
 		const condition = this.buildWhereConditions({ id, ...filters });
 		await this.db.delete(this.model).where(condition);
 	}
