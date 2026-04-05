@@ -22,13 +22,14 @@ type FilterValue = string | number | boolean | Date | null;
 type Filters = Record<string, FilterValue>;
 
 /**
- * Tipo estrutural mínimo para qualquer query builder do Drizzle que aceite cláusula 'where'.
+ * Tipo auto-referencial: garante que `.where()` devolve o mesmo tipo Q,
+ * preservando o tipo do builder ao longo de toda a chain.
  */
-type DrizzleQuery = {
-	where(condition: SQL | undefined): unknown;
+type WithWhere<T> = {
+	where(condition: SQL | undefined): T;
 };
 
-type ApplyQueryOptionsArgs<Q extends DrizzleQuery> = {
+type ApplyQueryOptionsArgs<Q extends WithWhere<Q>> = {
 	query: Q;
 	searchOptions?: searchOptionsSchema | null;
 	filters?: Filters | null;
@@ -60,7 +61,7 @@ export abstract class BaseSqlRepository<Model extends PgTable>
     /**
      * Aplica filtros, intervalos de data, ordenação e paginação.
      */
-    protected applyQueryOptions<Q extends DrizzleQuery>({
+    protected applyQueryOptions<Q extends WithWhere<Q>>({
         query,
         searchOptions,
         filters,
@@ -80,31 +81,28 @@ export abstract class BaseSqlRepository<Model extends PgTable>
 
         // Filtros de Data (SearchOptions)
         if (searchOptions) {
-            const createdBefore = searchOptions.created_before ? new Date(searchOptions.created_before) : undefined;
-            const createdOnOrBefore = searchOptions.created_on_or_before ? new Date(searchOptions.created_on_or_before) : undefined;
-            const createdAfter = searchOptions.created_after ? new Date(searchOptions.created_after) : undefined;
-            const createdOnOrAfter = searchOptions.created_on_or_after ? new Date(searchOptions.created_on_or_after) : undefined;
-
             const createdAtColumn = columns["created_at"];
             if (createdAtColumn) {
-                if (createdBefore) conditions.push(lt(createdAtColumn, createdBefore));
-                if (createdOnOrBefore) conditions.push(lte(createdAtColumn, createdOnOrBefore));
-                if (createdAfter) conditions.push(gt(createdAtColumn, createdAfter));
-                if (createdOnOrAfter) conditions.push(gte(createdAtColumn, createdOnOrAfter));
+                if (searchOptions.created_before)
+                    conditions.push(lt(createdAtColumn, new Date(searchOptions.created_before)));
+                if (searchOptions.created_on_or_before)
+                    conditions.push(lte(createdAtColumn, new Date(searchOptions.created_on_or_before)));
+                if (searchOptions.created_after)
+                    conditions.push(gt(createdAtColumn, new Date(searchOptions.created_after)));
+                if (searchOptions.created_on_or_after)
+                    conditions.push(gte(createdAtColumn, new Date(searchOptions.created_on_or_after)));
             }
         }
 
-        let nextQuery: unknown = query;
-
-        if (conditions.length > 0) {
-            nextQuery = (nextQuery as DrizzleQuery).where(and(...conditions));
-        }
+        // Q extends WithWhere<Q>: .where() devolve Q — sem cast necessário
+        let result: Q = conditions.length > 0 ? query.where(and(...conditions)) : query;
 
         // Paginação e Ordenação (Apenas para Selects)
+        // Cast isolado aqui: orderBy/limit/offset são exclusivos de SELECT builders
         if (searchOptions) {
-            let sq = nextQuery as AnyPgSelect;
+            let sq = result as unknown as AnyPgSelect;
 
-            const ordering = searchOptions.ordering || "-created_at";
+            const ordering = searchOptions.ordering ?? "-created_at";
             const columnName = ordering.startsWith("-") ? ordering.slice(1) : ordering;
             const direction = ordering.startsWith("-") ? "desc" : "asc";
 
@@ -113,16 +111,15 @@ export abstract class BaseSqlRepository<Model extends PgTable>
                 sq = sq.orderBy(direction === "desc" ? desc(orderColumn) : asc(orderColumn)) as AnyPgSelect;
             }
 
-            const pageSize = searchOptions.page_size;
+            const { page_size: pageSize, page } = searchOptions;
             if (pageSize !== "all") {
-                const offset = (searchOptions.page - 1) * pageSize;
-                sq = (sq.limit(pageSize) as AnyPgSelect).offset(offset) as AnyPgSelect;
+                sq = sq.limit(pageSize).offset((page - 1) * pageSize) as AnyPgSelect;
             }
 
-            nextQuery = sq;
+            result = sq as unknown as Q;
         }
 
-        return nextQuery as Q;
+        return result;
     }
 
     async getAll(searchOptions: searchOptionsSchema, filters?: Filters): Promise<InferSelectModel<Model>[]> {
