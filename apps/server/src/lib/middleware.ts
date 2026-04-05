@@ -1,11 +1,11 @@
 import { createMiddleware } from "hono/factory";
 import { HTTPException } from "hono/http-exception";
-import type { AppContext } from "../types";
+import type { AppContext, AuthAppContext } from "../types";
 import { auth } from "./auth";
 import { error } from "./errors";
 
 // DEVO USAR SINGLETON NO AUTH OU CRIOU TODA VEZ????
-export const authenticateSession = createMiddleware<AppContext>(
+export const authenticateSession = createMiddleware<AuthAppContext>(
 	async (c, next) => {
 		const session = await auth.api.getSession({ headers: c.req.raw.headers });
 

@@ -1,4 +1,5 @@
 import { RedisClient } from "bun";
+import type { Env, Input } from "hono";
 import type {
 	ClientRateLimitInfo,
 	HonoConfigType,
@@ -26,15 +27,22 @@ const GET_SCRIPT = `
   return { hits, pttl }
 `;
 
-export class BunRedisStore implements Store {
+export class BunRedisStore<
+	E extends Env = Env,
+	P extends string = string,
+	I extends Input = Input,
+> implements Store<E, P, I>
+{
 	windowMs = 0;
+	prefix: string;
+	private resetExpiryOnChange: boolean;
 
-	constructor(
-		private prefix = "hrl:",
-		private resetExpiryOnChange = false,
-	) {}
+	constructor(prefix = "hrl:", resetExpiryOnChange = false) {
+		this.prefix = prefix;
+		this.resetExpiryOnChange = resetExpiryOnChange;
+	}
 
-	init(options: HonoConfigType) {
+	init(options: HonoConfigType<E, P, I>) {
 		this.windowMs = options.windowMs;
 	}
 
@@ -42,14 +50,14 @@ export class BunRedisStore implements Store {
 		return `${this.prefix}${k}`;
 	}
 
-	async get(key: string): Promise<ClientRateLimitInfo | null> {
+	async get(key: string): Promise<ClientRateLimitInfo | undefined> {
 		const result = (await redis.send("EVAL", [
 			GET_SCRIPT,
 			"1",
 			this.key(key),
 		])) as [string, number] | null;
 
-		if (result === null) return null;
+		if (result === null) return undefined;
 
 		return {
 			totalHits: Number(result[0]),

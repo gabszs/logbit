@@ -55,17 +55,16 @@ opampRouter.openapi(
 
 		const AgentToServerJson = toJson(AgentToServerSchema, agentToServer);
 		// decodeCapabilities(AgentToServerJson.capabilities);
-		logger.info(AgentToServerJson, { printConsole: true });
+		// logger.info(AgentToServerJson, { printConsole: true });
 		// saveAgentPayload(AgentToServerJson);
 
 		const response = create(ServerToAgentSchema, {
 			instanceUid: agentToServer.instanceUid,
 		});
 
-		return c.body(
-			toBinary(ServerToAgentSchema, response),
-			"application/x-protobuf",
-		);
+		return c.body(toBinary(ServerToAgentSchema, response), 200, {
+			"content-type": "application/x-protobuf",
+		});
 	},
 );
 

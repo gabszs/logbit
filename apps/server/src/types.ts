@@ -1,5 +1,5 @@
 import type { OpenAPIHono } from "@hono/zod-openapi";
-import type { AuthType } from "./lib/auth";
+import type { AuthSessionData, AuthType, AuthUser } from "./lib/auth";
 
 export type AppContext = {
 	Variables: {
@@ -7,4 +7,12 @@ export type AppContext = {
 	};
 };
 
+export type AuthAppContext = {
+	Variables: AppContext["Variables"] & {
+		user: AuthUser;
+		session: AuthSessionData;
+	};
+};
+
 export type AppType = OpenAPIHono<AppContext>;
+export type AuthAppType = OpenAPIHono<AuthAppContext>;

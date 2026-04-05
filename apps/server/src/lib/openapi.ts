@@ -2,9 +2,9 @@ import type { RouteConfig } from "@hono/zod-openapi";
 import { Scalar } from "@scalar/hono-api-reference";
 import { createMarkdownFromOpenApi } from "@scalar/openapi-to-markdown";
 import type {
+	Path as BetterAuthPathItem,
 	FieldSchema,
 	OpenAPIModelSchema,
-	Path as BetterAuthPathItem,
 } from "better-auth/plugins";
 import { settings } from "@/env";
 import type { AppType } from "@/types";
@@ -22,8 +22,9 @@ const HTTP_METHODS = [
 ] as const satisfies RouteConfig["method"][];
 
 type HttpMethod = (typeof HTTP_METHODS)[number];
-type BetterAuthOperation =
-	NonNullable<BetterAuthPathItem[keyof BetterAuthPathItem]>;
+type BetterAuthOperation = NonNullable<
+	BetterAuthPathItem[keyof BetterAuthPathItem]
+>;
 type BetterAuthSecurityScheme = {
 	type: string;
 	description?: string;
@@ -213,7 +214,9 @@ function isHttpMethod(value: string): value is HttpMethod {
 	return (HTTP_METHODS as readonly string[]).includes(value);
 }
 
-function mapDbFieldTypeToSchemaType(type: FieldSchema["type"]): SchemaObject["type"] {
+function mapDbFieldTypeToSchemaType(
+	type: FieldSchema["type"],
+): SchemaObject["type"] {
 	switch (String(type)) {
 		case "string":
 		case "boolean":
@@ -263,9 +266,7 @@ function normalizeSchemaObject(value: unknown): SchemaObject | ReferenceObject {
 				break;
 			case "additionalProperties":
 				normalized.additionalProperties =
-					typeof entry === "boolean"
-						? entry
-						: normalizeSchemaObject(entry);
+					typeof entry === "boolean" ? entry : normalizeSchemaObject(entry);
 				break;
 			case "allOf":
 			case "anyOf":
@@ -341,12 +342,13 @@ function mapBetterAuthSecurityScheme(
 	if (scheme.type === "apiKey") {
 		return {
 			type: "apiKey",
-			in: scheme.in === "query" ||
+			in:
+				scheme.in === "query" ||
 				scheme.in === "header" ||
 				scheme.in === "path" ||
 				scheme.in === "cookie"
-				? scheme.in
-				: "header",
+					? scheme.in
+					: "header",
 			name: scheme.name ?? "Authorization",
 			description: scheme.description,
 		};
@@ -372,7 +374,7 @@ function mapBetterAuthParameters(
 		}
 
 		return {
-			...((parameter as unknown) as Record<string, unknown>),
+			...(parameter as unknown as Record<string, unknown>),
 			schema: parameter.schema
 				? normalizeSchemaObject(parameter.schema)
 				: undefined,
@@ -466,9 +468,10 @@ function mapBetterAuthOperationToRouteConfig(
 	path: string,
 	operation: BetterAuthOperation,
 ): RouteConfig {
-	const requestBody = "requestBody" in operation
-		? mapBetterAuthRequestBody(operation.requestBody)
-		: undefined;
+	const requestBody =
+		"requestBody" in operation
+			? mapBetterAuthRequestBody(operation.requestBody)
+			: undefined;
 
 	return {
 		method,

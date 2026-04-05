@@ -1,3 +1,4 @@
+import type { Attributes, AttributeValue } from "@opentelemetry/api";
 import { context as otelContext, trace } from "@opentelemetry/api";
 import type { LogAttributes } from "@opentelemetry/api-logs";
 import { logs, SeverityNumber } from "@opentelemetry/api-logs";
@@ -73,12 +74,9 @@ function createLogger(name: string, version?: string) {
 
 export const logger = createLogger("loglog.api", "1.0.0");
 
-type OtelPrimitive = string | number | boolean;
-type OtelValue = OtelPrimitive | OtelPrimitive[] | undefined;
+type OtelValue = AttributeValue | undefined;
 
-function normalizeAttributes(
-	obj: Record<string, unknown>,
-): Record<string, OtelValue> {
+function normalizeAttributes(obj: Record<string, unknown>): Attributes {
 	return Object.fromEntries(
 		Object.entries(obj).map(([key, value]) => {
 			if (

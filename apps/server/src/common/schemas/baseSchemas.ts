@@ -85,11 +85,6 @@ export const authorizationHeaderSchema = z.object({
 				url: "https://jwt.io/introduction",
 				description: "Learn more about JWT (JSON Web Tokens)",
 			},
-			metadata: {
-				security: "JWT",
-				tokenType: "access_token",
-				requiresAuthentication: true,
-			},
 		}),
 });
 
@@ -107,47 +102,6 @@ export const optionalAuthorizationHeaderSchema = z.object({
 export const shortUuidParamSchema = z.object({
 	id: z.string().regex(/^[a-zA-Z0-9]{6,32}$/, "Invalid ID"),
 });
-
-export function createNotFoundSchema(resourceName: string) {
-	return z
-		.object({
-			code: z.string().openapi({
-				description: "RFC Status phrase",
-				example: status.HTTP_404_NOT_FOUND.title,
-			}),
-			message: z.string().openapi({
-				description: "Detailed error message",
-				example: `The provided ${resourceName} was not found`,
-			}),
-			status: z.string().openapi({
-				description: "RFC Status phrase",
-				example: status.HTTP_404_NOT_FOUND.code,
-			}),
-		})
-		.openapi({
-			description: `${resourceName} not found response`,
-		});
-}
-export function createNoChangesSchema(resourceName: string) {
-	return z
-		.object({
-			error: z.string().openapi({
-				description: "RFC Status phrase",
-				example: status.HTTP_422_UNPROCESSABLE_ENTITY.title,
-			}),
-			message: z.string().openapi({
-				description: "Detailed error message",
-				example: `No changes were detected in the ${resourceName} payload`,
-			}),
-			code: z.string().openapi({
-				description: "RFC Status phrase",
-				example: status.HTTP_422_UNPROCESSABLE_ENTITY.code,
-			}),
-		})
-		.openapi({
-			description: `No changes detected response for ${resourceName}`,
-		});
-}
 
 export const fileUploadSchema = z.object({
 	file: z.any().openapi({

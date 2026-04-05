@@ -27,8 +27,6 @@ const envSchema = z.object({
 			"kepler",
 			"mars",
 			"laserwave",
-			"elysiajs",
-			"fastify",
 		])
 		.default("deepSpace"), // TODO: migrate to settings.SCALAR_THEME
 	ENABLE_OPEN_API: z.coerce.boolean().default(true),

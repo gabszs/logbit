@@ -2,7 +2,7 @@ import { httpInstrumentationMiddleware } from "@hono/otel";
 import { OpenAPIHono } from "@hono/zod-openapi";
 import type { InferRouterInputs, InferRouterOutputs } from "@orpc/server";
 import { RPCHandler } from "@orpc/server/fetch";
-import { migrate } from "drizzle-orm/postgres-js/migrator";
+import { migrate } from "drizzle-orm/bun-sql/migrator";
 import { compress } from "hono/compress";
 import { cors } from "hono/cors";
 import { showRoutes } from "hono/dev";
@@ -31,8 +31,8 @@ const app = new OpenAPIHono<AppContext>();
 app.use(
 	cors({
 		origin: settings.CORS_ORIGIN,
-		methods: ["GET", "POST", "OPTIONS"],
-		allowedHeaders: [
+		allowMethods: ["GET", "POST", "OPTIONS"],
+		allowHeaders: [
 			"Content-Type",
 			"Authorization",
 			"x-client-ip",
@@ -88,11 +88,11 @@ if (settings.RATE_LIMIT_ENABLED) {
 				c.req.header("x-forwarded-for")?.split(",")[0].trim() ||
 				"",
 			store: settings.REDIS_URL
-				? new BunRedisStore(
+				? new BunRedisStore<AppContext>(
 						settings.RATE_LIMIT_PREFIX,
 						settings.RATE_LIMIT_SLIDING_WINDOW,
 					)
-				: new MemoryStore(),
+				: new MemoryStore<AppContext>(),
 		}),
 	);
 }
