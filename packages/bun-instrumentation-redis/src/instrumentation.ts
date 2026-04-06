@@ -14,15 +14,28 @@ import {
 	ATTR_DB_OPERATION_NAME,
 	ATTR_DB_QUERY_TEXT,
 } from "@opentelemetry/semantic-conventions";
-import type { RedisInstrumentationConfig } from "./types";
+import type {
+	BunModuleExports,
+	BunRedisClientConstructor,
+	BunRedisClientInstance,
+	RedisInstrumentationConfig,
+} from "./types";
 import { getClientAttributes } from "./utils";
 
 const PACKAGE_NAME = "@loglog/bun-instrumentation-redis";
 const PACKAGE_VERSION = "0.1.0";
 
-declare const Bun: any;
-
 const WRAP_SYMBOL = Symbol("opentelemetry.bun-redis.wrapped");
+
+// bun-types declares Bun as a non-optional global namespace, but in non-Bun
+// environments it won't exist. This local declaration shadows the global one
+// to allow optional-chaining and reflect the true runtime possibility.
+declare const Bun: { RedisClient: BunRedisClientConstructor } | undefined;
+
+type MethodSlot = ((...args: unknown[]) => unknown) & {
+	[WRAP_SYMBOL]?: boolean;
+	_original?: (...args: unknown[]) => unknown;
+};
 
 // Semantic conventions for v1.40.0
 const ATTR_ERROR_TYPE = "error.type";
@@ -36,7 +49,7 @@ export class BunRedisInstrumentation extends InstrumentationBase {
 
 	protected init() {
 		// Direct patch for Bun's global RedisClient if available
-		if (typeof Bun !== "undefined" && Bun.RedisClient) {
+		if (Bun?.RedisClient) {
 			diag.debug("Bun.RedisClient found globally, patching directly...");
 			this._patchRedisClient(Bun.RedisClient);
 		}
@@ -45,15 +58,15 @@ export class BunRedisInstrumentation extends InstrumentationBase {
 			new InstrumentationNodeModuleDefinition(
 				"bun",
 				["*"],
-				(moduleExports: any) => {
-					if (moduleExports && moduleExports.RedisClient) {
+				(moduleExports: BunModuleExports) => {
+					if (moduleExports?.RedisClient) {
 						diag.debug("RedisClient found in module exports, patching...");
 						this._patchRedisClient(moduleExports.RedisClient);
 					}
 					return moduleExports;
 				},
-				(moduleExports: any) => {
-					if (moduleExports && moduleExports.RedisClient) {
+				(moduleExports: BunModuleExports) => {
+					if (moduleExports?.RedisClient) {
 						this._unpatchRedisClient(moduleExports.RedisClient);
 					}
 				},
@@ -61,8 +74,11 @@ export class BunRedisInstrumentation extends InstrumentationBase {
 		];
 	}
 
-	private _patchRedisClient(RedisClient: any) {
-		const proto = RedisClient.prototype;
+	private _patchRedisClient(RedisClient: BunRedisClientConstructor): void {
+		const proto = RedisClient.prototype as unknown as Record<
+			string,
+			MethodSlot
+		>;
 
 		// List of commands to patch, based on Bun's valkey.classes.ts
 		const commands = [
@@ -233,9 +249,9 @@ export class BunRedisInstrumentation extends InstrumentationBase {
 					continue;
 				}
 				const original = proto[command];
-				const wrapped = this._patchCommand(command)(original);
-				(wrapped as any)[WRAP_SYMBOL] = true;
-				(wrapped as any)._original = original;
+				const wrapped = this._patchCommand(command)(original) as MethodSlot;
+				wrapped[WRAP_SYMBOL] = true;
+				wrapped._original = original;
 
 				try {
 					// Since it's writable: true but configurable: false, we just assign it
@@ -247,12 +263,16 @@ export class BunRedisInstrumentation extends InstrumentationBase {
 		}
 	}
 
-	private _unpatchRedisClient(RedisClient: any) {
-		const proto = RedisClient.prototype;
+	private _unpatchRedisClient(RedisClient: BunRedisClientConstructor): void {
+		const proto = RedisClient.prototype as unknown as Record<
+			string,
+			MethodSlot
+		>;
 		for (const key in proto) {
-			if (proto[key] && proto[key][WRAP_SYMBOL]) {
+			const slot = proto[key];
+			if (slot?.[WRAP_SYMBOL] && slot._original) {
 				try {
-					proto[key] = proto[key]._original;
+					proto[key] = slot._original;
 				} catch (e) {
 					diag.error(`Failed to unpatch RedisClient.prototype.${key}:`, e);
 				}
@@ -262,8 +282,8 @@ export class BunRedisInstrumentation extends InstrumentationBase {
 
 	private _patchCommand(commandName: string) {
 		const instrumentation = this;
-		return (original: Function) => {
-			return function (this: any, ...args: any[]) {
+		return (original: (...args: unknown[]) => unknown) => {
+			return function (this: BunRedisClientInstance, ...args: unknown[]) {
 				const config = instrumentation._config as RedisInstrumentationConfig;
 				const hasNoParentSpan = trace.getSpan(context.active()) === undefined;
 
@@ -294,7 +314,10 @@ export class BunRedisInstrumentation extends InstrumentationBase {
 				const serializer =
 					config.dbStatementSerializer || defaultDbStatementSerializer;
 				try {
-					const statement = serializer(commandName, args);
+					const statement = serializer(
+						commandName,
+						args as Array<string | Buffer | number>,
+					);
 					if (statement) {
 						span.setAttribute(ATTR_DB_QUERY_TEXT, statement);
 					}
@@ -310,7 +333,12 @@ export class BunRedisInstrumentation extends InstrumentationBase {
 							(res) => {
 								if (config.responseHook) {
 									try {
-										config.responseHook(span, commandName, args, res);
+										config.responseHook(
+											span,
+											commandName,
+											args as Array<string | Buffer | number>,
+											res,
+										);
 									} catch (e) {
 										diag.error("Error in redis responseHook", e);
 									}
@@ -318,7 +346,7 @@ export class BunRedisInstrumentation extends InstrumentationBase {
 								span.end();
 								return res;
 							},
-							(err) => {
+							(err: Error) => {
 								span.recordException(err);
 
 								// error.type SHOULD match the canonical name of exception or status code

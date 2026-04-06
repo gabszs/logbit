@@ -1,4 +1,5 @@
 import type { Attributes } from "@opentelemetry/api";
+import type { BunSQLInstance, BunSQLOptions } from "./types";
 
 // Semantic Conventions v1.40.0+
 export const ATTR_DB_SYSTEM_NAME = "db.system.name";
@@ -10,8 +11,8 @@ export const ATTR_DB_OPERATION_NAME = "db.operation.name";
 export const ATTR_DB_QUERY_TEXT = "db.query.text";
 export const ATTR_ERROR_TYPE = "error.type";
 
-export function getClientAttributes(sql: any): Attributes {
-	const options = sql.options || {};
+export function getClientAttributes(sql: BunSQLInstance): Attributes {
+	const options = sql.options ?? {};
 	return {
 		[ATTR_DB_SYSTEM_NAME]: "postgresql",
 		[ATTR_DB_NAMESPACE]: options.database,
@@ -38,17 +39,16 @@ export function parseNormalizedOperationName(
 	return sqlCommand.endsWith(";") ? sqlCommand.slice(0, -1) : sqlCommand;
 }
 
-export function extractDatabaseName(options: any): string | undefined {
-	// Try to get from options.database first
+export function extractDatabaseName(
+	options: BunSQLOptions | undefined,
+): string | undefined {
 	if (options?.database) {
 		return options.database;
 	}
-	// Try to parse from connection string if available
 	if (options?.url) {
 		try {
 			const url = new URL(options.url);
 			const pathname = url.pathname;
-			// Remove leading slash and get database name
 			return pathname.slice(1) || undefined;
 		} catch {
 			return undefined;

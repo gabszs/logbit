@@ -1,10 +1,9 @@
-import type { AppContext } from "@/types";
+import type { ZodUUID } from "zod";
 import { httpErrors } from "../lib/errors";
 
 export function checkForChanges(
-	c: AppContext,
-	payload: Record<string, any>,
-	existing: Record<string, any>,
+	payload: Record<string, string | number | ZodUUID>,
+	existing: Record<string, string | number>,
 ) {
 	for (const key of Object.keys(payload)) {
 		if (payload[key] !== existing[key]) {

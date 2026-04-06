@@ -1,4 +1,5 @@
 import {
+	type Attributes,
 	context,
 	diag,
 	type Span,
@@ -11,7 +12,12 @@ import {
 	InstrumentationNodeModuleDefinition,
 	isWrapped,
 } from "@opentelemetry/instrumentation";
-import type { PgInstrumentationConfig } from "./types";
+import type {
+	BunModuleExports,
+	BunSQLConstructor,
+	BunSQLInstance,
+	PgInstrumentationConfig,
+} from "./types";
 import {
 	ATTR_DB_OPERATION_NAME,
 	ATTR_DB_QUERY_TEXT,
@@ -24,12 +30,25 @@ import {
 const PACKAGE_NAME = "@loglog/bun-instrumentation-pg";
 const PACKAGE_VERSION = "0.1.0";
 
-declare const Bun: any;
+declare const Bun: { SQL: BunSQLConstructor } | undefined;
 
-const WRAP_SYMBOL = Symbol("opentelemetry.bun-pg.wrapped");
+const WRAP_SYMBOL: unique symbol = Symbol("opentelemetry.bun-pg.wrapped");
+
+type WrappedMethod = (...args: unknown[]) => unknown;
+
+type WrappedConstructor = ((...args: unknown[]) => unknown) & {
+	[WRAP_SYMBOL]: boolean;
+	_original: BunSQLConstructor;
+	prototype: object;
+};
+
+type SQLParent = Record<
+	string,
+	BunSQLConstructor | WrappedConstructor | undefined
+>;
 
 export class BunPgInstrumentation extends InstrumentationBase {
-	private _methodCache = new WeakMap<any, Map<string, Function>>();
+	private _methodCache = new WeakMap<object, Map<string, WrappedMethod>>();
 
 	constructor(config: PgInstrumentationConfig = {}) {
 		super(PACKAGE_NAME, PACKAGE_VERSION, config);
@@ -37,44 +56,49 @@ export class BunPgInstrumentation extends InstrumentationBase {
 
 	protected init() {
 		// Direct patch for Bun's global SQL if available
-		if (typeof Bun !== "undefined" && Bun.SQL) {
+		if (Bun?.SQL) {
 			diag.debug("Bun.SQL found globally, patching...");
-			this._patchSQL(Bun, "SQL");
+			this._patchSQL(Bun as unknown as SQLParent, "SQL");
 		}
 
 		return [
 			new InstrumentationNodeModuleDefinition(
 				"bun",
 				["*"],
-				(moduleExports: any) => {
-					if (moduleExports && moduleExports.SQL) {
+				(moduleExports: BunModuleExports) => {
+					if (moduleExports?.SQL) {
 						diag.debug("SQL found in bun module exports, patching...");
-						this._patchSQL(moduleExports, "SQL");
+						this._patchSQL(moduleExports as unknown as SQLParent, "SQL");
 					}
 					return moduleExports;
 				},
-				(moduleExports: any) => {
-					if (moduleExports && moduleExports.SQL) {
-						this._unpatchSQL(moduleExports, "SQL");
+				(moduleExports: BunModuleExports) => {
+					if (moduleExports?.SQL) {
+						this._unpatchSQL(moduleExports as unknown as SQLParent, "SQL");
 					}
 				},
 			),
 		];
 	}
 
-	private _patchSQL(parent: any, key: string) {
+	private _patchSQL(parent: SQLParent, key: string) {
 		if (isWrapped(parent[key])) {
 			return;
 		}
 
-		const instrumentation = this;
-		const originalSQL = parent[key];
+		const originalSQL = parent[key] as BunSQLConstructor;
 
-		const wrappedSQL = function (this: any, ...args: any[]) {
-			// Bun.SQL can be called with or without 'new'
-			const instance = Reflect.construct(originalSQL, args);
-			return instrumentation._wrapSqlInstance(instance);
+		const self = this;
+		// biome-ignore lint/complexity/useArrowFunction: must be a regular function to support `new SQL()`
+		const wrapFn = function (...args: unknown[]) {
+			const instance = Reflect.construct(originalSQL, args) as BunSQLInstance;
+			return self._wrapSqlInstance(instance);
 		};
+		const wrappedSQL: WrappedConstructor = Object.assign(wrapFn, {
+			[WRAP_SYMBOL]: true as const,
+			_original: originalSQL,
+			prototype: originalSQL.prototype,
+		});
 
 		// Copy static properties
 		Object.defineProperties(
@@ -82,8 +106,6 @@ export class BunPgInstrumentation extends InstrumentationBase {
 			Object.getOwnPropertyDescriptors(originalSQL),
 		);
 		wrappedSQL.prototype = originalSQL.prototype;
-		(wrappedSQL as any)[WRAP_SYMBOL] = true;
-		(wrappedSQL as any)._original = originalSQL;
 
 		try {
 			parent[key] = wrappedSQL;
@@ -92,10 +114,11 @@ export class BunPgInstrumentation extends InstrumentationBase {
 		}
 	}
 
-	private _unpatchSQL(parent: any, key: string) {
-		if (parent[key] && (parent[key] as any)[WRAP_SYMBOL]) {
+	private _unpatchSQL(parent: SQLParent, key: string) {
+		const current = parent[key] as WrappedConstructor | undefined;
+		if (current?.[WRAP_SYMBOL]) {
 			try {
-				parent[key] = (parent[key] as any)._original;
+				parent[key] = current._original;
 			} catch (e) {
 				diag.error(`Failed to unpatch ${key}:`, e);
 			}
@@ -103,7 +126,7 @@ export class BunPgInstrumentation extends InstrumentationBase {
 	}
 
 	private _startPgSpan(
-		instance: any,
+		instance: BunSQLInstance,
 		operation?: string,
 		queryText?: string,
 	): Span {
@@ -111,7 +134,7 @@ export class BunPgInstrumentation extends InstrumentationBase {
 		const baseName = operation || "query";
 		const spanName = dbName ? `${baseName} ${dbName}` : baseName;
 
-		const attributes: any = {
+		const attributes: Attributes = {
 			...getClientAttributes(instance),
 		};
 
@@ -129,9 +152,10 @@ export class BunPgInstrumentation extends InstrumentationBase {
 		});
 	}
 
-	private _wrapSqlInstance(instance: any) {
+	private _wrapSqlInstance(instance: BunSQLInstance): BunSQLInstance {
 		const instrumentation = this;
-		const originalInstance = instance;
+		const originalInstance = instance as BunSQLInstance &
+			Record<symbol, unknown>;
 
 		// Prevent double wrapping
 		if (originalInstance[WRAP_SYMBOL]) {
@@ -139,15 +163,15 @@ export class BunPgInstrumentation extends InstrumentationBase {
 		}
 
 		return new Proxy(originalInstance, {
-			apply(target, thisArg, argArray) {
+			apply(target, _thisArg, argArray) {
 				return instrumentation._handleQuery(target, argArray);
 			},
 			get(target, prop, receiver) {
-				const value = Reflect.get(target, prop, receiver);
+				const value = Reflect.get(target, prop, receiver) as unknown;
 				if (typeof value === "function" && typeof prop === "string") {
 					// Don't patch Promise methods or internal symbols
 					if (prop === "then" || prop === "catch" || prop === "finally") {
-						return value.bind(target);
+						return (value as WrappedMethod).bind(target);
 					}
 
 					// Use cache for patched methods
@@ -159,7 +183,11 @@ export class BunPgInstrumentation extends InstrumentationBase {
 
 					let patchedMethod = instanceCache.get(prop);
 					if (!patchedMethod) {
-						patchedMethod = instrumentation._patchMethod(prop, value, target);
+						patchedMethod = instrumentation._patchMethod(
+							prop,
+							value as WrappedMethod,
+							target,
+						);
 						instanceCache.set(prop, patchedMethod);
 					}
 
@@ -167,13 +195,16 @@ export class BunPgInstrumentation extends InstrumentationBase {
 				}
 				return value;
 			},
-		});
+		}) as BunSQLInstance;
 	}
 
-	private _patchMethod(name: string, original: Function, instance: any) {
-		const instrumentation = this;
-		return function (this: any, ...args: any[]) {
-			const config = instrumentation._config as PgInstrumentationConfig;
+	private _patchMethod(
+		name: string,
+		original: WrappedMethod,
+		instance: BunSQLInstance,
+	): WrappedMethod {
+		return (...args: unknown[]) => {
+			const config = this._config as PgInstrumentationConfig;
 			const hasNoParentSpan = trace.getSpan(context.active()) === undefined;
 
 			if (config.requireParentSpan && hasNoParentSpan) {
@@ -203,38 +234,39 @@ export class BunPgInstrumentation extends InstrumentationBase {
 				operationName = "ROLLBACK";
 			}
 
-			const span = instrumentation._startPgSpan(
-				instance,
-				operationName,
-				queryText,
-			);
+			const span = this._startPgSpan(instance, operationName, queryText);
 
 			if (name === "transaction" && typeof args[0] === "function") {
-				const originalCallback = args[0];
-				args[0] = function (this: any, tx: any) {
-					const wrappedTx = instrumentation._wrapSqlInstance(tx);
-					return originalCallback.call(this, wrappedTx);
+				const originalCallback = args[0] as (tx: BunSQLInstance) => unknown;
+				args[0] = (tx: BunSQLInstance) => {
+					const wrappedTx = this._wrapSqlInstance(tx);
+					return originalCallback.call(undefined, wrappedTx);
 				};
 			}
 
 			return context.with(trace.setSpan(context.active(), span), () => {
 				try {
 					const result = original.apply(instance, args);
-					if (result && typeof result.then === "function") {
-						return instrumentation._wrapQuery(result, span);
+					if (
+						result !== null &&
+						typeof result === "object" &&
+						"then" in result
+					) {
+						return this._wrapQuery(result as PromiseLike<unknown>, span);
 					}
 					// For methods like 'begin' that return a new SQL instance synchronously
 					if (name === "begin" && result && typeof result === "function") {
-						return instrumentation._wrapSqlInstance(result);
+						return this._wrapSqlInstance(result as BunSQLInstance);
 					}
 					span.end();
 					return result;
-				} catch (e: any) {
-					span.recordException(e);
-					span.setAttribute(ATTR_ERROR_TYPE, e.name || "Error");
+				} catch (e) {
+					const err = e as Error;
+					span.recordException(err);
+					span.setAttribute(ATTR_ERROR_TYPE, err.name || "Error");
 					span.setStatus({
 						code: SpanStatusCode.ERROR,
-						message: e.message,
+						message: err.message,
 					});
 					span.end();
 					throw e;
@@ -243,17 +275,23 @@ export class BunPgInstrumentation extends InstrumentationBase {
 		};
 	}
 
-	private _handleQuery(originalInstance: any, args: any[]) {
+	private _handleQuery(
+		originalInstance: BunSQLInstance,
+		args: unknown[],
+	): unknown {
 		const config = this._config as PgInstrumentationConfig;
 		const hasNoParentSpan = trace.getSpan(context.active()) === undefined;
 
 		if (config.requireParentSpan && hasNoParentSpan) {
-			return originalInstance.apply(originalInstance, args);
+			return (originalInstance as unknown as WrappedMethod).apply(
+				originalInstance,
+				args,
+			);
 		}
 
 		// Detect if it's a tagged template call: args[0] is an array of strings
 		let queryText: string | undefined;
-		if (Array.isArray(args[0]) && (args[0] as any).raw) {
+		if (Array.isArray(args[0]) && (args[0] as { raw?: unknown }).raw) {
 			// Tagged template
 			const strings = args[0] as string[];
 			queryText = strings.join("?");
@@ -269,21 +307,25 @@ export class BunPgInstrumentation extends InstrumentationBase {
 
 		return context.with(trace.setSpan(context.active(), span), () => {
 			try {
-				const result = originalInstance.apply(originalInstance, args);
+				const result = (originalInstance as unknown as WrappedMethod).apply(
+					originalInstance,
+					args,
+				);
 
 				// Bun SQL queries return a Promise-like object (DirectQuery/PostgresSQLQuery)
-				if (result && typeof result.then === "function") {
-					return this._wrapQuery(result, span);
+				if (result !== null && typeof result === "object" && "then" in result) {
+					return this._wrapQuery(result as PromiseLike<unknown>, span);
 				}
 
 				span.end();
 				return result;
-			} catch (e: any) {
-				span.recordException(e);
-				span.setAttribute(ATTR_ERROR_TYPE, e.name || "Error");
+			} catch (e) {
+				const err = e as Error;
+				span.recordException(err);
+				span.setAttribute(ATTR_ERROR_TYPE, err.name || "Error");
 				span.setStatus({
 					code: SpanStatusCode.ERROR,
-					message: e.message,
+					message: err.message,
 				});
 				span.end();
 				throw e;
@@ -291,11 +333,14 @@ export class BunPgInstrumentation extends InstrumentationBase {
 		});
 	}
 
-	private _wrapQuery(query: any, span: any) {
+	private _wrapQuery(
+		query: PromiseLike<unknown>,
+		span: Span,
+	): PromiseLike<unknown> {
 		const config = this._config as PgInstrumentationConfig;
 		let spanEnded = false;
 
-		const endSpan = (err?: any, res?: any) => {
+		const endSpan = (err?: Error, res?: unknown) => {
 			if (!spanEnded) {
 				if (err) {
 					span.recordException(err);
@@ -317,17 +362,20 @@ export class BunPgInstrumentation extends InstrumentationBase {
 
 		return new Proxy(query, {
 			get(target, prop, receiver) {
-				const value = Reflect.get(target, prop, receiver);
+				const value = Reflect.get(target, prop, receiver) as unknown;
 				if (typeof value === "function") {
 					if (prop === "then") {
-						return (onFulfilled?: any, onRejected?: any) => {
-							return value.call(
+						return (
+							onFulfilled?: (value: unknown) => unknown,
+							onRejected?: (reason: unknown) => unknown,
+						) => {
+							return (value as PromiseLike<unknown>["then"]).call(
 								target,
-								(res: any) => {
-									endSpan(null, res);
+								(res: unknown) => {
+									endSpan(undefined, res);
 									return onFulfilled ? onFulfilled(res) : res;
 								},
-								(err: any) => {
+								(err: Error) => {
 									endSpan(err);
 									return onRejected ? onRejected(err) : Promise.reject(err);
 								},
@@ -335,24 +383,24 @@ export class BunPgInstrumentation extends InstrumentationBase {
 						};
 					}
 					if (prop === "catch") {
-						return (onRejected?: any) => {
-							return value.call(target, (err: any) => {
+						return (onRejected?: (reason: unknown) => unknown) => {
+							return (value as WrappedMethod).call(target, (err: Error) => {
 								endSpan(err);
 								return onRejected ? onRejected(err) : Promise.reject(err);
 							});
 						};
 					}
 					if (prop === "finally") {
-						return (onFinally?: any) => {
-							return value.call(target, () => {
+						return (onFinally?: () => void) => {
+							return (value as WrappedMethod).call(target, () => {
 								endSpan();
 								return onFinally ? onFinally() : undefined;
 							});
 						};
 					}
 					// For other methods (like .values(), .expect(), etc.), wrap them to return the Proxy if they return the target
-					return function (this: any, ...args: any[]) {
-						const result = value.apply(target, args);
+					return (...args: unknown[]) => {
+						const result = (value as WrappedMethod).apply(target, args);
 						if (result === target) {
 							return receiver;
 						}

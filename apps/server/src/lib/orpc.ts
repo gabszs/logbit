@@ -1,6 +1,5 @@
 import { ORPCError, os } from "@orpc/server";
 import type { Context as HonoContext } from "hono";
-import type { profileRouter } from "@/features/profile/routes";
 import { db } from "../db";
 import { auth } from "./auth";
 

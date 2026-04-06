@@ -46,23 +46,21 @@ function RootComponent() {
 	}, [router.location.pathname]);
 
 	return (
-		<>
-			<ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
-				{isAuthenticated && <AppSidebar />}
-				<BackgroundLayout
-					contentClassName={cn(
-						"flex min-h-svh flex-col overflow-x-hidden transition-[margin-left,max-width] duration-200 ease-linear",
-						isAuthenticated &&
-							(isSidebarExpanded
-								? "ml-48 max-w-[calc(100vw-12rem)]"
-								: "ml-12 max-w-[calc(100vw-3rem)]"),
-					)}
-				>
-					{showHeader && <Header />}
-					<Outlet />
-				</BackgroundLayout>
-				<Toaster richColors />
-			</ThemeProvider>
-		</>
+		<ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
+			{isAuthenticated && <AppSidebar />}
+			<BackgroundLayout
+				contentClassName={cn(
+					"flex min-h-svh flex-col overflow-x-hidden transition-[margin-left,max-width] duration-200 ease-linear",
+					isAuthenticated &&
+						(isSidebarExpanded
+							? "ml-48 max-w-[calc(100vw-12rem)]"
+							: "ml-12 max-w-[calc(100vw-3rem)]"),
+				)}
+			>
+				{showHeader && <Header />}
+				<Outlet />
+			</BackgroundLayout>
+			<Toaster richColors />
+		</ThemeProvider>
 	);
 }

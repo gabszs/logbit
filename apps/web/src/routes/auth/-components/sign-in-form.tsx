@@ -3,6 +3,7 @@ import { useNavigate, useRouter } from "@tanstack/react-router";
 import { Eye, EyeOff, Lock, Mail } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import type { z } from "zod";
 import { useAuth } from "@/web/components/auth-provider";
 import { Button } from "@/web/components/ui/button";
 import { Input } from "@/web/components/ui/input";
@@ -30,7 +31,7 @@ export function SignInForm({ redirectPath }: SignInFormProps) {
 	}, [auth.isAuthenticated, navigate, redirectPath]);
 
 	const signInMutation = useMutation({
-		mutationFn: async ({ email, password }: typeof signInSchema._type) => {
+		mutationFn: async ({ email, password }: z.infer<typeof signInSchema>) => {
 			return authClient.signIn.email({
 				email,
 				password,

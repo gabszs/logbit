@@ -29,7 +29,7 @@ export function Footer() {
 							<ul className="mt-4 space-y-3">
 								<li>
 									<Link
-										to="/chat"
+										to="/"
 										className="text-muted-foreground text-sm transition-colors hover:text-foreground"
 									>
 										Get Started

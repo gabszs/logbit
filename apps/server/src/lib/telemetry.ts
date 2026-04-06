@@ -1,4 +1,4 @@
-import type { Attributes, AttributeValue } from "@opentelemetry/api";
+import type { Attributes } from "@opentelemetry/api";
 import { context as otelContext, trace } from "@opentelemetry/api";
 import type { LogAttributes } from "@opentelemetry/api-logs";
 import { logs, SeverityNumber } from "@opentelemetry/api-logs";
@@ -97,8 +97,6 @@ function createLogger(name: string, version?: string) {
 
 export const logger = createLogger("loglog.api", "1.0.0");
 
-type OtelValue = AttributeValue | undefined;
-
 function normalizeAttributes(obj: Record<string, unknown>): Attributes {
 	return Object.fromEntries(
 		Object.entries(obj).map(([key, value]) => {
@@ -145,9 +143,14 @@ export const injectOtelTraceHeader = (): MiddlewareHandler => {
 	};
 };
 
+type ClassMethod = ((...args: unknown[]) => unknown) & {
+	__isInstrumented?: boolean;
+};
+
 export function InstrumentClass(): ClassDecorator {
+	// biome-ignore lint/complexity/noBannedTypes: ClassDecorator requires Function
 	return (target: Function) => {
-		let currentProto = target.prototype;
+		let currentProto = target.prototype as Record<string, unknown>;
 
 		while (currentProto && currentProto !== Object.prototype) {
 			for (const propertyName of Object.getOwnPropertyNames(currentProto)) {
@@ -167,10 +170,13 @@ export function InstrumentClass(): ClassDecorator {
 
 				if (!descriptor || descriptor.get || descriptor.set) continue;
 
-				const originalMethod = descriptor.value;
+				const originalMethod = descriptor.value as ClassMethod;
 				if (originalMethod.__isInstrumented) continue;
 
-				const instrumented = function (this: any, ...args: any[]) {
+				const instrumented = function (
+					this: object,
+					...args: unknown[]
+				): unknown {
 					const tracer = trace.getTracer("default");
 					const spanName = `${target.name}.${propertyName}`;
 
@@ -184,8 +190,8 @@ export function InstrumentClass(): ClassDecorator {
 										span.end();
 										return res;
 									})
-									.catch((err) => {
-										span.recordException(err);
+									.catch((err: unknown) => {
+										span.recordException(err as Error);
 										span.setStatus({ code: 2 });
 										span.end();
 										throw err;
@@ -201,9 +207,9 @@ export function InstrumentClass(): ClassDecorator {
 							throw err;
 						}
 					});
-				};
+				} as ClassMethod;
 
-				(instrumented as any).__isInstrumented = true;
+				instrumented.__isInstrumented = true;
 
 				Object.defineProperty(currentProto, propertyName, {
 					...descriptor,
@@ -211,7 +217,10 @@ export function InstrumentClass(): ClassDecorator {
 				});
 			}
 
-			currentProto = Object.getPrototypeOf(currentProto);
+			currentProto = Object.getPrototypeOf(currentProto) as Record<
+				string,
+				unknown
+			>;
 		}
 	};
 }
@@ -257,14 +266,14 @@ function buildServiceAttributes(c: HonoContext) {
 	};
 }
 
-function buildQueryAttributes(query: Record<string, string | string[]>) {
-	return Object.fromEntries(
-		Object.entries(query).map(([k, v]) => [
-			`url.query.${k}`,
-			Array.isArray(v) ? v.join(",") : v,
-		]),
-	);
-}
+// function buildQueryAttributes(query: Record<string, string | string[]>) {
+// 	return Object.fromEntries(
+// 		Object.entries(query).map(([k, v]) => [
+// 			`url.query.${k}`,
+// 			Array.isArray(v) ? v.join(",") : v,
+// 		]),
+// 	);
+// }
 
 export const otelConfig = () =>
 	createMiddleware(async (c: HonoContext, next: Next) => {

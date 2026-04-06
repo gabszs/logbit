@@ -1,3 +1,8 @@
+import { useForm } from "@tanstack/react-form";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Pencil, Trash2 } from "lucide-react";
+import React, { useRef, useState } from "react";
+import { toast } from "sonner";
 import {
 	Avatar,
 	AvatarFallback,
@@ -16,11 +21,6 @@ import { Input } from "@/web/components/ui/input";
 import { Label } from "@/web/components/ui/label";
 import { useProfile } from "@/web/hooks/use-profile";
 import { orpc } from "@/web/lib/orpc";
-import { useForm } from "@tanstack/react-form";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Pencil, Trash2 } from "lucide-react";
-import React, { useRef, useState } from "react";
-import { toast } from "sonner";
 
 export function ProfileInfo() {
 	const [isEditOpen, setIsEditOpen] = useState(false);
@@ -72,7 +72,7 @@ export function ProfileInfo() {
 		reader.onload = () => {
 			const dataUrl = reader.result as string;
 			updateMutation.mutate({
-				name: user.data!.name || "",
+				name: user.data?.name || "",
 				image: dataUrl,
 			});
 		};
@@ -225,9 +225,7 @@ export function ProfileInfo() {
 										Cancel
 									</Button>
 									<Button disabled={updateMutation.isPending}>
-										{updateMutation.isPending
-											? "Saving..."
-											: "Save Changes"}
+										{updateMutation.isPending ? "Saving..." : "Save Changes"}
 									</Button>
 								</div>
 							</form>

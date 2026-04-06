@@ -19,5 +19,5 @@
 		"emitDecoratorMetadata": true,
 		"jsxImportSource": "hono/jsx"
 	},
-	"exclude": ["node_modules", "dist", "tests"]
+	"exclude": ["node_modules", "**/node_modules", "dist", "tests"]
 }

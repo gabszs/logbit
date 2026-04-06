@@ -41,7 +41,7 @@ export function SettingsError({ error, reset }: ErrorComponentProps) {
 						Try Again
 					</Button>
 					<Button
-						onClick={() => router.navigate({ to: "/chat" })}
+						onClick={() => router.navigate({ to: "/" })}
 						variant="outline"
 						className="gap-2"
 					>

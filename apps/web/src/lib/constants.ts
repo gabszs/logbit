@@ -1,5 +1,3 @@
-import type { QuickPrompt } from "@/web/types/chat";
-
 /**
  * Application-wide constants
  */
@@ -29,29 +27,6 @@ export const SIGN_IN_FORM = {
 
 export const MAX_TEXT_LENGTH = 32_000;
 export const MAX_MESSAGE_BATCH = 100;
-
-export const QUICK_PROMPTS: QuickPrompt[] = [
-	{
-		id: "prompt-tanstack-router",
-		label: "Learn TanStack Router patterns",
-		text: "Using Tanstack Router, show me how to implement nested routes with loaders.",
-	},
-	{
-		id: "prompt-alchemy",
-		label: "Create resources with Alchemy",
-		text: "Alchemy is an Infrastructure as Code library for Cloudflare and other cloud providers. Read the Alchemy docs for the Cloudflare provider. How do I create a Durable Object resource, and how do I bind it to a Worker resource?",
-	},
-	{
-		id: "prompt-hono",
-		label: "Build API routes with Hono",
-		text: "Read the Hono docs. Build a REST API with middleware for authentication, rate limiting, and CORS handling.",
-	},
-	{
-		id: "prompt-better-auth",
-		label: "Send magic links with Better Auth",
-		text: "How do I use better-auth to authenticate users with magic links?",
-	},
-];
 
 export const SETTINGS_NAV_ITEMS = [
 	{

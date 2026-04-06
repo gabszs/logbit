@@ -1,6 +1,6 @@
-import { Lock, Mail } from "lucide-react";
 import { Button } from "@/web/components/ui/button";
 import { Input } from "@/web/components/ui/input";
+import { Lock, Mail } from "lucide-react";
 
 export function SignInShellSkeleton() {
 	return (
@@ -12,10 +12,16 @@ export function SignInShellSkeleton() {
 				<p className="mb-8 text-center text-muted-foreground">Welcome back!</p>
 				<div className="space-y-4 rounded-lg border border-border bg-card p-5">
 					<div className="space-y-2">
-						<label className="font-medium text-sm">Email</label>
+						<label
+							htmlFor="sign-in-skeleton-email"
+							className="font-medium text-sm"
+						>
+							Email
+						</label>
 						<div className="relative">
 							<Mail className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
 							<Input
+								id="sign-in-skeleton-email"
 								type="email"
 								placeholder="you@example.com"
 								disabled
@@ -24,10 +30,16 @@ export function SignInShellSkeleton() {
 						</div>
 					</div>
 					<div className="space-y-2">
-						<label className="font-medium text-sm">Password</label>
+						<label
+							htmlFor="sign-in-skeleton-password"
+							className="font-medium text-sm"
+						>
+							Password
+						</label>
 						<div className="relative">
 							<Lock className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
 							<Input
+								id="sign-in-skeleton-password"
 								type="password"
 								placeholder="••••••••"
 								disabled

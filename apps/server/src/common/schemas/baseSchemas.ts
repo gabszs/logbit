@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { status } from "../../lib/constants";
 
 export const searchOptionsSchema = z.object({
 	page: z

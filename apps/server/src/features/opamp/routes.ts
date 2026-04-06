@@ -55,7 +55,7 @@ opampRouter.openapi(
 
 		const AgentToServerJson = toJson(AgentToServerSchema, agentToServer);
 		// decodeCapabilities(AgentToServerJson.capabilities);
-		// logger.info(AgentToServerJson, { printConsole: true });
+		logger.info(AgentToServerJson, { printConsole: true });
 		// saveAgentPayload(AgentToServerJson);
 
 		const response = create(ServerToAgentSchema, {

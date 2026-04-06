@@ -6,11 +6,14 @@ import {
 	ATTR_SERVER_ADDRESS,
 	ATTR_SERVER_PORT,
 } from "@opentelemetry/semantic-conventions";
+import type { BunRedisClientInstance } from "./types";
 
 // Semantic convention for db.namespace (database index)
 export const ATTR_DB_NAMESPACE = "db.namespace";
 
-export function getClientAttributes(client: any): Attributes {
+export function getClientAttributes(
+	client: BunRedisClientInstance,
+): Attributes {
 	const attributes: Attributes = {
 		[ATTR_DB_SYSTEM_NAME]: "redis",
 	};
