@@ -2,10 +2,12 @@ import v8 from "node:v8";
 import { BunPgInstrumentation } from "@loglog/bun-instrumentation-pg";
 import { BunRedisInstrumentation } from "@loglog/bun-instrumentation-redis";
 import { DiagConsoleLogger, DiagLogLevel, diag } from "@opentelemetry/api";
-import { getNodeAutoInstrumentations } from "@opentelemetry/auto-instrumentations-node";
 import { OTLPMetricExporter } from "@opentelemetry/exporter-metrics-otlp-http";
 import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http";
 import { HostMetrics } from "@opentelemetry/host-metrics";
+import { HttpInstrumentation } from "@opentelemetry/instrumentation-http";
+import { RuntimeNodeInstrumentation } from "@opentelemetry/instrumentation-runtime-node";
+import { UndiciInstrumentation } from "@opentelemetry/instrumentation-undici";
 import { resourceFromAttributes } from "@opentelemetry/resources";
 import { PeriodicExportingMetricReader } from "@opentelemetry/sdk-metrics";
 import { NodeSDK } from "@opentelemetry/sdk-node";
@@ -40,14 +42,9 @@ const sdk = new NodeSDK({
 	instrumentations: [
 		new BunPgInstrumentation(),
 		new BunRedisInstrumentation(),
-		getNodeAutoInstrumentations({
-			"@opentelemetry/instrumentation-fs": { enabled: false },
-			"@opentelemetry/instrumentation-dns": { enabled: false },
-			"@opentelemetry/instrumentation-pino": { enabled: false },
-			"@opentelemetry/instrumentation-ioredis": { enabled: false },
-			"@opentelemetry/instrumentation-redis": { enabled: false },
-			"@opentelemetry/instrumentation-pg": { enabled: true },
-		}),
+		new HttpInstrumentation(),
+		new UndiciInstrumentation(),
+		new RuntimeNodeInstrumentation(),
 	],
 });
 
