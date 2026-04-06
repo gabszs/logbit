@@ -26,6 +26,21 @@ export const auth = betterAuth({
 		schema: models,
 		usePlural: true,
 	}),
+	databaseHooks: {
+		user: {
+			create: {
+				after: async (user) => {
+					const now = new Date();
+					await db.insert(models.userSettings).values({
+						userId: user.id,
+						theme: "system",
+						createdAt: now,
+						updatedAt: now,
+					});
+				},
+			},
+		},
+	},
 	...(settings.REDIS_URL && {
 		secondaryStorage: {
 			get: async (key: string): Promise<string | null> => {
