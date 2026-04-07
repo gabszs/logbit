@@ -12,7 +12,6 @@ const mastraAuth = new MastraAuthBetterAuth({
 	// protected: ["/v1/ai/*"],
 })
 
-
 export const mastra = new Mastra({
 	server: {
 		auth: mastraAuth,
