@@ -22,6 +22,7 @@ import { setupOpenApi } from "./lib/openapi";
 import { createContext } from "./lib/orpc";
 import { injectOtelTraceHeader, logger } from "./lib/telemetry";
 import type { AppContext } from "./types";
+import { logger as honoLogger } from "hono/logger";
 
 // RUN MIGRATIONS
 await migrate(db, { migrationsFolder: "./src/db/migrations" });
@@ -33,7 +34,16 @@ const aiServer = new MastraServer({
 	mastra,
 	prefix: "/v1/ai",
 	openapiPath: "/openapi.json",
+	// customRouteAuthConfig: {"GET:/v1/ai/chat": true},
 });
+
+if (settings.NODE_ENV === "development") {
+	app.use(honoLogger());
+	app.use(async (c, next) => {
+		console.log("Headers:", Object.fromEntries(c.req.raw.headers.entries()));
+		await next();
+	})
+}
 
 // cors
 app.use(

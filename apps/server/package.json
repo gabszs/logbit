@@ -14,6 +14,7 @@
 		"@hono/zod-openapi": "^1.2.0",
 		"@loglog/bun-instrumentation-pg": "workspace:*",
 		"@loglog/bun-instrumentation-redis": "workspace:*",
+		"@mastra/auth-better-auth": "^1.0.2",
 		"@mastra/core": "^1.22.0",
 		"@mastra/hono": "^1.4.0",
 		"@opentelemetry/api": "^1.9.0",
