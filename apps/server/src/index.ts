@@ -1,5 +1,6 @@
 import { httpInstrumentationMiddleware } from "@hono/otel";
 import { OpenAPIHono } from "@hono/zod-openapi";
+import { MastraServer } from "@mastra/hono";
 import type { InferRouterInputs, InferRouterOutputs } from "@orpc/server";
 import { RPCHandler } from "@orpc/server/fetch";
 import { migrate } from "drizzle-orm/bun-sql/migrator";
@@ -10,6 +11,7 @@ import { problemDetailsHandler } from "hono-problem-details";
 import { MemoryStore, rateLimiter } from "hono-rate-limiter";
 import { db, pgClient } from "./db";
 import { settings } from "./env";
+import { mastra } from "./features/ai";
 import authRouter from "./features/auth/routes";
 import opampRouter from "./features/opamp/routes";
 import { profileRouter } from "./features/profile/routes";
@@ -26,6 +28,12 @@ await migrate(db, { migrationsFolder: "./src/db/migrations" });
 
 // create app
 const app = new OpenAPIHono<AppContext>();
+const aiServer = new MastraServer({
+	app,
+	mastra,
+	prefix: "/v1/ai",
+	openapiPath: "/openapi.json",
+});
 
 // cors
 app.use(
@@ -150,6 +158,8 @@ export const shutdownDependencies = async () => {
 	redis.close(); // fecha conexão com Redis
 	process.exit(0);
 };
+
+await aiServer.init();
 
 ["SIGTERM", "SIGINT", "beforeExit", "SIGQUIT"].forEach((event) => {
 	process.on(event, shutdownDependencies);

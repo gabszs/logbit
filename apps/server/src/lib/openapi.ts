@@ -488,13 +488,16 @@ function mapBetterAuthOperationToRouteConfig(
 }
 
 export function setupOpenApi(app: AppType) {
-	app.doc("/open-api", { ...openApiSchema, tags: tagDescriptions });
+	app.doc("/open-api.json", { ...openApiSchema, tags: tagDescriptions });
 
 	app.get(
 		"/docs",
 		Scalar({
 			pageTitle: "LogLog Documentation",
-			sources: [{ url: "/open-api", title: "API" }],
+			sources: [
+				{ url: "/open-api.json", title: "API" },
+				{ url: "/v1/ai/openapi.json", title: "AI API" },
+			],
 			metaData: {
 				title: "LogLog docs",
 				description: "Complete API documentation for LogLog platform",
