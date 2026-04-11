@@ -24,7 +24,7 @@
 			"!!**/.alchemy",
 			"!!**/wrangler.jsonc",
 			"!!**/.source",
-			"!!.opencode/**"
+			"!!.opencode"
 		]
 	},
 	"formatter": {
