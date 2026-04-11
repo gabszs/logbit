@@ -32,10 +32,14 @@ export function SignInForm({ redirectPath }: SignInFormProps) {
 
 	const signInMutation = useMutation({
 		mutationFn: async ({ email, password }: z.infer<typeof signInSchema>) => {
-			return authClient.signIn.email({
+			const result = await authClient.signIn.email({
 				email,
 				password,
 			});
+			if (result.error) {
+				throw result.error;
+			}
+			return result.data;
 		},
 		onSuccess: async () => {
 			toast.success(SIGN_IN_FORM.SUCCESS_MESSAGES.SIGN_IN_SUCCESS);
@@ -45,8 +49,8 @@ export function SignInForm({ redirectPath }: SignInFormProps) {
 				replace: true,
 			});
 		},
-		onError: (error: { error?: { message?: string } }) => {
-			toast.error(error.error?.message || "Failed to sign in");
+		onError: (error: { message?: string }) => {
+			toast.error(error.message || "Failed to sign in");
 		},
 	});
 

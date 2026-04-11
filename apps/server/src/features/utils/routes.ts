@@ -1,4 +1,5 @@
 import { createRoute, OpenAPIHono } from "@hono/zod-openapi";
+import { logger } from "@/lib/telemetry";
 import { status } from "../../lib/constants";
 import type { AppContext } from "../../types";
 import { healthSchema } from "./schemas";
@@ -23,6 +24,7 @@ utilityRouter.openapi(
 		},
 	}),
 	async (c) => {
+		logger.info("Health check endpoint called");
 		return c.json({
 			status: "ok",
 			timestamp: new Date().toISOString(),

@@ -7,6 +7,7 @@ import { migrate } from "drizzle-orm/bun-sql/migrator";
 import { compress } from "hono/compress";
 import { cors } from "hono/cors";
 import { showRoutes } from "hono/dev";
+import { logger as honoLogger } from "hono/logger";
 import { problemDetailsHandler } from "hono-problem-details";
 import { MemoryStore, rateLimiter } from "hono-rate-limiter";
 import { db, pgClient } from "./db";
@@ -22,7 +23,6 @@ import { setupOpenApi } from "./lib/openapi";
 import { createContext } from "./lib/orpc";
 import { injectOtelTraceHeader, logger } from "./lib/telemetry";
 import type { AppContext } from "./types";
-import { logger as honoLogger } from "hono/logger";
 
 // RUN MIGRATIONS
 await migrate(db, { migrationsFolder: "./src/db/migrations" });
@@ -42,7 +42,7 @@ if (settings.NODE_ENV === "development") {
 	app.use(async (c, next) => {
 		console.log("Headers:", Object.fromEntries(c.req.raw.headers.entries()));
 		await next();
-	})
+	});
 }
 
 // cors
