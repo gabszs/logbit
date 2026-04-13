@@ -1,7 +1,7 @@
 import { revalidateLogic } from "@tanstack/react-form";
 import { useMutation } from "@tanstack/react-query";
 import { useNavigate, useRouter } from "@tanstack/react-router";
-import { AlertCircle, Eye, EyeOff, Lock, Mail } from "lucide-react";
+import { AlertCircle, Eye, EyeOff, Lock, Mail, User } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import type { z } from "zod";
@@ -24,11 +24,15 @@ export function SignUpForm({ redirectPath }: SignUpFormProps) {
 	const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
 	const signUpMutation = useMutation({
-		mutationFn: async ({ email, password }: z.infer<typeof signUpSchema>) => {
+		mutationFn: async ({
+			email,
+			name,
+			password,
+		}: z.infer<typeof signUpSchema>) => {
 			const result = await authClient.signUp.email({
 				email,
+				name,
 				password,
-				name: email.split("@")[0],
 			});
 
 			if (result.error) {
@@ -52,6 +56,7 @@ export function SignUpForm({ redirectPath }: SignUpFormProps) {
 
 	const form = useAppForm({
 		defaultValues: {
+			name: "",
 			email: "",
 			password: "",
 			confirmPassword: "",
@@ -84,6 +89,29 @@ export function SignUpForm({ redirectPath }: SignUpFormProps) {
 					className="space-y-5"
 				>
 					<div className="space-y-4 rounded-lg border border-border bg-card p-5">
+						<form.AppField name="name">
+							{(field) => (
+								<field.FormItem>
+									<field.FormLabel>Name</field.FormLabel>
+									<field.FormControl>
+										<div className="relative">
+											<User className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+											<Input
+												type="text"
+												value={field.state.value}
+												onChange={(e) => field.handleChange(e.target.value)}
+												onBlur={field.handleBlur}
+												disabled={signUpMutation.isPending}
+												placeholder="Your name"
+												className="pl-9"
+											/>
+										</div>
+									</field.FormControl>
+									<field.FormMessage />
+								</field.FormItem>
+							)}
+						</form.AppField>
+
 						<form.AppField name="email">
 							{(field) => (
 								<field.FormItem>

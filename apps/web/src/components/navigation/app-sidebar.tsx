@@ -99,7 +99,7 @@ export function AppSidebar() {
 		<aside
 			className={cn(
 				"fixed top-0 left-0 z-50 flex h-svh flex-col border-r bg-background py-3 transition-[width] duration-200 ease-linear",
-				isExpanded ? "w-48 items-start px-3" : "w-12 items-center",
+				isExpanded ? "w-48 items-start px-2" : "w-12 items-center",
 			)}
 		>
 			<button
@@ -146,7 +146,7 @@ export function AppSidebar() {
 			)}
 
 			{/* Middle: Nav items */}
-			<nav className="flex flex-1 flex-col gap-1">
+			<nav className="flex w-full flex-1 flex-col gap-1">
 				{navigationItems.map((item) => {
 					const Icon = item.icon;
 

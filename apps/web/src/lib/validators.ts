@@ -7,6 +7,7 @@ export const signInSchema = z.object({
 
 export const signUpSchema = signInSchema
 	.extend({
+		name: z.string().trim().min(2, "Please enter your name"),
 		confirmPassword: z.string().min(1, "Please confirm your password"),
 	})
 	.refine((data) => data.password === data.confirmPassword, {
