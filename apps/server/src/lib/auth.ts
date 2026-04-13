@@ -62,16 +62,6 @@ export const auth = betterAuth({
 			generateId: false,
 		},
 	},
-	hooks: {
-		before: createAuthMiddleware(async (ctx) => {
-			if (ctx.path !== "/sign-up/email") return;
-			if (!(await hasAnyUser())) return;
-			throw new APIError("FORBIDDEN", {
-				message:
-					"Sign up is disabled because a user already exists. Ask an administrator to create your account.",
-			});
-		}),
-	},
 	user: {
 		deleteUser: {
 			enabled: settings.AUTH_ENABLE_DELETE_ACCOUNT,
@@ -131,6 +121,16 @@ export const auth = betterAuth({
 			},
 		},
 	},
+	// hooks: {
+	// 	before: createAuthMiddleware(async (ctx) => {
+	// 		if (ctx.path !== "/sign-up/email") return;
+	// 		if (!(await hasAnyUser())) return;
+	// 		throw new APIError("FORBIDDEN", {
+	// 			message:
+	// 				"Sign up is disabled because a user already exists. Ask an administrator to create your account.",
+	// 		});
+	// 	}),
+	// },
 	// ...(settings.REDIS_URL && {
 	// 	secondaryStorage: {
 	// 		get: async (key: string): Promise<string | null> => {
