@@ -14,6 +14,7 @@ import { Route as DocsRouteImport } from './routes/docs'
 import { Route as SettingsRouteRouteImport } from './routes/settings/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SettingsProfileRouteImport } from './routes/settings/profile'
+import { Route as SettingsOrganizationsRouteImport } from './routes/settings/organizations'
 import { Route as SettingsAppearanceRouteImport } from './routes/settings/appearance'
 import { Route as AuthSignUpRouteImport } from './routes/auth/sign-up'
 import { Route as AuthSignInRouteImport } from './routes/auth/sign-in'
@@ -43,6 +44,11 @@ const SettingsProfileRoute = SettingsProfileRouteImport.update({
   path: '/profile',
   getParentRoute: () => SettingsRouteRoute,
 } as any)
+const SettingsOrganizationsRoute = SettingsOrganizationsRouteImport.update({
+  id: '/organizations',
+  path: '/organizations',
+  getParentRoute: () => SettingsRouteRoute,
+} as any)
 const SettingsAppearanceRoute = SettingsAppearanceRouteImport.update({
   id: '/appearance',
   path: '/appearance',
@@ -67,6 +73,7 @@ export interface FileRoutesByFullPath {
   '/auth/sign-in': typeof AuthSignInRoute
   '/auth/sign-up': typeof AuthSignUpRoute
   '/settings/appearance': typeof SettingsAppearanceRoute
+  '/settings/organizations': typeof SettingsOrganizationsRoute
   '/settings/profile': typeof SettingsProfileRoute
 }
 export interface FileRoutesByTo {
@@ -77,6 +84,7 @@ export interface FileRoutesByTo {
   '/auth/sign-in': typeof AuthSignInRoute
   '/auth/sign-up': typeof AuthSignUpRoute
   '/settings/appearance': typeof SettingsAppearanceRoute
+  '/settings/organizations': typeof SettingsOrganizationsRoute
   '/settings/profile': typeof SettingsProfileRoute
 }
 export interface FileRoutesById {
@@ -88,6 +96,7 @@ export interface FileRoutesById {
   '/auth/sign-in': typeof AuthSignInRoute
   '/auth/sign-up': typeof AuthSignUpRoute
   '/settings/appearance': typeof SettingsAppearanceRoute
+  '/settings/organizations': typeof SettingsOrganizationsRoute
   '/settings/profile': typeof SettingsProfileRoute
 }
 export interface FileRouteTypes {
@@ -100,6 +109,7 @@ export interface FileRouteTypes {
     | '/auth/sign-in'
     | '/auth/sign-up'
     | '/settings/appearance'
+    | '/settings/organizations'
     | '/settings/profile'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -110,6 +120,7 @@ export interface FileRouteTypes {
     | '/auth/sign-in'
     | '/auth/sign-up'
     | '/settings/appearance'
+    | '/settings/organizations'
     | '/settings/profile'
   id:
     | '__root__'
@@ -120,6 +131,7 @@ export interface FileRouteTypes {
     | '/auth/sign-in'
     | '/auth/sign-up'
     | '/settings/appearance'
+    | '/settings/organizations'
     | '/settings/profile'
   fileRoutesById: FileRoutesById
 }
@@ -169,6 +181,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsProfileRouteImport
       parentRoute: typeof SettingsRouteRoute
     }
+    '/settings/organizations': {
+      id: '/settings/organizations'
+      path: '/organizations'
+      fullPath: '/settings/organizations'
+      preLoaderRoute: typeof SettingsOrganizationsRouteImport
+      parentRoute: typeof SettingsRouteRoute
+    }
     '/settings/appearance': {
       id: '/settings/appearance'
       path: '/appearance'
@@ -195,11 +214,13 @@ declare module '@tanstack/react-router' {
 
 interface SettingsRouteRouteChildren {
   SettingsAppearanceRoute: typeof SettingsAppearanceRoute
+  SettingsOrganizationsRoute: typeof SettingsOrganizationsRoute
   SettingsProfileRoute: typeof SettingsProfileRoute
 }
 
 const SettingsRouteRouteChildren: SettingsRouteRouteChildren = {
   SettingsAppearanceRoute: SettingsAppearanceRoute,
+  SettingsOrganizationsRoute: SettingsOrganizationsRoute,
   SettingsProfileRoute: SettingsProfileRoute,
 }
 

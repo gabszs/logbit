@@ -35,6 +35,11 @@ export const SETTINGS_NAV_ITEMS = [
 		description: "View session details",
 	},
 	{
+		to: "/settings/organizations",
+		label: "Organizations",
+		description: "Create and manage organizations",
+	},
+	{
 		to: "/settings/appearance",
 		label: "Appearance",
 		description: "Change theme & UI density",
