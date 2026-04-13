@@ -37,7 +37,7 @@ function SessionItem({
 	});
 
 	return (
-		<div className="flex items-center justify-between rounded border p-2">
+		<div className="flex items-center justify-between rounded-lg border border-border/70 bg-muted/35 px-3 py-2.5">
 			<div className="flex items-center gap-2">
 				{getDeviceIcon(session.userAgent)}
 				<span className="text-sm">{deviceInfo.data || "Unknown Device"}</span>
@@ -137,7 +137,7 @@ export function SessionManager() {
 					No active sessions found.
 				</p>
 			) : (
-				<div className="space-y-2 bg-background/60">
+				<div className="space-y-2">
 					{validSessions.map((session, index) => {
 						const isCurrentSession =
 							session.token === auth.session?.session?.token;
