@@ -96,8 +96,10 @@ export const auth = betterAuth({
 				after: async (user) => {
 					const now = new Date();
 
+					let organizationId: string | null = null;
+
 					if (await isOnlyUser(user.id)) {
-						const organizationId = Bun.randomUUIDv7();
+						organizationId = Bun.randomUUIDv7();
 						await db
 							.update(models.users)
 							.set({ role: "admin", emailVerified: true })
@@ -121,6 +123,7 @@ export const auth = betterAuth({
 					await db.insert(models.userSettings).values({
 						userId: user.id,
 						theme: "system",
+						organizationId,
 						createdAt: now,
 						updatedAt: now,
 					});
@@ -128,20 +131,20 @@ export const auth = betterAuth({
 			},
 		},
 	},
-	...(settings.REDIS_URL && {
-		secondaryStorage: {
-			get: async (key: string): Promise<string | null> => {
-				return redis.get(key);
-			},
-			set: async (key: string, value: string, ttl?: number): Promise<void> => {
-				await redis.set(key, value);
-				if (ttl) await redis.expire(key, ttl);
-			},
-			delete: async (key: string): Promise<void> => {
-				await redis.del(key);
-			},
-		},
-	}),
+	// ...(settings.REDIS_URL && {
+	// 	secondaryStorage: {
+	// 		get: async (key: string): Promise<string | null> => {
+	// 			return redis.get(key);
+	// 		},
+	// 		set: async (key: string, value: string, ttl?: number): Promise<void> => {
+	// 			await redis.set(key, value);
+	// 			if (ttl) await redis.expire(key, ttl);
+	// 		},
+	// 		delete: async (key: string): Promise<void> => {
+	// 			await redis.del(key);
+	// 		},
+	// 	},
+	// }),
 	session: {
 		expiresIn: settings.AUTH_SESSION_DURATION_SECONDS,
 	},

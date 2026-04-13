@@ -4,6 +4,7 @@ import { getUserSettings, updateUserSettings } from "./queries";
 
 const updateSettingsSchema = z.object({
 	theme: z.string().optional(),
+	organizationId: z.string().uuid().nullable().optional(),
 });
 
 export const settingsRouter = {

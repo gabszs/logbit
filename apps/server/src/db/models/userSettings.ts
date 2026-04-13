@@ -1,5 +1,5 @@
 import { index, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
-import { users } from "./authModels";
+import { organizations, users } from "./authModels";
 
 export const userSettings = pgTable(
 	"user_settings",
@@ -12,6 +12,9 @@ export const userSettings = pgTable(
 			.notNull()
 			.unique()
 			.references(() => users.id, { onDelete: "cascade" }),
+		organizationId: uuid("organization_id").references(() => organizations.id, {
+			onDelete: "set null",
+		}),
 		createdAt: timestamp("created_at").notNull(),
 		updatedAt: timestamp("updated_at")
 			.$onUpdate(() => new Date())
