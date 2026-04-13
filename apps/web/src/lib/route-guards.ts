@@ -1,5 +1,6 @@
 import { redirect } from "@tanstack/react-router";
 import type { authClient } from "@/web/lib/auth-client";
+import { getSetupStatus } from "@/web/lib/hono-rpc";
 
 interface RedirectIfAuthenticatedOptions {
 	authClient: typeof authClient;
@@ -39,9 +40,11 @@ export async function requireAuthenticated({
 
 	if (!session) {
 		const redirectTarget = location.href ?? location.pathname ?? "/";
+		const setup = await getSetupStatus();
+		const authRoute = setup.hasUsers ? "/auth/sign-in" : "/auth/sign-up";
 
 		throw redirect({
-			to: "/auth/sign-in",
+			to: authRoute,
 			replace: true,
 			search: {
 				redirect: redirectTarget,

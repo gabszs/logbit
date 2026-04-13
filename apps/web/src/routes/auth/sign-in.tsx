@@ -1,32 +1,17 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
+import { ErrorBoundary } from "@/web/components/error-boundary";
 import { SignInShellSkeleton } from "@/web/components/skeletons/sign-in-skeleton";
+import { getSetupStatus } from "@/web/lib/hono-rpc";
 import { redirectIfAuthenticated } from "@/web/lib/route-guards";
 import { SignInForm } from "./-components/sign-in-form";
-
-interface SignInSearch {
-	redirect?: string;
-}
-
-const FALLBACK_REDIRECT = "/";
-
-function sanitizeRedirect(rawRedirect: string | undefined): string {
-	if (!rawRedirect || typeof rawRedirect !== "string") {
-		return FALLBACK_REDIRECT;
-	}
-
-	if (!rawRedirect.startsWith("/")) {
-		return FALLBACK_REDIRECT;
-	}
-
-	if (rawRedirect === "/auth/sign-in") {
-		return FALLBACK_REDIRECT;
-	}
-
-	return rawRedirect;
-}
+import {
+	type AuthRedirectSearch,
+	FALLBACK_REDIRECT,
+	sanitizeRedirect,
+} from "./-utils/redirect";
 
 export const Route = createFileRoute("/auth/sign-in")({
-	validateSearch: (search: Record<string, unknown>): SignInSearch => {
+	validateSearch: (search: Record<string, unknown>): AuthRedirectSearch => {
 		const redirectValue = sanitizeRedirect(
 			search.redirect as string | undefined,
 		);
@@ -42,9 +27,22 @@ export const Route = createFileRoute("/auth/sign-in")({
 			authClient: opts.context.authClient,
 			to: opts.search.redirect || FALLBACK_REDIRECT,
 		});
+
+		const setup = await getSetupStatus();
+		if (!setup.hasUsers) {
+			throw redirect({
+				to: "/auth/sign-up",
+				replace: true,
+				search:
+					opts.search.redirect && opts.search.redirect !== FALLBACK_REDIRECT
+						? { redirect: opts.search.redirect }
+						: undefined,
+			});
+		}
 	},
 	component: SignInRoute,
 	pendingComponent: SignInShellSkeleton,
+	errorComponent: ErrorBoundary,
 });
 
 function SignInRoute() {

@@ -8,6 +8,9 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/web/components/ui/card";
+import { orpc } from "@/web/lib/orpc";
+import { SettingsError } from "./-components/settings-error";
+import { SettingsSectionSkeleton } from "./-components/settings-section-skeleton";
 
 const themeOptions = [
 	{
@@ -31,7 +34,12 @@ const themeOptions = [
 ] as const;
 
 export const Route = createFileRoute("/settings/appearance")({
+	loader: async ({ context }) => {
+		await context.queryClient.ensureQueryData(orpc.settings.get.queryOptions());
+	},
 	component: AppearanceSettings,
+	pendingComponent: SettingsSectionSkeleton,
+	errorComponent: SettingsError,
 });
 
 function AppearanceSettings() {

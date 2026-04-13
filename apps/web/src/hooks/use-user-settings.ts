@@ -1,14 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
-import type { RouterOutputs } from "@/server/index";
+import type { RouterOutputs } from "@/server/client/contracts";
 import { useAuth } from "@/web/components/auth-provider";
+import { useAuthenticatedQueryEnabled } from "@/web/hooks/use-authenticated-query-enabled";
 import { orpc } from "@/web/lib/orpc";
 
 export type UserSettings = RouterOutputs["settings"]["get"];
 
 export function useUserSettings() {
-	const auth = useAuth();
-	const isAuthenticated = Boolean(auth.session?.user?.id);
+	const isAuthenticated = useAuthenticatedQueryEnabled();
 
 	return useQuery(
 		orpc.settings.get.queryOptions({
@@ -33,7 +33,7 @@ export function useUpdateUserSettings() {
 					queryKey: orpc.settings.get.queryKey({}),
 				});
 
-				const previous = queryClient.getQueryData(
+				const previous = queryClient.getQueryData<UserSettings>(
 					orpc.settings.get.queryKey({}),
 				);
 
@@ -49,7 +49,11 @@ export function useUpdateUserSettings() {
 			onSuccess: (updated: UserSettings) => {
 				queryClient.setQueryData(orpc.settings.get.queryKey({}), updated);
 			},
-			onError: (_error, _variables, context) => {
+			onError: (
+				_error: Error,
+				_variables: Partial<UserSettings>,
+				context: { previous?: UserSettings } | undefined,
+			) => {
 				if (context?.previous) {
 					queryClient.setQueryData(
 						orpc.settings.get.queryKey({}),

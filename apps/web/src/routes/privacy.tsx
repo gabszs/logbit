@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { ErrorBoundary } from "@/web/components/error-boundary";
 import { DocumentSkeleton } from "@/web/components/skeletons/document-skeleton";
 
 const subtleLinkClass =
@@ -7,6 +8,7 @@ const subtleLinkClass =
 export const Route = createFileRoute("/privacy")({
 	component: PrivacyRoute,
 	pendingComponent: DocumentSkeleton,
+	errorComponent: ErrorBoundary,
 });
 
 function PrivacyRoute() {

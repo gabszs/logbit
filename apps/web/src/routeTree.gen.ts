@@ -15,6 +15,7 @@ import { Route as SettingsRouteRouteImport } from './routes/settings/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SettingsProfileRouteImport } from './routes/settings/profile'
 import { Route as SettingsAppearanceRouteImport } from './routes/settings/appearance'
+import { Route as AuthSignUpRouteImport } from './routes/auth/sign-up'
 import { Route as AuthSignInRouteImport } from './routes/auth/sign-in'
 
 const PrivacyRoute = PrivacyRouteImport.update({
@@ -47,6 +48,11 @@ const SettingsAppearanceRoute = SettingsAppearanceRouteImport.update({
   path: '/appearance',
   getParentRoute: () => SettingsRouteRoute,
 } as any)
+const AuthSignUpRoute = AuthSignUpRouteImport.update({
+  id: '/auth/sign-up',
+  path: '/auth/sign-up',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthSignInRoute = AuthSignInRouteImport.update({
   id: '/auth/sign-in',
   path: '/auth/sign-in',
@@ -59,6 +65,7 @@ export interface FileRoutesByFullPath {
   '/docs': typeof DocsRoute
   '/privacy': typeof PrivacyRoute
   '/auth/sign-in': typeof AuthSignInRoute
+  '/auth/sign-up': typeof AuthSignUpRoute
   '/settings/appearance': typeof SettingsAppearanceRoute
   '/settings/profile': typeof SettingsProfileRoute
 }
@@ -68,6 +75,7 @@ export interface FileRoutesByTo {
   '/docs': typeof DocsRoute
   '/privacy': typeof PrivacyRoute
   '/auth/sign-in': typeof AuthSignInRoute
+  '/auth/sign-up': typeof AuthSignUpRoute
   '/settings/appearance': typeof SettingsAppearanceRoute
   '/settings/profile': typeof SettingsProfileRoute
 }
@@ -78,6 +86,7 @@ export interface FileRoutesById {
   '/docs': typeof DocsRoute
   '/privacy': typeof PrivacyRoute
   '/auth/sign-in': typeof AuthSignInRoute
+  '/auth/sign-up': typeof AuthSignUpRoute
   '/settings/appearance': typeof SettingsAppearanceRoute
   '/settings/profile': typeof SettingsProfileRoute
 }
@@ -89,6 +98,7 @@ export interface FileRouteTypes {
     | '/docs'
     | '/privacy'
     | '/auth/sign-in'
+    | '/auth/sign-up'
     | '/settings/appearance'
     | '/settings/profile'
   fileRoutesByTo: FileRoutesByTo
@@ -98,6 +108,7 @@ export interface FileRouteTypes {
     | '/docs'
     | '/privacy'
     | '/auth/sign-in'
+    | '/auth/sign-up'
     | '/settings/appearance'
     | '/settings/profile'
   id:
@@ -107,6 +118,7 @@ export interface FileRouteTypes {
     | '/docs'
     | '/privacy'
     | '/auth/sign-in'
+    | '/auth/sign-up'
     | '/settings/appearance'
     | '/settings/profile'
   fileRoutesById: FileRoutesById
@@ -117,6 +129,7 @@ export interface RootRouteChildren {
   DocsRoute: typeof DocsRoute
   PrivacyRoute: typeof PrivacyRoute
   AuthSignInRoute: typeof AuthSignInRoute
+  AuthSignUpRoute: typeof AuthSignUpRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -163,6 +176,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsAppearanceRouteImport
       parentRoute: typeof SettingsRouteRoute
     }
+    '/auth/sign-up': {
+      id: '/auth/sign-up'
+      path: '/auth/sign-up'
+      fullPath: '/auth/sign-up'
+      preLoaderRoute: typeof AuthSignUpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/auth/sign-in': {
       id: '/auth/sign-in'
       path: '/auth/sign-in'
@@ -193,6 +213,7 @@ const rootRouteChildren: RootRouteChildren = {
   DocsRoute: DocsRoute,
   PrivacyRoute: PrivacyRoute,
   AuthSignInRoute: AuthSignInRoute,
+  AuthSignUpRoute: AuthSignUpRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

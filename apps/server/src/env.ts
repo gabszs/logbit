@@ -2,9 +2,14 @@ import z from "zod";
 
 const envSchema = z.object({
 	// GENERAL SETTINGS
+	HOSTNAME: z.string().default("localhost:5051"), // corrijir depois para abrajer edge cases
 	API_PORT: z.coerce.number().default(5051),
 	REDIS_URL: z.string().startsWith("redis://").optional(),
 	DATABASE_URL: z.string().startsWith("postgresql://"),
+	CLICKHOUSE_URL: z
+		.string()
+		.startsWith("http://")
+		.default("http://localhost:8123"),
 	CORS_ORIGIN: z
 		.string()
 		.transform((val) => val.split(","))
@@ -34,10 +39,14 @@ const envSchema = z.object({
 	// Auth settings
 	AUTH_SECRET: z.string().default("supersecret"),
 	AUTH_SALT: z.string().default("supersalt"),
-	AUTH_SESSION_MAX_AGE: z.string().default("7d"),
+	AUTH_SESSION_DURATION_SECONDS: z.coerce.number().default(1209600), // DEFAULT 14 DAYS
 	AUTH_BASE_PATH: z.string().default("/v1/auth"),
 	AUTH_OPEN_API_PATH: z.string().default("/docs"),
 	AUTH_ENABLE_DELETE_ACCOUNT: z.coerce.boolean().default(true),
+	AUTH_ALLOWED_EMAIL_DOMAINS: z
+		.string()
+		.transform((val) => val.split(","))
+		.optional(),
 
 	// rate-limit
 	RATE_LIMIT_ENABLED: z.coerce.boolean().default(true),

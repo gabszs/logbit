@@ -1,13 +1,26 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Card, CardContent } from "@/web/components/ui/card";
 import { Separator } from "@/web/components/ui/separator";
+import { orpc } from "@/web/lib/orpc";
 import { DeleteAccountButton } from "./-components/profile/delete-account-button";
 import { ProfileInfo } from "./-components/profile/profile-info";
 import { SessionManager } from "./-components/profile/session-manager";
 import { SignOutButton } from "./-components/profile/sign-out-button";
+import { SettingsError } from "./-components/settings-error";
+import { SettingsSectionSkeleton } from "./-components/settings-section-skeleton";
 
 export const Route = createFileRoute("/settings/profile")({
+	loader: async ({ context }) => {
+		await Promise.all([
+			context.queryClient.ensureQueryData(orpc.profile.get.queryOptions()),
+			context.queryClient.ensureQueryData(
+				orpc.profile.listSessions.queryOptions(),
+			),
+		]);
+	},
 	component: ProfilePage,
+	pendingComponent: SettingsSectionSkeleton,
+	errorComponent: SettingsError,
 });
 
 function ProfilePage() {

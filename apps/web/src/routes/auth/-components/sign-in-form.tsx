@@ -1,10 +1,10 @@
+import { revalidateLogic } from "@tanstack/react-form";
 import { useMutation } from "@tanstack/react-query";
 import { useNavigate, useRouter } from "@tanstack/react-router";
 import { Eye, EyeOff, Lock, Mail } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import type { z } from "zod";
-import { useAuth } from "@/web/components/auth-provider";
 import { Button } from "@/web/components/ui/button";
 import { Input } from "@/web/components/ui/input";
 import { useAppForm } from "@/web/components/ui/tanstack-form";
@@ -19,16 +19,7 @@ interface SignInFormProps {
 export function SignInForm({ redirectPath }: SignInFormProps) {
 	const navigate = useNavigate();
 	const router = useRouter();
-	const auth = useAuth();
-
-	useEffect(() => {
-		if (auth.isAuthenticated) {
-			navigate({
-				to: redirectPath,
-				replace: true,
-			});
-		}
-	}, [auth.isAuthenticated, navigate, redirectPath]);
+	const [showPassword, setShowPassword] = useState(false);
 
 	const signInMutation = useMutation({
 		mutationFn: async ({ email, password }: z.infer<typeof signInSchema>) => {
@@ -44,7 +35,7 @@ export function SignInForm({ redirectPath }: SignInFormProps) {
 		onSuccess: async () => {
 			toast.success(SIGN_IN_FORM.SUCCESS_MESSAGES.SIGN_IN_SUCCESS);
 			await router.invalidate();
-			navigate({
+			await navigate({
 				to: redirectPath,
 				replace: true,
 			});
@@ -59,15 +50,14 @@ export function SignInForm({ redirectPath }: SignInFormProps) {
 			email: "",
 			password: "",
 		},
+		validationLogic: revalidateLogic(),
 		validators: {
-			onChange: signInSchema,
+			onDynamic: signInSchema,
 		},
 		onSubmit: async ({ value }) => {
 			signInMutation.mutate(value);
 		},
 	});
-
-	const [showPassword, setShowPassword] = useState(false);
 
 	return (
 		<div className="w-full max-w-md">

@@ -1,8 +1,11 @@
-import { Link, useNavigate } from "@tanstack/react-router";
+import { useQueryClient } from "@tanstack/react-query";
+import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import {
 	BookText,
 	CircleHelp,
+	House,
 	LogOut,
+	type LucideIcon,
 	Monitor,
 	Moon,
 	PanelLeftClose,
@@ -10,6 +13,7 @@ import {
 	Settings,
 	Sun,
 } from "lucide-react";
+import { toast } from "sonner";
 import { useAuth } from "@/web/components/auth-provider";
 import { useTheme } from "@/web/components/theme-provider";
 import {
@@ -31,6 +35,7 @@ import {
 import { useContentSidebar } from "@/web/hooks/use-content-sidebar";
 import { useProfile } from "@/web/hooks/use-profile";
 import { authClient } from "@/web/lib/auth-client";
+import { clearAuthenticatedQueries } from "@/web/lib/orpc";
 import { cn } from "@/web/utils/cn";
 
 function getInitial(
@@ -43,19 +48,48 @@ function getInitial(
 
 export function AppSidebar() {
 	const navigate = useNavigate();
+	const queryClient = useQueryClient();
 	const auth = useAuth();
 	const profile = useProfile();
 	const { setTheme } = useTheme();
 	const { isExpanded, toggle: toggleSidebar } = useContentSidebar();
+	const pathname = useRouterState({
+		select: (state) => state.location.pathname,
+	});
 
 	const user = profile.data;
 	const isAuthenticated = Boolean(auth.session?.user);
 
+	const navigationItems: Array<{
+		to: "/" | "/settings/profile";
+		label: string;
+		icon: LucideIcon;
+		isActive: boolean;
+	}> = [
+		{
+			to: "/",
+			label: "Home",
+			icon: House,
+			isActive: pathname === "/",
+		},
+		{
+			to: "/settings/profile",
+			label: "Settings",
+			icon: Settings,
+			isActive: pathname.startsWith("/settings"),
+		},
+	];
+
 	const handleSignOut = async () => {
 		await authClient.signOut({
 			fetchOptions: {
-				onSuccess: () => {
-					window.location.href = "/";
+				onSuccess: async () => {
+					await navigate({ to: "/auth/sign-in", replace: true });
+					await clearAuthenticatedQueries(queryClient);
+					toast.success("Signed out successfully");
+				},
+				onError: () => {
+					toast.error("Failed to sign out");
 				},
 			},
 		});
@@ -112,8 +146,30 @@ export function AppSidebar() {
 			)}
 
 			{/* Middle: Nav items */}
-			<nav className="flex flex-1 flex-col items-center gap-1">
-				{/* Add other nav items here if needed */}
+			<nav className="flex flex-1 flex-col gap-1">
+				{navigationItems.map((item) => {
+					const Icon = item.icon;
+
+					return (
+						<Link
+							key={item.to}
+							to={item.to}
+							preload="intent"
+							className={cn(
+								"flex h-9 items-center rounded-lg text-sm transition-colors",
+								isExpanded
+									? "w-full justify-start gap-2 px-3"
+									: "w-9 justify-center self-center",
+								item.isActive
+									? "bg-primary/10 text-primary"
+									: "text-muted-foreground hover:bg-accent hover:text-foreground",
+							)}
+						>
+							<Icon className="size-4 shrink-0" />
+							{isExpanded && <span>{item.label}</span>}
+						</Link>
+					);
+				})}
 			</nav>
 
 			{/* Bottom: Help + User */}

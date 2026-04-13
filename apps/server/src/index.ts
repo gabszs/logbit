@@ -1,6 +1,5 @@
 import { httpInstrumentationMiddleware } from "@hono/otel";
 import { OpenAPIHono } from "@hono/zod-openapi";
-import { MastraServer } from "@mastra/hono";
 import type { InferRouterInputs, InferRouterOutputs } from "@orpc/server";
 import { RPCHandler } from "@orpc/server/fetch";
 import { migrate } from "drizzle-orm/bun-sql/migrator";
@@ -12,8 +11,8 @@ import { problemDetailsHandler } from "hono-problem-details";
 import { MemoryStore, rateLimiter } from "hono-rate-limiter";
 import { db, pgClient } from "./db";
 import { settings } from "./env";
-import { mastra } from "./features/ai";
 import authRouter from "./features/auth/routes";
+import logsRouter from "./features/logs/routes";
 import opampRouter from "./features/opamp/routes";
 import { profileRouter } from "./features/profile/routes";
 import { settingsRouter } from "./features/settings/routes";
@@ -29,15 +28,8 @@ await migrate(db, { migrationsFolder: "./src/db/migrations" });
 
 // create app
 const app = new OpenAPIHono<AppContext>();
-const aiServer = new MastraServer({
-	app,
-	mastra,
-	prefix: "/v1/ai",
-	openapiPath: "/openapi.json",
-	// customRouteAuthConfig: {"GET:/v1/ai/chat": true},
-});
 
-if (settings.NODE_ENV === "development") {
+if (settings.NODE_ENV === "test") {
 	app.use(honoLogger());
 	app.use(async (c, next) => {
 		console.log("Headers:", Object.fromEntries(c.req.raw.headers.entries()));
@@ -152,6 +144,7 @@ app.use("/orpc/*", async (c) => {
 // V1 Routes
 app.route("/v1", authRouter);
 app.route("/v1", opampRouter);
+app.route("/v1", logsRouter);
 
 // utilities routes
 app.route("/", utilityRoutes);
@@ -168,8 +161,6 @@ export const shutdownDependencies = async () => {
 	redis.close(); // fecha conexão com Redis
 	process.exit(0);
 };
-
-await aiServer.init();
 
 ["SIGTERM", "SIGINT", "beforeExit", "SIGQUIT"].forEach((event) => {
 	process.on(event, shutdownDependencies);

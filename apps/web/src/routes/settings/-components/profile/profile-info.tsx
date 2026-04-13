@@ -45,7 +45,7 @@ export function ProfileInfo() {
 				toast.success("Profile updated successfully");
 				setIsEditOpen(false);
 				queryClient.invalidateQueries({
-					queryKey: orpc.profile.get.key(),
+					queryKey: orpc.profile.get.queryOptions().queryKey,
 				});
 				user.refetch();
 				initials.refetch();
@@ -104,9 +104,13 @@ export function ProfileInfo() {
 		}
 	}, [isEditOpen]);
 
-	if (user.isLoading) return <div>Loading...</div>;
-	if (user.error) return <div>Error loading profile</div>;
-	if (!user.data) return <div>No user data</div>;
+	if (!user.data) {
+		return (
+			<div className="rounded-lg border border-border/70 border-dashed bg-background/40 p-4 text-muted-foreground text-sm">
+				Profile details are temporarily unavailable.
+			</div>
+		);
+	}
 
 	return (
 		<div className="space-y-4">

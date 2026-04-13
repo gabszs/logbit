@@ -46,7 +46,7 @@ export function SettingsError({ error, reset }: ErrorComponentProps) {
 						className="gap-2"
 					>
 						<ArrowLeft className="size-4" />
-						Back to Chat
+						Back to Home
 					</Button>
 				</div>
 			</div>

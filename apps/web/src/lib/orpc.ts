@@ -2,9 +2,10 @@ import { createORPCClient, onError } from "@orpc/client";
 import { RPCLink } from "@orpc/client/fetch";
 import type { RouterClient } from "@orpc/server";
 import { createTanstackQueryUtils } from "@orpc/tanstack-query";
+import type { QueryClient as TanStackQueryClient } from "@tanstack/react-query";
 import { QueryCache, QueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import type { AppRouter } from "../../../server/src/index";
+import type { AppRouter } from "@/server/client/contracts";
 
 export const queryClient = new QueryClient({
 	queryCache: new QueryCache({
@@ -42,3 +43,18 @@ export const orpcClient: AppRouterClient =
 	createORPCClient<AppRouterClient>(link);
 
 export const orpc = createTanstackQueryUtils(orpcClient);
+
+export async function clearAuthenticatedQueries(
+	targetQueryClient: TanStackQueryClient,
+) {
+	const protectedQueryKeys = [
+		orpc.profile.get.queryOptions().queryKey,
+		orpc.profile.listSessions.queryOptions().queryKey,
+		orpc.settings.get.queryOptions().queryKey,
+	];
+
+	for (const queryKey of protectedQueryKeys) {
+		await targetQueryClient.cancelQueries({ queryKey });
+		targetQueryClient.removeQueries({ queryKey });
+	}
+}

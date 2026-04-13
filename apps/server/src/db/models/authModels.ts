@@ -22,8 +22,6 @@ export const users = pgTable("users", {
 	updatedAt: timestamp("updated_at")
 		.$onUpdate(() => new Date())
 		.notNull(),
-	phoneNumber: text("phone_number").unique(),
-	phoneNumberVerified: boolean("phone_number_verified"),
 	role: text("role"),
 	banned: boolean("banned").default(false),
 	banReason: text("ban_reason"),
@@ -50,7 +48,7 @@ export const sessions = pgTable(
 		activeOrganizationId: uuid("active_organization_id"),
 		impersonatedBy: uuid("impersonated_by"),
 	},
-	(table) => [index("sessions_user_id_idx").on(table.userId)],
+	(table) => [index("sessions_userId_idx").on(table.userId)],
 );
 
 export const accounts = pgTable(
@@ -76,7 +74,7 @@ export const accounts = pgTable(
 			.$onUpdate(() => new Date())
 			.notNull(),
 	},
-	(table) => [index("accounts_user_id_idx").on(table.userId)],
+	(table) => [index("accounts_userId_idx").on(table.userId)],
 );
 
 export const verifications = pgTable(
@@ -126,8 +124,8 @@ export const apikeys = pgTable(
 		metadata: text("metadata"),
 	},
 	(table) => [
-		index("api_keys_key_idx").on(table.key),
-		index("api_keys_user_id_idx").on(table.userId),
+		index("apikeys_key_idx").on(table.key),
+		index("apikeys_userId_idx").on(table.userId),
 	],
 );
 
@@ -162,8 +160,8 @@ export const members = pgTable(
 		createdAt: timestamp("created_at").notNull(),
 	},
 	(table) => [
-		index("members_organization_id_idx").on(table.organizationId),
-		index("members_user_id_idx").on(table.userId),
+		index("members_organizationId_idx").on(table.organizationId),
+		index("members_userId_idx").on(table.userId),
 	],
 );
 
@@ -186,7 +184,7 @@ export const invitations = pgTable(
 			.references(() => users.id, { onDelete: "cascade" }),
 	},
 	(table) => [
-		index("invitations_organization_id_idx").on(table.organizationId),
+		index("invitations_organizationId_idx").on(table.organizationId),
 		index("invitations_email_idx").on(table.email),
 	],
 );

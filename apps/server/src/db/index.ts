@@ -1,8 +1,23 @@
+import { ClickhouseDialect } from "@founderpath/kysely-clickhouse";
 import { SQL } from "bun";
 import { settings } from "@/env";
 import "dotenv/config";
 import { drizzle } from "drizzle-orm/bun-sql";
+
+import { Kysely } from "kysely";
+import type { chDB } from "./clickhouse/types";
 import { models } from "./models";
+
+export const chDb = new Kysely<chDB>({
+	dialect: new ClickhouseDialect({
+		options: {
+			url: "http://192.168.1.3:8125",
+			username: "default",
+			password: "clickhouse",
+			database: "default",
+		},
+	}),
+});
 
 export const pgClient = new SQL({
 	url: settings.DATABASE_URL,

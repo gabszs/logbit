@@ -62,6 +62,16 @@ export const auth = betterAuth({
 			generateId: false,
 		},
 	},
+	hooks: {
+		before: createAuthMiddleware(async (ctx) => {
+			if (ctx.path !== "/sign-up/email") return;
+			if (!(await hasAnyUser())) return;
+			throw new APIError("FORBIDDEN", {
+				message:
+					"Sign up is disabled because a user already exists. Ask an administrator to create your account.",
+			});
+		}),
+	},
 	user: {
 		deleteUser: {
 			enabled: settings.AUTH_ENABLE_DELETE_ACCOUNT,
@@ -90,7 +100,7 @@ export const auth = betterAuth({
 						const organizationId = Bun.randomUUIDv7();
 						await db
 							.update(models.users)
-							.set({ role: "admin" })
+							.set({ role: "admin", emailVerified: true })
 							.where(eq(models.users.id, user.id));
 						await db.insert(models.organizations).values({
 							id: organizationId,
@@ -118,39 +128,34 @@ export const auth = betterAuth({
 			},
 		},
 	},
-	// ...(settings.REDIS_URL && {
-	// 	secondaryStorage: {
-	// 		get: async (key: string): Promise<string | null> => {
-	// 			return redis.get(key);
-	// 		},
-	// 		set: async (key: string, value: string, ttl?: number): Promise<void> => {
-	// 			await redis.set(key, value);
-	// 			if (ttl) await redis.expire(key, ttl);
-	// 		},
-	// 		delete: async (key: string): Promise<void> => {
-	// 			await redis.del(key);
-	// 		},
-	// 	},
-	// }),
+	...(settings.REDIS_URL && {
+		secondaryStorage: {
+			get: async (key: string): Promise<string | null> => {
+				return redis.get(key);
+			},
+			set: async (key: string, value: string, ttl?: number): Promise<void> => {
+				await redis.set(key, value);
+				if (ttl) await redis.expire(key, ttl);
+			},
+			delete: async (key: string): Promise<void> => {
+				await redis.del(key);
+			},
+		},
+	}),
 	session: {
-		expiresIn: 60 * 60 * 24 * 7,
-		// cookieCache: {
-		// 	enabled: true,
-		// 	maxAge: 60 * 5,
-		// },
+		expiresIn: settings.AUTH_SESSION_DURATION_SECONDS,
 	},
 	plugins: [
 		apiKey({
 			apiKeyHeaders: ["x-api-key"],
 			defaultPrefix: "sk_",
 		}),
-		// phoneNumber(),
 		admin(),
 		organization({
-			sendInvitationEmail: async (data) => {
-				const inviteLink = `${settings.HOSTNAME}${settings.AUTH_BASE_PATH}/accept-invitation?invitationId=${data.id}`;
-				console.log("invitation:", inviteLink);
-			},
+			// sendInvitationEmail: async (data) => {
+			// 	const inviteLink = `${settings.HOSTNAME}${settings.AUTH_BASE_PATH}/accept-invitation?invitationId=${data.id}`;
+			// 	console.log("invitation:", inviteLink);
+			// },
 			organizationHooks: {
 				beforeCreateOrganization: async ({ user }) => {
 					if (!hasAllowedEmailDomain(user.email)) {

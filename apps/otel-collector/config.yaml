@@ -20,7 +20,7 @@ processors:
 
 exporters:
   clickhouse:
-    endpoint: tcp://clickhouse:9000
+    endpoint: tcp://192.168.1.3:9001
     database: default
     username: default
     password: "clickhouse"

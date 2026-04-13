@@ -16,12 +16,14 @@ import {
 } from "@tanstack/react-router";
 import { useEffect } from "react";
 import type { authClient } from "@/web/lib/auth-client";
+import type { honoClient } from "@/web/lib/hono-rpc";
 import type { orpc } from "@/web/lib/orpc";
 import { cn } from "@/web/utils/cn";
 
 export interface RouterAppContext {
 	orpc: typeof orpc;
 	queryClient: QueryClient;
+	honoClient: typeof honoClient;
 	authClient: typeof authClient;
 	auth: AuthContextValue;
 }
@@ -37,8 +39,9 @@ function RootComponent() {
 	const auth = useAuth();
 	const { isExpanded: isSidebarExpanded } = useContentSidebar();
 	const isAuthenticated = auth.isAuthenticated;
-	const isSignIn = router.location.pathname.startsWith("/auth/sign-in");
-	const showHeader = !isSignIn;
+	const isAuthRoute = router.location.pathname.startsWith("/auth/");
+	const showAuthenticatedChrome = isAuthenticated && !isAuthRoute;
+	const showHeader = !isAuthRoute;
 
 	// force scroll to top on route change -- router default behavior doesn't seem to be working?
 	useEffect(() => {
@@ -47,11 +50,11 @@ function RootComponent() {
 
 	return (
 		<ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
-			{isAuthenticated && <AppSidebar />}
+			{showAuthenticatedChrome && <AppSidebar />}
 			<BackgroundLayout
 				contentClassName={cn(
 					"flex min-h-svh flex-col overflow-x-hidden transition-[margin-left,max-width] duration-200 ease-linear",
-					isAuthenticated &&
+					showAuthenticatedChrome &&
 						(isSidebarExpanded
 							? "ml-48 max-w-[calc(100vw-12rem)]"
 							: "ml-12 max-w-[calc(100vw-3rem)]"),

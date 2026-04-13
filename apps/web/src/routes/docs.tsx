@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import type { ReactNode } from "react";
+import { ErrorBoundary } from "@/web/components/error-boundary";
 import { DocumentSkeleton } from "@/web/components/skeletons/document-skeleton";
 import { TECH_STACK_SECTIONS } from "@/web/lib/constants";
 
@@ -22,6 +23,7 @@ function TechLink({ href, children }: TechLinkProps) {
 export const Route = createFileRoute("/docs")({
 	component: DocsRoute,
 	pendingComponent: DocumentSkeleton,
+	errorComponent: ErrorBoundary,
 });
 
 function DocsRoute() {

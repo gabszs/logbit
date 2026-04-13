@@ -1,5 +1,12 @@
 import z from "zod";
 
+export const setupSchema = z.object({
+	hasUsers: z.boolean().openapi({
+		example: false,
+		description: "Whether any users exist in the system",
+	}),
+});
+
 export const healthSchema = z.object({
 	status: z.string().openapi({
 		example: "ok",

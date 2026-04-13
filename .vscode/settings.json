@@ -29,5 +29,38 @@
 	"[javascript][typescript][javascriptreact][typescriptreact][json][jsonc][css][graphql]": {
 		"editor.defaultFormatter": "biomejs.biome"
 	},
-	"js/ts.tsdk.path": "node_modules/typescript/lib"
+	"editor.semanticHighlighting.enabled": true,
+	"js/ts.tsdk.path": "node_modules/typescript/lib",
+	"colorize.languages": [
+		"typescript",
+		"typescriptreact",
+		"javascript",
+		"javascriptreact",
+		"css",
+		"scss",
+		"sass",
+		"less",
+		"html",
+		"json",
+		"jsonc",
+		"yaml",
+		"markdown",
+		"graphql",
+		"vue",
+		"svelte",
+		"rust",
+		"go",
+		"python",
+		"java",
+		"c",
+		"cpp",
+		"csharp",
+		"php",
+		"ruby",
+		"swift",
+		"kotlin",
+		"dart",
+		"lua",
+		"shell"
+	]
 }

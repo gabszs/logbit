@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useAuth } from "@/web/components/auth-provider";
+import { useAuthenticatedQueryEnabled } from "@/web/hooks/use-authenticated-query-enabled";
 import { orpc } from "@/web/lib/orpc";
 
 /**
@@ -14,8 +14,7 @@ import { orpc } from "@/web/lib/orpc";
  * keeping data fresh when it actually changes.
  */
 export function useProfile() {
-	const auth = useAuth();
-	const isAuthenticated = Boolean(auth.session?.user);
+	const isAuthenticated = useAuthenticatedQueryEnabled();
 
 	return useQuery(
 		orpc.profile.get.queryOptions({

@@ -1,3 +1,4 @@
+import { revalidateLogic } from "@tanstack/react-form";
 import { useMutation } from "@tanstack/react-query";
 import { useNavigate, useRouter } from "@tanstack/react-router";
 import { AlertCircle, Eye, EyeOff, Lock, Mail } from "lucide-react";
@@ -55,8 +56,9 @@ export function SignUpForm({ redirectPath }: SignUpFormProps) {
 			password: "",
 			confirmPassword: "",
 		},
+		validationLogic: revalidateLogic(),
 		validators: {
-			onChange: signUpSchema,
+			onDynamic: signUpSchema,
 		},
 		onSubmit: async ({ value }) => {
 			signUpMutation.mutate(value);
@@ -81,14 +83,6 @@ export function SignUpForm({ redirectPath }: SignUpFormProps) {
 					}}
 					className="space-y-5"
 				>
-					<Alert className="border-primary/30 bg-primary/5 text-primary">
-						<AlertCircle />
-						<AlertTitle>Initial setup</AlertTitle>
-						<AlertDescription>
-							This screen is only available until the first user is created.
-						</AlertDescription>
-					</Alert>
-
 					<div className="space-y-4 rounded-lg border border-border bg-card p-5">
 						<form.AppField name="email">
 							{(field) => (
@@ -203,6 +197,14 @@ export function SignUpForm({ redirectPath }: SignUpFormProps) {
 							)}
 						</form.Subscribe>
 					</div>
+
+					<Alert className="rounded-lg border-primary/30 bg-primary/5 text-primary">
+						<AlertCircle />
+						<AlertTitle>Initial setup</AlertTitle>
+						<AlertDescription>
+							This screen is only available until the first user is created.
+						</AlertDescription>
+					</Alert>
 				</form>
 			</form.AppForm>
 		</div>
