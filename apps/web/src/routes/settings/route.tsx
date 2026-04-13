@@ -5,16 +5,8 @@ import {
 	redirect,
 	useRouterState,
 } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { AppShellSkeleton } from "@/web/components/skeletons/app-skeleton";
-import {
-	Sheet,
-	SheetContent,
-	SheetDescription,
-	SheetHeader,
-	SheetTitle,
-} from "@/web/components/ui/sheet";
-import { useIsMobile } from "@/web/hooks/use-mobile";
 import { SETTINGS_NAV_ITEMS } from "@/web/lib/constants";
 import { requireAuthenticated } from "@/web/lib/route-guards";
 import { cn } from "@/web/utils/cn";
@@ -39,9 +31,6 @@ export const Route = createFileRoute("/settings")({
 
 function SettingsLayout() {
 	const location = useRouterState({ select: (state) => state.location });
-	const isMobile = useIsMobile();
-	const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-
 	const activePath = location.pathname ?? "";
 
 	const navigationItems = useMemo(() => {
@@ -52,83 +41,33 @@ function SettingsLayout() {
 		});
 	}, [activePath]);
 
-	useEffect(() => {
-		const handler = () => setMobileSidebarOpen(true);
-		window.addEventListener(
-			"better-chat:open-settings",
-			handler as EventListener,
-		);
-		return () =>
-			window.removeEventListener(
-				"better-chat:open-settings",
-				handler as EventListener,
-			);
-	}, []);
-
-	useEffect(() => {
-		if (!isMobile) {
-			setMobileSidebarOpen(false);
-		}
-	}, [isMobile]);
-
-	const renderNavigation = (onNavigate?: () => void) => (
-		<div className="space-y-2">
-			{navigationItems.map((item) => (
-				<Link
-					key={item.to}
-					to={item.to}
-					className={cn(
-						"block rounded-lg border px-3 py-3 transition",
-						item.isActive
-							? "border-primary bg-primary/10 text-primary"
-							: "border-transparent bg-muted/40 text-foreground hover:border-muted hover:bg-muted",
-					)}
-					preload="intent"
-					onClick={() => onNavigate?.()}
-				>
-					<div className="font-semibold text-sm">{item.label}</div>
-					<p className="text-muted-foreground text-xs">{item.description}</p>
-				</Link>
-			))}
-		</div>
-	);
-
 	return (
-		<div className="max-w-[100vw] overflow-x-hidden px-2 pt-19 sm:px-4">
-			{isMobile && (
-				<Sheet open={mobileSidebarOpen} onOpenChange={setMobileSidebarOpen}>
-					<SheetContent
-						side="left"
-						className="w-[min(90vw,18rem)] border-r-0 p-0 sm:max-w-xs"
+		<div className="px-3 pt-19 pb-8 sm:px-5">
+			<div className="mx-auto w-full max-w-5xl">
+				<div className="scrollbar-hide overflow-x-auto">
+					<nav
+						aria-label="Settings sections"
+						className="flex min-w-max items-end gap-2 border-border/80 border-b"
 					>
-						<SheetHeader className="sr-only">
-							<SheetTitle>Settings</SheetTitle>
-							<SheetDescription>
-								Navigate between settings sections.
-							</SheetDescription>
-						</SheetHeader>
-						<div className="flex h-full flex-col gap-4 overflow-hidden bg-card p-4">
-							<div className="-mx-1 flex-1 overflow-y-auto px-1">
-								{renderNavigation(() => setMobileSidebarOpen(false))}
-							</div>
-						</div>
-					</SheetContent>
-				</Sheet>
-			)}
-			<div className="mx-auto flex min-h-[calc(100svh-4rem-1.5rem)] w-full min-w-0 max-w-5xl gap-4 px-1 sm:gap-6 sm:px-0 md:min-h-[calc(100svh-4rem-0.5rem)]">
-				<aside className="relative hidden w-64 shrink-0 md:block">
-					<div className="sticky top-16 flex h-[calc(100svh-4rem-1.5rem)] flex-col overflow-hidden rounded-lg border bg-card p-3 shadow-sm sm:p-4 md:h-[calc(100svh-4rem-0.5rem)]">
-						<div className="-mx-1 flex-1 overflow-y-auto px-1">
-							{renderNavigation()}
-						</div>
-					</div>
-				</aside>
-				<section className="min-w-0 flex-1 basis-0">
-					<div className="sticky top-16 flex h-[calc(100svh-4rem-1.5rem)] max-w-[100vw] flex-col overflow-hidden rounded-lg border bg-card shadow-sm md:h-[calc(100svh-4rem-0.5rem)]">
-						<div className="flex-1 overflow-y-auto px-4 py-6 sm:px-6">
-							<Outlet />
-						</div>
-					</div>
+						{navigationItems.map((item) => (
+							<Link
+								key={item.to}
+								to={item.to}
+								preload="intent"
+								className={cn(
+									"relative -mb-px overflow-hidden rounded-t-lg px-4 py-3 transition-all duration-150",
+									item.isActive
+										? "bg-card text-foreground shadow-[inset_0_-2px_0_0_var(--color-primary)]"
+										: "text-muted-foreground hover:bg-card/70 hover:text-foreground hover:shadow-[0_8px_24px_rgba(0,0,0,0.16)]",
+								)}
+							>
+								<div className="font-semibold text-sm">{item.label}</div>
+							</Link>
+						))}
+					</nav>
+				</div>
+				<section className="min-w-0 pt-8">
+					<Outlet />
 				</section>
 			</div>
 		</div>
