@@ -3,11 +3,12 @@ import { OpenAPIHono } from "@hono/zod-openapi";
 import type { InferRouterInputs, InferRouterOutputs } from "@orpc/server";
 import { RPCHandler } from "@orpc/server/fetch";
 import { migrate } from "drizzle-orm/bun-sql/migrator";
-import { problemDetailsHandler } from "hono-problem-details";
-import { MemoryStore, rateLimiter } from "hono-rate-limiter";
+import { serveStatic } from "hono/bun";
 import { compress } from "hono/compress";
 import { cors } from "hono/cors";
 import { showRoutes } from "hono/dev";
+import { problemDetailsHandler } from "hono-problem-details";
+import { MemoryStore, rateLimiter } from "hono-rate-limiter";
 import { db, pgClient } from "./db";
 import { settings } from "./env";
 import authRouter from "./features/auth/routes";
@@ -21,7 +22,6 @@ import { setupOpenApi } from "./lib/openapi";
 import { createContext } from "./lib/orpc";
 import { injectOtelTraceHeader, logger } from "./lib/telemetry";
 import type { AppContext } from "./types";
-import { serveStatic } from "hono/bun";
 
 // RUN MIGRATIONS
 await migrate(db, { migrationsFolder: "./src/db/migrations" });

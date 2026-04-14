@@ -488,7 +488,10 @@ function mapBetterAuthOperationToRouteConfig(
 }
 
 export function setupOpenApi(app: AppType, apiPrefix: string) {
-	app.doc(`${apiPrefix}/open-api.json`, { ...openApiSchema, tags: tagDescriptions });
+	app.doc(`${apiPrefix}/open-api.json`, {
+		...openApiSchema,
+		tags: tagDescriptions,
+	});
 
 	app.get(
 		`${apiPrefix}/docs`,
