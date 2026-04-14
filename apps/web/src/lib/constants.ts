@@ -122,11 +122,6 @@ export const TECH_STACK_SECTIONS: TechStackSection[] = [
 		title: "Backend",
 		items: [
 			{
-				name: "Cloudflare Workers",
-				href: "https://developers.cloudflare.com/workers/",
-				suffix: " for serverless compute",
-			},
-			{
 				name: "Hono",
 				href: "https://hono.dev/docs",
 				suffix: " for HTTP routing",

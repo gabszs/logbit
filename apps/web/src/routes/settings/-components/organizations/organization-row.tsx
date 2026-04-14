@@ -1,11 +1,12 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Copy, Loader2, Pencil, ShieldCheck, Trash2 } from "lucide-react";
+import { Loader2, Pencil, ShieldCheck, Trash2 } from "lucide-react";
 import type { MouseEvent } from "react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Alert, AlertDescription, AlertTitle } from "@/web/components/ui/alert";
 import { Badge } from "@/web/components/ui/badge";
 import { Button } from "@/web/components/ui/button";
+import { CopyButton } from "@/web/components/ui/copy-button";
 import {
 	Dialog,
 	DialogContent,
@@ -55,17 +56,6 @@ function DetailCard({
 	className?: string;
 	preformatted?: boolean;
 }) {
-	const handleCopy = async (event: MouseEvent<HTMLButtonElement>) => {
-		event.stopPropagation();
-
-		try {
-			await navigator.clipboard.writeText(copyValue ?? value);
-			toast.success(`${label} copied`);
-		} catch {
-			toast.error(`Failed to copy ${label.toLowerCase()}`);
-		}
-	};
-
 	return (
 		<div
 			className={cn(
@@ -83,17 +73,14 @@ function DetailCard({
 			) : (
 				<p className="mt-1 break-words text-sm leading-5">{value}</p>
 			)}
-			<Button
-				type="button"
-				size="icon"
-				variant="ghost"
-				onMouseDown={(event) => event.stopPropagation()}
-				onClick={handleCopy}
+			<CopyButton
+				onCopy={async () => {
+					await navigator.clipboard.writeText(copyValue ?? value);
+					toast.success(`${label} copied`);
+				}}
 				aria-label={`Copy ${label}`}
 				className="absolute top-1/2 right-2 size-7 -translate-y-1/2 opacity-0 shadow-none transition-opacity hover:shadow-sm group-hover:opacity-100"
-			>
-				<Copy className="size-3.5" />
-			</Button>
+			/>
 		</div>
 	);
 }

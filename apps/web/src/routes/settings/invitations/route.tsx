@@ -2,7 +2,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Outlet } from "@tanstack/react-router";
 import {
 	Check,
-	Copy,
 	Loader2,
 	LogOut,
 	MailPlus,
@@ -25,8 +24,9 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/web/components/ui/card";
+import { CopyButton } from "@/web/components/ui/copy-button";
+import { LabeledSwitch } from "@/web/components/ui/labeled-switch";
 import { Separator } from "@/web/components/ui/separator";
-import { Switch } from "@/web/components/ui/switch";
 import { authClient } from "@/web/lib/auth-client";
 import { copyToClipboard } from "@/web/utils/clipboard";
 import type {
@@ -197,21 +197,12 @@ function InvitationsSettingsLayout() {
 								: "Review invitations addressed to you across organizations."}
 						</CardDescription>
 						{canManageInvitations ? (
-							<label
-								htmlFor="management-view-toggle"
-								className="flex w-fit items-center gap-3 pt-1"
-							>
-								<span className="text-muted-foreground text-sm">
-									Management view:
-								</span>
-								<Switch
-									id="management-view-toggle"
-									checked={isManagementMode}
-									onCheckedChange={setIsManagementMode}
-									aria-label="Toggle management view"
-									className="h-4 w-6.5"
-								/>
-							</label>
+							<LabeledSwitch
+								label="Management view:"
+								checked={isManagementMode}
+								onCheckedChange={setIsManagementMode}
+								className="h-4 w-6.5"
+							/>
 						) : null}
 					</div>
 
@@ -502,18 +493,9 @@ function ManagementInvitationRow({
 				</div>
 
 				<div className="flex shrink-0 flex-col gap-2 sm:flex-row sm:items-center">
-					<Button
-						type="button"
-						size="sm"
-						variant="outline"
-						onClick={(event: MouseEvent<HTMLButtonElement>) => {
-							event.stopPropagation();
-							void handleCopyLink();
-						}}
-					>
-						<Copy className="size-4" />
+					<CopyButton size="sm" variant="outline" onCopy={handleCopyLink}>
 						Link
-					</Button>
+					</CopyButton>
 					<Button
 						type="button"
 						size="sm"
@@ -760,34 +742,20 @@ function UserInvitationRow({
 }
 
 function InvitationDetail({ label, value }: { label: string; value: string }) {
-	const handleCopy = async (event: MouseEvent<HTMLButtonElement>) => {
-		event.stopPropagation();
-
-		try {
-			await navigator.clipboard.writeText(value);
-			toast.success(`${label} copied`);
-		} catch {
-			toast.error(`Failed to copy ${label.toLowerCase()}`);
-		}
-	};
-
 	return (
 		<div className="group relative rounded-lg border border-border/55 bg-muted/35 px-3 py-2.5">
 			<p className="pr-8 text-[10px] text-muted-foreground uppercase tracking-[0.16em]">
 				{label}
 			</p>
 			<p className="mt-1 break-words text-sm leading-5">{value}</p>
-			<Button
-				type="button"
-				size="icon"
-				variant="ghost"
-				onMouseDown={(event) => event.stopPropagation()}
-				onClick={handleCopy}
+			<CopyButton
+				onCopy={async () => {
+					await navigator.clipboard.writeText(value);
+					toast.success(`${label} copied`);
+				}}
 				aria-label={`Copy ${label}`}
 				className="absolute top-1/2 right-2 size-7 -translate-y-1/2 opacity-0 shadow-none transition-opacity hover:shadow-sm group-hover:opacity-100"
-			>
-				<Copy className="size-3.5" />
-			</Button>
+			/>
 		</div>
 	);
 }

@@ -124,7 +124,6 @@ function DocsRoute() {
 									</li>
 								</ul>
 							</div>
-							<p>Cloudflare Workers: Edge-native serverless runtime</p>
 							<p>Better Auth: Email OTP and social OAuth (Google, GitHub)</p>
 							<p>KV Sessions: Distributed session cache with rate limiting</p>
 						</div>
