@@ -487,16 +487,16 @@ function mapBetterAuthOperationToRouteConfig(
 	};
 }
 
-export function setupOpenApi(app: AppType) {
-	app.doc("/open-api.json", { ...openApiSchema, tags: tagDescriptions });
+export function setupOpenApi(app: AppType, apiPrefix: string) {
+	app.doc(`${apiPrefix}/open-api.json`, { ...openApiSchema, tags: tagDescriptions });
 
 	app.get(
-		"/docs",
+		`${apiPrefix}/docs`,
 		Scalar({
 			pageTitle: "LogLog Documentation",
 			sources: [
-				{ url: "/open-api.json", title: "API" },
-				{ url: "/v1/ai/openapi.json", title: "AI API" },
+				{ url: `${apiPrefix}/open-api.json`, title: "API" },
+				{ url: `${apiPrefix}/v1/ai/openapi.json`, title: "AI API" },
 			],
 			metaData: {
 				title: "LogLog docs",

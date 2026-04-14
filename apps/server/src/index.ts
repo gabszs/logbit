@@ -3,12 +3,11 @@ import { OpenAPIHono } from "@hono/zod-openapi";
 import type { InferRouterInputs, InferRouterOutputs } from "@orpc/server";
 import { RPCHandler } from "@orpc/server/fetch";
 import { migrate } from "drizzle-orm/bun-sql/migrator";
+import { problemDetailsHandler } from "hono-problem-details";
+import { MemoryStore, rateLimiter } from "hono-rate-limiter";
 import { compress } from "hono/compress";
 import { cors } from "hono/cors";
 import { showRoutes } from "hono/dev";
-import { logger as honoLogger } from "hono/logger";
-import { problemDetailsHandler } from "hono-problem-details";
-import { MemoryStore, rateLimiter } from "hono-rate-limiter";
 import { db, pgClient } from "./db";
 import { settings } from "./env";
 import authRouter from "./features/auth/routes";
@@ -22,20 +21,13 @@ import { setupOpenApi } from "./lib/openapi";
 import { createContext } from "./lib/orpc";
 import { injectOtelTraceHeader, logger } from "./lib/telemetry";
 import type { AppContext } from "./types";
+import { serveStatic } from "hono/bun";
 
 // RUN MIGRATIONS
 await migrate(db, { migrationsFolder: "./src/db/migrations" });
 
 // create app
 const app = new OpenAPIHono<AppContext>();
-
-if (settings.NODE_ENV === "test") {
-	app.use(honoLogger());
-	app.use(async (c, next) => {
-		console.log("Headers:", Object.fromEntries(c.req.raw.headers.entries()));
-		await next();
-	});
-}
 
 // cors
 app.use(
@@ -124,10 +116,12 @@ export type AppRouter = typeof OrpcRouter;
 export type RouterOutputs = InferRouterOutputs<AppRouter>;
 export type RouterInputs = InferRouterInputs<AppRouter>;
 
-app.use("/orpc/*", async (c) => {
+const apiPrefix = settings.SERVE_STATIC ? "/api" : "";
+
+app.use(`${apiPrefix}/orpc/*`, async (c) => {
 	try {
 		const { matched, response } = await rpcHandler.handle(c.req.raw, {
-			prefix: "/orpc",
+			prefix: `${apiPrefix}/orpc`,
 			context: await createContext({ context: c }),
 		});
 
@@ -142,16 +136,22 @@ app.use("/orpc/*", async (c) => {
 });
 
 // V1 Routes
-app.route("/v1", authRouter);
-app.route("/v1", opampRouter);
-app.route("/v1", logsRouter);
+app.route(`${apiPrefix}/v1`, authRouter);
+app.route(`${apiPrefix}/v1`, opampRouter);
+app.route(`${apiPrefix}/v1`, logsRouter);
 
 // utilities routes
-app.route("/", utilityRoutes);
+app.route(`${apiPrefix}/`, utilityRoutes);
 
 // docs
 if (settings.ENABLE_OPEN_API) {
-	setupOpenApi(app);
+	setupOpenApi(app, apiPrefix);
+}
+
+if (settings.SERVE_STATIC) {
+	app.use("/assets/*", serveStatic({ root: "./build" }));
+	app.use("/favicon.ico", serveStatic({ path: "./build/favicon.ico" }));
+	app.get("*", serveStatic({ path: "./build/index.html" }));
 }
 
 showRoutes(app);
