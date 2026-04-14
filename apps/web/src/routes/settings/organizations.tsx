@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { queryOptions, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { Building2, Loader2, Plus, RefreshCw } from "lucide-react";
 import { useState } from "react";
@@ -18,17 +18,30 @@ import { authClient } from "@/web/lib/auth-client";
 import { OrganizationFormDialog } from "./-components/organizations/organization-form-dialog";
 import { OrganizationRow } from "./-components/organizations/organization-row";
 import type {
-	OrganizationAuthClient,
 	OrganizationListItem,
 	OrganizationListRow,
 } from "./-components/organizations/types";
 import { SettingsError } from "./-components/settings-error";
 import { SettingsSectionSkeleton } from "./-components/settings-section-skeleton";
 
-const organizationAuthClient = authClient as typeof authClient &
-	OrganizationAuthClient;
+const organizationsQueryOptions = queryOptions({
+	queryKey: ["better-auth", "organizations", "list"],
+	retry: false,
+	queryFn: async () => {
+		const { data, error } = await authClient.organization.list();
+
+		if (error) {
+			throw new Error(error.message || "Failed to load organizations");
+		}
+
+		return data ?? [];
+	},
+});
 
 export const Route = createFileRoute("/settings/organizations")({
+	loader: async ({ context }) => {
+		await context.queryClient.ensureQueryData(organizationsQueryOptions);
+	},
 	component: OrganizationsSettingsPage,
 	pendingComponent: SettingsSectionSkeleton,
 	errorComponent: SettingsError,
@@ -39,7 +52,7 @@ function inferMembership(organization: OrganizationListItem) {
 	if (organization.role) return true;
 	if (Array.isArray(organization.members))
 		return organization.members.length > 0;
-	return true;
+	return false;
 }
 
 function OrganizationsSettingsPage() {
@@ -49,19 +62,7 @@ function OrganizationsSettingsPage() {
 
 	const activeOrganizationId = auth.session?.session?.activeOrganizationId;
 
-	const organizationsQuery = useQuery({
-		queryKey: ["better-auth", "organizations", "list"],
-		retry: false,
-		queryFn: async () => {
-			const { data, error } = await organizationAuthClient.organization.list();
-
-			if (error) {
-				throw new Error(error.message || "Failed to load organizations");
-			}
-
-			return data ?? [];
-		},
-	});
+	const organizationsQuery = useQuery(organizationsQueryOptions);
 
 	const organizations: OrganizationListRow[] = (
 		organizationsQuery.data ?? []
@@ -109,7 +110,7 @@ function OrganizationsSettingsPage() {
 							className="h-8 rounded-md px-3 text-xs"
 						>
 							<Plus className="size-3.5" />
-							Create organizations
+							Create organization
 						</Button>
 					</div>
 				</CardHeader>

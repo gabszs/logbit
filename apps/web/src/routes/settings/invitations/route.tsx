@@ -3,7 +3,6 @@ import { createFileRoute, Outlet } from "@tanstack/react-router";
 import {
 	Check,
 	Loader2,
-	LogOut,
 	MailPlus,
 	Plus,
 	RefreshCw,
@@ -29,11 +28,7 @@ import { LabeledSwitch } from "@/web/components/ui/labeled-switch";
 import { Separator } from "@/web/components/ui/separator";
 import { authClient } from "@/web/lib/auth-client";
 import { copyToClipboard } from "@/web/utils/clipboard";
-import type {
-	BetterAuthErrorLike,
-	OrganizationAuthClient,
-	OrganizationListItem,
-} from "../-components/organizations/types";
+import type { OrganizationListItem } from "../-components/organizations/types";
 import { SettingsError } from "../-components/settings-error";
 import { SettingsSectionSkeleton } from "../-components/settings-section-skeleton";
 
@@ -42,18 +37,6 @@ export const Route = createFileRoute("/settings/invitations")({
 	pendingComponent: SettingsSectionSkeleton,
 	errorComponent: SettingsError,
 });
-
-interface OrganizationRoleClient {
-	useActiveMemberRole: () => {
-		data: { role: string } | null;
-		error: BetterAuthErrorLike | null;
-		isPending: boolean;
-	};
-}
-
-const organizationClient = authClient as typeof authClient &
-	Pick<OrganizationAuthClient, "useListOrganizations"> &
-	OrganizationRoleClient;
 
 type ReceivedInvitation = NonNullable<
 	Awaited<
@@ -71,8 +54,8 @@ function InvitationsSettingsLayout() {
 	const [isManagementMode, setIsManagementMode] = useState(false);
 	const activeOrganizationId = auth.session?.session?.activeOrganizationId;
 
-	const { data: activeMemberRole } = organizationClient.useActiveMemberRole();
-	const { data: organizations } = organizationClient.useListOrganizations();
+	const { data: activeMemberRole } = authClient.useActiveMemberRole();
+	const { data: organizations } = authClient.useListOrganizations();
 
 	const canManageInvitations =
 		activeMemberRole?.role === "admin" || activeMemberRole?.role === "owner";
@@ -602,28 +585,6 @@ function UserInvitationRow({
 		},
 	});
 
-	const leaveOrganizationMutation = useMutation({
-		mutationFn: async () => {
-			const { data, error } = await authClient.organization.leave({
-				organizationId: invitation.organizationId,
-			});
-
-			if (error) {
-				throw new Error(error.message || "Failed to leave organization");
-			}
-
-			return data;
-		},
-		onSuccess: async () => {
-			await onRefresh();
-			await queryClient.invalidateQueries();
-			toast.success("You left the organization");
-		},
-		onError: (error: { message?: string }) => {
-			toast.error(error.message || "Failed to leave organization");
-		},
-	});
-
 	return (
 		<button
 			type="button"
@@ -632,18 +593,9 @@ function UserInvitationRow({
 		>
 			<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 				<div className="min-w-0 flex-1">
-					<div className="flex flex-wrap items-center gap-2">
-						<h3 className="truncate font-semibold text-base">
-							{organizationName}
-						</h3>
-						<Badge
-							variant={
-								invitation.status === "pending" ? "secondary" : "outline"
-							}
-						>
-							{invitation.status}
-						</Badge>
-					</div>
+					<h3 className="truncate font-semibold text-base">
+						{organizationName}
+					</h3>
 				</div>
 
 				<div className="flex shrink-0 flex-col gap-2 sm:flex-row sm:items-center">
@@ -694,30 +646,9 @@ function UserInvitationRow({
 								)}
 							</Button>
 						</>
-					) : invitation.status === "accepted" ? (
-						<Button
-							type="button"
-							size="sm"
-							variant="outline"
-							onClick={(event: MouseEvent<HTMLButtonElement>) => {
-								event.stopPropagation();
-								leaveOrganizationMutation.mutate();
-							}}
-							disabled={leaveOrganizationMutation.isPending}
-						>
-							{leaveOrganizationMutation.isPending ? (
-								<>
-									<Loader2 className="size-4 animate-spin" />
-									Leaving...
-								</>
-							) : (
-								<>
-									<LogOut className="size-4" />
-									Leave
-								</>
-							)}
-						</Button>
-					) : null}
+					) : (
+						<Badge variant="outline">{invitation.status}</Badge>
+					)}
 				</div>
 			</div>
 

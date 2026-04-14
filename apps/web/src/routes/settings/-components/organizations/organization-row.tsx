@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Pencil, ShieldCheck, Trash2 } from "lucide-react";
+import { Loader2, LogOut, Pencil, ShieldCheck, Trash2 } from "lucide-react";
 import type { MouseEvent } from "react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -18,14 +18,7 @@ import {
 import { authClient } from "@/web/lib/auth-client";
 import { cn } from "@/web/utils/cn";
 import { OrganizationFormDialog } from "./organization-form-dialog";
-import type {
-	OrganizationAuthClient,
-	OrganizationListItem,
-	OrganizationListRow,
-} from "./types";
-
-const organizationAuthClient = authClient as typeof authClient &
-	OrganizationAuthClient;
+import type { OrganizationListItem, OrganizationListRow } from "./types";
 
 function formatMetadata(value: unknown) {
 	if (value == null || value === "") {
@@ -102,17 +95,19 @@ export function OrganizationRow({
 	const [isDeletePending, setIsDeletePending] = useState(false);
 	const [isEditOpen, setIsEditOpen] = useState(false);
 	const [isSetActivePending, setIsSetActivePending] = useState(false);
+	const [isLeavePending, setIsLeavePending] = useState(false);
 
 	const detailsQuery = useQuery({
 		queryKey: ["organization", "details", organization.id],
 		enabled: isExpanded,
 		retry: false,
 		queryFn: async () => {
-			const { data, error } =
-				await organizationAuthClient.organization.getFullOrganization({
+			const { data, error } = await authClient.organization.getFullOrganization(
+				{
 					organizationId: organization.id,
 					membersLimit: 1,
-				});
+				},
+			);
 
 			if (error) {
 				throw new Error(error.message || "Failed to load organization details");
@@ -139,7 +134,7 @@ export function OrganizationRow({
 		setIsSetActivePending(true);
 
 		try {
-			const { error } = await organizationAuthClient.organization.setActive({
+			const { error } = await authClient.organization.setActive({
 				organizationId: organization.id,
 			});
 
@@ -160,11 +155,35 @@ export function OrganizationRow({
 		}
 	};
 
+	const handleLeave = async () => {
+		setIsLeavePending(true);
+
+		try {
+			const { error } = await authClient.organization.leave({
+				organizationId: organization.id,
+			});
+
+			if (error) {
+				throw new Error(error.message || "Failed to leave organization");
+			}
+
+			await onRefresh();
+			await queryClient.invalidateQueries();
+			toast.success(`You left ${organization.name}`);
+		} catch (error) {
+			const message =
+				error instanceof Error ? error.message : "Failed to leave organization";
+			toast.error(message);
+		} finally {
+			setIsLeavePending(false);
+		}
+	};
+
 	const handleDelete = async () => {
 		setIsDeletePending(true);
 
 		try {
-			const { error } = await organizationAuthClient.organization.delete({
+			const { error } = await authClient.organization.delete({
 				organizationId: organization.id,
 			});
 
@@ -247,11 +266,21 @@ export function OrganizationRow({
 							variant="outline"
 							onClick={(event: MouseEvent<HTMLButtonElement>) => {
 								event.stopPropagation();
-								setIsDeleteOpen(true);
+								void handleLeave();
 							}}
+							disabled={isLeavePending}
 						>
-							<Trash2 className="size-4" />
-							Delete
+							{isLeavePending ? (
+								<>
+									<Loader2 className="size-4 animate-spin" />
+									Leaving...
+								</>
+							) : (
+								<>
+									<LogOut className="size-4" />
+									Leave
+								</>
+							)}
 						</Button>
 					</div>
 				</div>
@@ -271,39 +300,55 @@ export function OrganizationRow({
 								</AlertDescription>
 							</Alert>
 						) : detailsQuery.data ? (
-							<div className="grid gap-4 md:grid-cols-2">
-								<div className="space-y-3">
-									<DetailCard
-										label="Organization ID"
-										value={detailsQuery.data.id}
-										className="font-mono"
-									/>
-									<DetailCard label="Name" value={detailsQuery.data.name} />
-									<DetailCard
-										label="Slug"
-										value={`/${detailsQuery.data.slug}`}
-										className="font-mono"
-									/>
-								</div>
+							<>
+								<div className="grid gap-4 md:grid-cols-2">
+									<div className="space-y-3">
+										<DetailCard
+											label="Organization ID"
+											value={detailsQuery.data.id}
+											className="font-mono"
+										/>
+										<DetailCard label="Name" value={detailsQuery.data.name} />
+										<DetailCard
+											label="Slug"
+											value={`/${detailsQuery.data.slug}`}
+											className="font-mono"
+										/>
+									</div>
 
-								<div className="space-y-3">
-									<DetailCard
-										label="Members"
-										value={`${detailsQuery.data.members?.length ?? 0} member${
-											detailsQuery.data.members?.length === 1 ? "" : "s"
-										}`}
-									/>
-									<DetailCard
-										label="Logo"
-										value={detailsQuery.data.logo || "No logo configured"}
-									/>
-									<DetailCard
-										label="Metadata"
-										value={formatMetadata(detailsQuery.data.metadata)}
-										preformatted
-									/>
+									<div className="space-y-3">
+										<DetailCard
+											label="Members"
+											value={`${detailsQuery.data.members?.length ?? 0} member${
+												detailsQuery.data.members?.length === 1 ? "" : "s"
+											}`}
+										/>
+										<DetailCard
+											label="Logo"
+											value={detailsQuery.data.logo || "No logo configured"}
+										/>
+										<DetailCard
+											label="Metadata"
+											value={formatMetadata(detailsQuery.data.metadata)}
+											preformatted
+										/>
+									</div>
 								</div>
-							</div>
+								<div className="flex justify-end pt-1">
+									<Button
+										type="button"
+										size="sm"
+										variant="outline"
+										onClick={(event: MouseEvent<HTMLButtonElement>) => {
+											event.stopPropagation();
+											setIsDeleteOpen(true);
+										}}
+									>
+										<Trash2 className="size-4" />
+										Delete
+									</Button>
+								</div>
+							</>
 						) : null}
 					</div>
 				) : null}

@@ -15,14 +15,7 @@ import { Input } from "@/web/components/ui/input";
 import { Label } from "@/web/components/ui/label";
 import { Textarea } from "@/web/components/ui/textarea";
 import { authClient } from "@/web/lib/auth-client";
-import type {
-	OrganizationAuthClient,
-	OrganizationFormValues,
-	OrganizationListItem,
-} from "./types";
-
-const organizationAuthClient = authClient as typeof authClient &
-	OrganizationAuthClient;
+import type { OrganizationFormValues, OrganizationListItem } from "./types";
 
 function slugify(value: string) {
 	return value
@@ -105,10 +98,9 @@ export function OrganizationFormDialog({
 		enabled: shouldCheckSlug,
 		retry: false,
 		queryFn: async () => {
-			const { data, error } =
-				await organizationAuthClient.organization.checkSlug({
-					slug: deferredSlug,
-				});
+			const { data, error } = await authClient.organization.checkSlug({
+				slug: deferredSlug,
+			});
 
 			if (error) {
 				throw new Error(error.message || "Failed to validate slug");
@@ -198,7 +190,7 @@ export function OrganizationFormDialog({
 
 		try {
 			if (mode === "create") {
-				const { error } = await organizationAuthClient.organization.create({
+				const { error } = await authClient.organization.create({
 					name,
 					slug,
 					logo: formValues.logo.trim() || undefined,
@@ -216,7 +208,7 @@ export function OrganizationFormDialog({
 					throw new Error("Missing organization id");
 				}
 
-				const { error } = await organizationAuthClient.organization.update({
+				const { error } = await authClient.organization.update({
 					organizationId: organization.id,
 					data: {
 						name,

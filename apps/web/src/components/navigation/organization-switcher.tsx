@@ -14,33 +14,6 @@ import { Input } from "@/web/components/ui/input";
 import { authClient } from "@/web/lib/auth-client";
 import { cn } from "@/web/utils/cn";
 
-interface OrganizationSummary {
-	id: string;
-	name: string;
-}
-
-interface BetterAuthErrorLike {
-	message?: string;
-}
-
-interface OrganizationAuthClient {
-	useListOrganizations: () => {
-		data: OrganizationSummary[] | null;
-		error: BetterAuthErrorLike | null;
-		isPending: boolean;
-	};
-	useActiveOrganization: () => {
-		data: OrganizationSummary | null;
-		error: BetterAuthErrorLike | null;
-		isPending: boolean;
-	};
-	organization: {
-		setActive: (input: {
-			organizationId: string;
-		}) => Promise<{ error: BetterAuthErrorLike | null }>;
-	};
-}
-
 export function OrganizationSwitcher() {
 	const auth = useAuth();
 	const queryClient = useQueryClient();
@@ -48,16 +21,12 @@ export function OrganizationSwitcher() {
 	const [search, setSearch] = useState("");
 	const [isSwitching, setIsSwitching] = useState(false);
 
-	const organizationAuthClient = authClient as typeof authClient &
-		OrganizationAuthClient;
-
 	const {
 		data: organizations,
 		error: organizationsError,
 		isPending: isOrganizationsPending,
-	} = organizationAuthClient.useListOrganizations();
-	const { data: activeOrganization } =
-		organizationAuthClient.useActiveOrganization();
+	} = authClient.useListOrganizations();
+	const { data: activeOrganization } = authClient.useActiveOrganization();
 
 	const activeOrganizationId = activeOrganization?.id;
 
@@ -91,7 +60,7 @@ export function OrganizationSwitcher() {
 		);
 
 		try {
-			const { error } = await organizationAuthClient.organization.setActive({
+			const { error } = await authClient.organization.setActive({
 				organizationId: nextOrganizationId,
 			});
 
