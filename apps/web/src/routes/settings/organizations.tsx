@@ -121,7 +121,6 @@ function OrganizationsSettingsPage() {
 							{organizations.length} organization
 							{organizations.length === 1 ? "" : "s"}
 						</Badge>
-						{activeOrganizationId ? <Badge>Active org selected</Badge> : null}
 					</div>
 
 					{organizationsQuery.isPending ? (
@@ -145,14 +144,18 @@ function OrganizationsSettingsPage() {
 							</p>
 						</div>
 					) : (
-						<div className="space-y-3">
-							{organizations.map((organization) => (
-								<OrganizationRow
-									key={organization.id}
-									organization={organization}
-									activeOrganizationId={activeOrganizationId}
-									onRefresh={refreshOrganizations}
-								/>
+						<div className="overflow-hidden rounded-xl border border-border/70 bg-card/70">
+							{organizations.map((organization, index) => (
+								<div key={organization.id}>
+									<OrganizationRow
+										organization={organization}
+										activeOrganizationId={activeOrganizationId}
+										onRefresh={refreshOrganizations}
+									/>
+									{index < organizations.length - 1 ? (
+										<Separator className="bg-border/70" />
+									) : null}
+								</div>
 							))}
 						</div>
 					)}

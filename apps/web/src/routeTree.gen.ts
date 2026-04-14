@@ -18,6 +18,8 @@ import { Route as SettingsOrganizationsRouteImport } from './routes/settings/org
 import { Route as SettingsAppearanceRouteImport } from './routes/settings/appearance'
 import { Route as AuthSignUpRouteImport } from './routes/auth/sign-up'
 import { Route as AuthSignInRouteImport } from './routes/auth/sign-in'
+import { Route as SettingsInvitationsRouteRouteImport } from './routes/settings/invitations/route'
+import { Route as SettingsInvitationsInvitationIdRouteImport } from './routes/settings/invitations/$invitationId'
 
 const PrivacyRoute = PrivacyRouteImport.update({
   id: '/privacy',
@@ -64,28 +66,44 @@ const AuthSignInRoute = AuthSignInRouteImport.update({
   path: '/auth/sign-in',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SettingsInvitationsRouteRoute =
+  SettingsInvitationsRouteRouteImport.update({
+    id: '/invitations',
+    path: '/invitations',
+    getParentRoute: () => SettingsRouteRoute,
+  } as any)
+const SettingsInvitationsInvitationIdRoute =
+  SettingsInvitationsInvitationIdRouteImport.update({
+    id: '/$invitationId',
+    path: '/$invitationId',
+    getParentRoute: () => SettingsInvitationsRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/settings': typeof SettingsRouteRouteWithChildren
   '/docs': typeof DocsRoute
   '/privacy': typeof PrivacyRoute
+  '/settings/invitations': typeof SettingsInvitationsRouteRouteWithChildren
   '/auth/sign-in': typeof AuthSignInRoute
   '/auth/sign-up': typeof AuthSignUpRoute
   '/settings/appearance': typeof SettingsAppearanceRoute
   '/settings/organizations': typeof SettingsOrganizationsRoute
   '/settings/profile': typeof SettingsProfileRoute
+  '/settings/invitations/$invitationId': typeof SettingsInvitationsInvitationIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/settings': typeof SettingsRouteRouteWithChildren
   '/docs': typeof DocsRoute
   '/privacy': typeof PrivacyRoute
+  '/settings/invitations': typeof SettingsInvitationsRouteRouteWithChildren
   '/auth/sign-in': typeof AuthSignInRoute
   '/auth/sign-up': typeof AuthSignUpRoute
   '/settings/appearance': typeof SettingsAppearanceRoute
   '/settings/organizations': typeof SettingsOrganizationsRoute
   '/settings/profile': typeof SettingsProfileRoute
+  '/settings/invitations/$invitationId': typeof SettingsInvitationsInvitationIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -93,11 +111,13 @@ export interface FileRoutesById {
   '/settings': typeof SettingsRouteRouteWithChildren
   '/docs': typeof DocsRoute
   '/privacy': typeof PrivacyRoute
+  '/settings/invitations': typeof SettingsInvitationsRouteRouteWithChildren
   '/auth/sign-in': typeof AuthSignInRoute
   '/auth/sign-up': typeof AuthSignUpRoute
   '/settings/appearance': typeof SettingsAppearanceRoute
   '/settings/organizations': typeof SettingsOrganizationsRoute
   '/settings/profile': typeof SettingsProfileRoute
+  '/settings/invitations/$invitationId': typeof SettingsInvitationsInvitationIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -106,33 +126,39 @@ export interface FileRouteTypes {
     | '/settings'
     | '/docs'
     | '/privacy'
+    | '/settings/invitations'
     | '/auth/sign-in'
     | '/auth/sign-up'
     | '/settings/appearance'
     | '/settings/organizations'
     | '/settings/profile'
+    | '/settings/invitations/$invitationId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/settings'
     | '/docs'
     | '/privacy'
+    | '/settings/invitations'
     | '/auth/sign-in'
     | '/auth/sign-up'
     | '/settings/appearance'
     | '/settings/organizations'
     | '/settings/profile'
+    | '/settings/invitations/$invitationId'
   id:
     | '__root__'
     | '/'
     | '/settings'
     | '/docs'
     | '/privacy'
+    | '/settings/invitations'
     | '/auth/sign-in'
     | '/auth/sign-up'
     | '/settings/appearance'
     | '/settings/organizations'
     | '/settings/profile'
+    | '/settings/invitations/$invitationId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -209,16 +235,46 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthSignInRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/settings/invitations': {
+      id: '/settings/invitations'
+      path: '/invitations'
+      fullPath: '/settings/invitations'
+      preLoaderRoute: typeof SettingsInvitationsRouteRouteImport
+      parentRoute: typeof SettingsRouteRoute
+    }
+    '/settings/invitations/$invitationId': {
+      id: '/settings/invitations/$invitationId'
+      path: '/$invitationId'
+      fullPath: '/settings/invitations/$invitationId'
+      preLoaderRoute: typeof SettingsInvitationsInvitationIdRouteImport
+      parentRoute: typeof SettingsInvitationsRouteRoute
+    }
   }
 }
 
+interface SettingsInvitationsRouteRouteChildren {
+  SettingsInvitationsInvitationIdRoute: typeof SettingsInvitationsInvitationIdRoute
+}
+
+const SettingsInvitationsRouteRouteChildren: SettingsInvitationsRouteRouteChildren =
+  {
+    SettingsInvitationsInvitationIdRoute: SettingsInvitationsInvitationIdRoute,
+  }
+
+const SettingsInvitationsRouteRouteWithChildren =
+  SettingsInvitationsRouteRoute._addFileChildren(
+    SettingsInvitationsRouteRouteChildren,
+  )
+
 interface SettingsRouteRouteChildren {
+  SettingsInvitationsRouteRoute: typeof SettingsInvitationsRouteRouteWithChildren
   SettingsAppearanceRoute: typeof SettingsAppearanceRoute
   SettingsOrganizationsRoute: typeof SettingsOrganizationsRoute
   SettingsProfileRoute: typeof SettingsProfileRoute
 }
 
 const SettingsRouteRouteChildren: SettingsRouteRouteChildren = {
+  SettingsInvitationsRouteRoute: SettingsInvitationsRouteRouteWithChildren,
   SettingsAppearanceRoute: SettingsAppearanceRoute,
   SettingsOrganizationsRoute: SettingsOrganizationsRoute,
   SettingsProfileRoute: SettingsProfileRoute,

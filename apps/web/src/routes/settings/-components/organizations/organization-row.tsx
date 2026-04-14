@@ -1,11 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-	ChevronDown,
-	Loader2,
-	Pencil,
-	ShieldCheck,
-	Trash2,
-} from "lucide-react";
+import { Copy, Loader2, Pencil, ShieldCheck, Trash2 } from "lucide-react";
+import type { MouseEvent } from "react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Alert, AlertDescription, AlertTitle } from "@/web/components/ui/alert";
@@ -45,6 +40,62 @@ function formatMetadata(value: unknown) {
 	}
 
 	return JSON.stringify(value, null, 2);
+}
+
+function DetailCard({
+	label,
+	value,
+	copyValue,
+	className,
+	preformatted = false,
+}: {
+	label: string;
+	value: string;
+	copyValue?: string;
+	className?: string;
+	preformatted?: boolean;
+}) {
+	const handleCopy = async (event: MouseEvent<HTMLButtonElement>) => {
+		event.stopPropagation();
+
+		try {
+			await navigator.clipboard.writeText(copyValue ?? value);
+			toast.success(`${label} copied`);
+		} catch {
+			toast.error(`Failed to copy ${label.toLowerCase()}`);
+		}
+	};
+
+	return (
+		<div
+			className={cn(
+				"group relative rounded-lg border border-border/60 bg-muted/20 px-3 py-2.5",
+				className,
+			)}
+		>
+			<p className="pr-8 text-[10px] text-muted-foreground uppercase tracking-[0.16em]">
+				{label}
+			</p>
+			{preformatted ? (
+				<pre className="mt-1 overflow-x-auto whitespace-pre-wrap break-words font-mono text-[11px] leading-5">
+					{value}
+				</pre>
+			) : (
+				<p className="mt-1 break-words text-sm leading-5">{value}</p>
+			)}
+			<Button
+				type="button"
+				size="icon"
+				variant="ghost"
+				onMouseDown={(event) => event.stopPropagation()}
+				onClick={handleCopy}
+				aria-label={`Copy ${label}`}
+				className="absolute top-1/2 right-2 size-7 -translate-y-1/2 opacity-0 shadow-none transition-opacity hover:shadow-sm group-hover:opacity-100"
+			>
+				<Copy className="size-3.5" />
+			</Button>
+		</div>
+	);
 }
 
 type OrganizationRowProps = {
@@ -151,93 +202,75 @@ export function OrganizationRow({
 
 	return (
 		<>
-			<div className="rounded-xl border border-border/70 bg-card/70">
-				<div className="flex flex-col gap-4 p-4">
-					<div className="flex flex-col gap-4 sm:flex-row sm:items-stretch sm:justify-between">
-						<div className="min-w-0 flex-1 space-y-3">
-							<div className="flex flex-wrap items-center gap-2">
-								<h3 className="font-semibold text-base">{organization.name}</h3>
-								{isActive ? <Badge>Active</Badge> : null}
-								<Badge
-									variant={organization.isMember ? "secondary" : "outline"}
-								>
-									{organization.isMember ? "Member" : "Not a member"}
-								</Badge>
-							</div>
-							<div className="space-y-1">
-								<p className="font-mono text-muted-foreground text-xs">
-									/{organization.slug}
-								</p>
-								<p className="text-muted-foreground text-sm">
-									{organization.logo ? "Custom logo configured" : "No logo set"}
-								</p>
-							</div>
+			<button
+				type="button"
+				onClick={() => setIsExpanded((current) => !current)}
+				className="flex w-full flex-col gap-4 p-4 text-left"
+			>
+				<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+					<div className="min-w-0 flex-1">
+						<div className="flex flex-wrap items-center gap-2">
+							<h3 className="font-semibold text-base">{organization.name}</h3>
+							<Badge variant={organization.isMember ? "secondary" : "outline"}>
+								{organization.isMember ? "Member" : "Not a member"}
+							</Badge>
 						</div>
+					</div>
 
-						<div className="flex shrink-0 flex-col items-end justify-between gap-3 sm:min-w-52">
-							<div className="flex flex-wrap justify-end gap-2">
-								<Button
-									type="button"
-									size="sm"
-									variant="outline"
-									onClick={handleSetActive}
-									disabled={isActive || isSetActivePending}
-								>
-									{isSetActivePending ? (
-										<>
-											<Loader2 className="size-4 animate-spin" />
-											Switching...
-										</>
-									) : (
-										<>
-											<ShieldCheck className="size-4" />
-											Set active
-										</>
-									)}
-								</Button>
+					<div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+						<Button
+							type="button"
+							size="sm"
+							variant="outline"
+							onClick={(event: MouseEvent<HTMLButtonElement>) => {
+								event.stopPropagation();
+								void handleSetActive();
+							}}
+							disabled={isActive || isSetActivePending}
+						>
+							{isSetActivePending ? (
+								<>
+									<Loader2 className="size-4 animate-spin" />
+									Switching...
+								</>
+							) : (
+								<>
+									<ShieldCheck className="size-4" />
+									Set active
+								</>
+							)}
+						</Button>
 
-								<Button
-									type="button"
-									size="sm"
-									variant="outline"
-									onClick={() => setIsEditOpen(true)}
-								>
-									<Pencil className="size-4" />
-									Edit
-								</Button>
+						<Button
+							type="button"
+							size="sm"
+							variant="outline"
+							onClick={(event: MouseEvent<HTMLButtonElement>) => {
+								event.stopPropagation();
+								setIsEditOpen(true);
+							}}
+						>
+							<Pencil className="size-4" />
+							Edit
+						</Button>
 
-								<Button
-									type="button"
-									size="sm"
-									variant="destructive"
-									onClick={() => setIsDeleteOpen(true)}
-								>
-									<Trash2 className="size-4" />
-									Delete
-								</Button>
-							</div>
-
-							<Button
-								type="button"
-								size="icon"
-								variant="ghost"
-								onClick={() => setIsExpanded((current) => !current)}
-								aria-label={isExpanded ? "Hide details" : "Show details"}
-								className="shadow-none hover:shadow-sm"
-							>
-								<ChevronDown
-									className={cn(
-										"size-4 transition-transform",
-										isExpanded && "rotate-180",
-									)}
-								/>
-							</Button>
-						</div>
+						<Button
+							type="button"
+							size="sm"
+							variant="outline"
+							onClick={(event: MouseEvent<HTMLButtonElement>) => {
+								event.stopPropagation();
+								setIsDeleteOpen(true);
+							}}
+						>
+							<Trash2 className="size-4" />
+							Delete
+						</Button>
 					</div>
 				</div>
 
 				{isExpanded ? (
-					<div className="border-border/70 border-t px-4 py-4">
+					<div className="space-y-3">
 						{detailsQuery.isPending ? (
 							<div className="flex items-center gap-2 text-muted-foreground text-sm">
 								<Loader2 className="size-4 animate-spin" />
@@ -253,60 +286,41 @@ export function OrganizationRow({
 						) : detailsQuery.data ? (
 							<div className="grid gap-4 md:grid-cols-2">
 								<div className="space-y-3">
-									<div>
-										<p className="text-muted-foreground text-xs uppercase tracking-wide">
-											Organization ID
-										</p>
-										<p className="font-mono text-sm">{detailsQuery.data.id}</p>
-									</div>
-									<div>
-										<p className="text-muted-foreground text-xs uppercase tracking-wide">
-											Name
-										</p>
-										<p className="text-sm">{detailsQuery.data.name}</p>
-									</div>
-									<div>
-										<p className="text-muted-foreground text-xs uppercase tracking-wide">
-											Slug
-										</p>
-										<p className="font-mono text-sm">
-											{detailsQuery.data.slug}
-										</p>
-									</div>
-									<div>
-										<p className="text-muted-foreground text-xs uppercase tracking-wide">
-											Members
-										</p>
-										<p className="text-sm">
-											{detailsQuery.data.members?.length ?? 0} member
-											{detailsQuery.data.members?.length === 1 ? "" : "s"}
-										</p>
-									</div>
+									<DetailCard
+										label="Organization ID"
+										value={detailsQuery.data.id}
+										className="font-mono"
+									/>
+									<DetailCard label="Name" value={detailsQuery.data.name} />
+									<DetailCard
+										label="Slug"
+										value={`/${detailsQuery.data.slug}`}
+										className="font-mono"
+									/>
 								</div>
 
 								<div className="space-y-3">
-									<div>
-										<p className="text-muted-foreground text-xs uppercase tracking-wide">
-											Logo
-										</p>
-										<p className="break-all text-sm">
-											{detailsQuery.data.logo || "No logo configured"}
-										</p>
-									</div>
-									<div>
-										<p className="text-muted-foreground text-xs uppercase tracking-wide">
-											Metadata
-										</p>
-										<pre className="overflow-x-auto rounded-lg bg-muted/50 p-3 font-mono text-xs">
-											{formatMetadata(detailsQuery.data.metadata)}
-										</pre>
-									</div>
+									<DetailCard
+										label="Members"
+										value={`${detailsQuery.data.members?.length ?? 0} member${
+											detailsQuery.data.members?.length === 1 ? "" : "s"
+										}`}
+									/>
+									<DetailCard
+										label="Logo"
+										value={detailsQuery.data.logo || "No logo configured"}
+									/>
+									<DetailCard
+										label="Metadata"
+										value={formatMetadata(detailsQuery.data.metadata)}
+										preformatted
+									/>
 								</div>
 							</div>
 						) : null}
 					</div>
 				) : null}
-			</div>
+			</button>
 
 			<OrganizationFormDialog
 				mode="edit"

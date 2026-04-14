@@ -35,6 +35,11 @@ export const SETTINGS_NAV_ITEMS = [
 		description: "View session details",
 	},
 	{
+		to: "/settings/invitations",
+		label: "Invitations",
+		description: "Review pending organization invites",
+	},
+	{
 		to: "/settings/organizations",
 		label: "Organizations",
 		description: "Create and manage organizations",

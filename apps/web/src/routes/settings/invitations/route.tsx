@@ -56,7 +56,9 @@ const organizationClient = authClient as typeof authClient &
 	OrganizationRoleClient;
 
 type ReceivedInvitation = NonNullable<
-	Awaited<ReturnType<typeof authClient.organization.listUserInvitations>>["data"]
+	Awaited<
+		ReturnType<typeof authClient.organization.listUserInvitations>
+	>["data"]
 >[number];
 
 type SentInvitation = NonNullable<
@@ -195,11 +197,15 @@ function InvitationsSettingsLayout() {
 								: "Review invitations addressed to you across organizations."}
 						</CardDescription>
 						{canManageInvitations ? (
-							<label className="flex w-fit items-center gap-3 pt-1">
+							<label
+								htmlFor="management-view-toggle"
+								className="flex w-fit items-center gap-3 pt-1"
+							>
 								<span className="text-muted-foreground text-sm">
 									Management view:
 								</span>
 								<Switch
+									id="management-view-toggle"
 									checked={isManagementMode}
 									onCheckedChange={setIsManagementMode}
 									aria-label="Toggle management view"
@@ -245,12 +251,12 @@ function InvitationsSettingsLayout() {
 					<div className="flex flex-wrap gap-2">
 						<Badge variant="outline">
 							{canManageInvitations && isManagementMode
-								? sentInvitationsQuery.data?.length ?? 0
-								: receivedInvitationsQuery.data?.length ?? 0}{" "}
+								? (sentInvitationsQuery.data?.length ?? 0)
+								: (receivedInvitationsQuery.data?.length ?? 0)}{" "}
 							invitation
 							{(canManageInvitations && isManagementMode
-								? sentInvitationsQuery.data?.length ?? 0
-								: receivedInvitationsQuery.data?.length ?? 0) === 1
+								? (sentInvitationsQuery.data?.length ?? 0)
+								: (receivedInvitationsQuery.data?.length ?? 0)) === 1
 								? ""
 								: "s"}
 						</Badge>
@@ -298,7 +304,9 @@ function ManagementInvitationsSection({
 	if (!activeOrganizationId) {
 		return (
 			<div className="rounded-xl border border-border/70 border-dashed bg-background/40 px-4 py-8 text-center">
-				<p className="font-medium text-sm">Select an active organization first.</p>
+				<p className="font-medium text-sm">
+					Select an active organization first.
+				</p>
 				<p className="mt-2 text-muted-foreground text-sm">
 					Management view is scoped to the currently active organization.
 				</p>
@@ -480,9 +488,13 @@ function ManagementInvitationRow({
 			<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 				<div className="min-w-0 flex-1">
 					<div className="flex flex-wrap items-center gap-2">
-						<h3 className="truncate font-semibold text-base">{invitation.email}</h3>
+						<h3 className="truncate font-semibold text-base">
+							{invitation.email}
+						</h3>
 						<Badge
-							variant={invitation.status === "pending" ? "secondary" : "outline"}
+							variant={
+								invitation.status === "pending" ? "secondary" : "outline"
+							}
 						>
 							{invitation.status}
 						</Badge>
@@ -643,7 +655,9 @@ function UserInvitationRow({
 							{organizationName}
 						</h3>
 						<Badge
-							variant={invitation.status === "pending" ? "secondary" : "outline"}
+							variant={
+								invitation.status === "pending" ? "secondary" : "outline"
+							}
 						>
 							{invitation.status}
 						</Badge>
@@ -745,19 +759,35 @@ function UserInvitationRow({
 	);
 }
 
-function InvitationDetail({
-	label,
-	value,
-}: {
-	label: string;
-	value: string;
-}) {
+function InvitationDetail({ label, value }: { label: string; value: string }) {
+	const handleCopy = async (event: MouseEvent<HTMLButtonElement>) => {
+		event.stopPropagation();
+
+		try {
+			await navigator.clipboard.writeText(value);
+			toast.success(`${label} copied`);
+		} catch {
+			toast.error(`Failed to copy ${label.toLowerCase()}`);
+		}
+	};
+
 	return (
-		<div className="rounded-lg border border-border/55 bg-muted/35 px-3 py-2.5">
-			<p className="text-[10px] text-muted-foreground uppercase tracking-[0.16em]">
+		<div className="group relative rounded-lg border border-border/55 bg-muted/35 px-3 py-2.5">
+			<p className="pr-8 text-[10px] text-muted-foreground uppercase tracking-[0.16em]">
 				{label}
 			</p>
 			<p className="mt-1 break-words text-sm leading-5">{value}</p>
+			<Button
+				type="button"
+				size="icon"
+				variant="ghost"
+				onMouseDown={(event) => event.stopPropagation()}
+				onClick={handleCopy}
+				aria-label={`Copy ${label}`}
+				className="absolute top-1/2 right-2 size-7 -translate-y-1/2 opacity-0 shadow-none transition-opacity hover:shadow-sm group-hover:opacity-100"
+			>
+				<Copy className="size-3.5" />
+			</Button>
 		</div>
 	);
 }

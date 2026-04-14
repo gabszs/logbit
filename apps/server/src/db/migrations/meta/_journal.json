@@ -1,48 +1,48 @@
 {
-  "version": "7",
-  "dialect": "postgresql",
-  "entries": [
-    {
-      "idx": 0,
-      "version": "7",
-      "when": 1774360633481,
-      "tag": "0000_adding_auth_models",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1774569092067,
-      "tag": "0001_adding_user_settings",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1774569503563,
-      "tag": "0002_fix_user_settings",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1776035544712,
-      "tag": "0003_adding organizations model",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1776056889547,
-      "tag": "0004_removing phone-number plugin",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "7",
-      "when": 1776060517608,
-      "tag": "0005_adding organaziation on user settings",
-      "breakpoints": true
-    }
-  ]
+	"version": "7",
+	"dialect": "postgresql",
+	"entries": [
+		{
+			"idx": 0,
+			"version": "7",
+			"when": 1774360633481,
+			"tag": "0000_adding_auth_models",
+			"breakpoints": true
+		},
+		{
+			"idx": 1,
+			"version": "7",
+			"when": 1774569092067,
+			"tag": "0001_adding_user_settings",
+			"breakpoints": true
+		},
+		{
+			"idx": 2,
+			"version": "7",
+			"when": 1774569503563,
+			"tag": "0002_fix_user_settings",
+			"breakpoints": true
+		},
+		{
+			"idx": 3,
+			"version": "7",
+			"when": 1776035544712,
+			"tag": "0003_adding organizations model",
+			"breakpoints": true
+		},
+		{
+			"idx": 4,
+			"version": "7",
+			"when": 1776056889547,
+			"tag": "0004_removing phone-number plugin",
+			"breakpoints": true
+		},
+		{
+			"idx": 5,
+			"version": "7",
+			"when": 1776060517608,
+			"tag": "0005_adding organaziation on user settings",
+			"breakpoints": true
+		}
+	]
 }

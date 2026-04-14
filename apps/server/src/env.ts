@@ -4,6 +4,7 @@ const envSchema = z.object({
 	// GENERAL SETTINGS
 	HOSTNAME: z.string().default("localhost:5051"), // corrijir depois para abrajer edge cases
 	API_PORT: z.coerce.number().default(5051),
+	VITE_WEB_URL: z.string().default("http://localhost:5052"),
 	REDIS_URL: z.string().startsWith("redis://").optional(),
 	DATABASE_URL: z.string().startsWith("postgresql://"),
 	CLICKHOUSE_URL: z

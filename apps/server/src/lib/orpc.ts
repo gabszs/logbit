@@ -9,16 +9,16 @@ export type CreateContextOptions = {
 
 export async function createContext({ context }: CreateContextOptions) {
 	try {
-	const session = await auth.api.getSession({
-		headers: context.req.raw.headers,
-	});
+		const session = await auth.api.getSession({
+			headers: context.req.raw.headers,
+		});
 
-	return {
-		session,
-		db,
-		auth,
-		headers: context.req.raw.headers,
-	};
+		return {
+			session,
+			db,
+			auth,
+			headers: context.req.raw.headers,
+		};
 	} catch (error) {
 		console.error("Error creating context:", error);
 		throw error;

@@ -1,9 +1,8 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { admin, apiKey, openAPI, phoneNumber } from "better-auth/plugins";
+import { admin, apiKey, openAPI } from "better-auth/plugins";
 import { eq } from "drizzle-orm";
 import { settings } from "@/env";
-import { redis } from "@/lib/cache";
 import "dotenv/config";
 import { APIError, createAuthMiddleware } from "better-auth/api";
 import { organization } from "better-auth/plugins";
@@ -85,7 +84,6 @@ export const auth = betterAuth({
 				},
 				after: async (user) => {
 					const now = new Date();
-
 					let organizationId: string | null = null;
 
 					if (await isOnlyUser(user.id)) {
@@ -113,7 +111,6 @@ export const auth = betterAuth({
 					await db.insert(models.userSettings).values({
 						userId: user.id,
 						theme: "system",
-						organizationId,
 						createdAt: now,
 						updatedAt: now,
 					});
@@ -121,16 +118,16 @@ export const auth = betterAuth({
 			},
 		},
 	},
-	// hooks: {
-	// 	before: createAuthMiddleware(async (ctx) => {
-	// 		if (ctx.path !== "/sign-up/email") return;
-	// 		if (!(await hasAnyUser())) return;
-	// 		throw new APIError("FORBIDDEN", {
-	// 			message:
-	// 				"Sign up is disabled because a user already exists. Ask an administrator to create your account.",
-	// 		});
-	// 	}),
-	// },
+	hooks: {
+		before: createAuthMiddleware(async (ctx) => {
+			if (ctx.path !== "/sign-up/email") return;
+			if (!(await hasAnyUser())) return;
+			throw new APIError("FORBIDDEN", {
+				message:
+					"Sign up is disabled because a user already exists. Ask an administrator to create your account.",
+			});
+		}),
+	},
 	// ...(settings.REDIS_URL && {
 	// 	secondaryStorage: {
 	// 		get: async (key: string): Promise<string | null> => {
@@ -155,10 +152,12 @@ export const auth = betterAuth({
 		}),
 		admin(),
 		organization({
-			// sendInvitationEmail: async (data) => {
-			// 	const inviteLink = `${settings.HOSTNAME}${settings.AUTH_BASE_PATH}/accept-invitation?invitationId=${data.id}`;
-			// 	console.log("invitation:", inviteLink);
-			// },
+			sendInvitationEmail: async (data) => {
+				const acceptLink = `${settings.VITE_WEB_URL}/settings/invitations/${data.id}`;
+				const refuseLink = `${settings.VITE_WEB_URL}/settings/invitations/${data.id}`;
+				console.log("accept:", acceptLink);
+				console.log("refuse:", refuseLink);
+			},
 			organizationHooks: {
 				beforeCreateOrganization: async ({ user }) => {
 					if (!hasAllowedEmailDomain(user.email)) {
