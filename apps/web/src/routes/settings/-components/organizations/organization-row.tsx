@@ -7,6 +7,7 @@ import {
 	RotateCcw,
 	ShieldCheck,
 	Trash2,
+	X,
 } from "lucide-react";
 import type { MouseEvent } from "react";
 import { useEffect, useState } from "react";
@@ -30,6 +31,11 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/web/components/ui/select";
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "@/web/components/ui/tooltip";
 import { authClient } from "@/web/lib/auth-client";
 import { cn } from "@/web/utils/cn";
 import { OrganizationFormDialog } from "./organization-form-dialog";
@@ -108,7 +114,7 @@ function MemberRow({
 	isUpdatingRole,
 	isRemovingMember,
 	onRoleChange,
-	onRemove,
+	onRequestRemove,
 }: {
 	member: OrganizationMemberSummary;
 	role: string;
@@ -116,7 +122,7 @@ function MemberRow({
 	isUpdatingRole: boolean;
 	isRemovingMember: boolean;
 	onRoleChange: (member: OrganizationMemberSummary, nextRole: string) => void;
-	onRemove: (member: OrganizationMemberSummary) => void;
+	onRequestRemove: (member: OrganizationMemberSummary) => void;
 }) {
 	const email = member.user?.email?.trim() || "No email";
 
@@ -144,28 +150,28 @@ function MemberRow({
 						</SelectContent>
 					</Select>
 
-					<Button
-						type="button"
-						size="sm"
-						variant="outline"
-						onClick={(event: MouseEvent<HTMLButtonElement>) => {
-							event.stopPropagation();
-							onRemove(member);
-						}}
-						disabled={isUpdatingRole || isRemovingMember}
-					>
-						{isRemovingMember ? (
-							<>
-								<Loader2 className="size-4 animate-spin" />
-								Removing...
-							</>
-						) : (
-							<>
-								<Trash2 className="size-4" />
-								Remove
-							</>
-						)}
-					</Button>
+					<Tooltip>
+						<TooltipTrigger asChild>
+							<Button
+								type="button"
+								size="sm"
+								variant="outline"
+								onClick={(event: MouseEvent<HTMLButtonElement>) => {
+									event.stopPropagation();
+									onRequestRemove(member);
+								}}
+								disabled={isUpdatingRole || isRemovingMember}
+								aria-label="Remove member"
+							>
+								{isRemovingMember ? (
+									<Loader2 className="size-4 animate-spin" />
+								) : (
+									<X className="size-4" />
+								)}
+							</Button>
+						</TooltipTrigger>
+						<TooltipContent>Remove</TooltipContent>
+					</Tooltip>
 				</div>
 			) : (
 				<div className="text-muted-foreground text-sm">{role}</div>
@@ -260,6 +266,9 @@ export function OrganizationRow({
 	const [isDeletePending, setIsDeletePending] = useState(false);
 	const [isEditOpen, setIsEditOpen] = useState(false);
 	const [isMembersExpanded, setIsMembersExpanded] = useState(false);
+	const [isLeaveConfirmOpen, setIsLeaveConfirmOpen] = useState(false);
+	const [memberPendingRemoval, setMemberPendingRemoval] =
+		useState<OrganizationMemberSummary | null>(null);
 	const [memberActionKey, setMemberActionKey] = useState<string | null>(null);
 	const [memberActionType, setMemberActionType] = useState<
 		"role-update" | "remove" | null
@@ -438,6 +447,7 @@ export function OrganizationRow({
 		} finally {
 			setMemberActionKey(null);
 			setMemberActionType(null);
+			setMemberPendingRemoval(null);
 		}
 	};
 
@@ -489,6 +499,7 @@ export function OrganizationRow({
 			toast.error(message);
 		} finally {
 			setIsLeavePending(false);
+			setIsLeaveConfirmOpen(false);
 		}
 	};
 
@@ -565,41 +576,64 @@ export function OrganizationRow({
 							</Button>
 						) : null}
 
-						<Button
-							type="button"
-							size="sm"
-							variant="outline"
-							onClick={(event: MouseEvent<HTMLButtonElement>) => {
-								event.stopPropagation();
-								setIsEditOpen(true);
-							}}
-						>
-							<Pencil className="size-4" />
-							Edit
-						</Button>
+						<Tooltip>
+							<TooltipTrigger asChild>
+								<Button
+									type="button"
+									size="sm"
+									variant="outline"
+									onClick={(event: MouseEvent<HTMLButtonElement>) => {
+										event.stopPropagation();
+										setIsEditOpen(true);
+									}}
+									aria-label="Edit organization"
+								>
+									<Pencil className="size-4" />
+								</Button>
+							</TooltipTrigger>
+							<TooltipContent>Edit</TooltipContent>
+						</Tooltip>
 
-						<Button
-							type="button"
-							size="sm"
-							variant="outline"
-							onClick={(event: MouseEvent<HTMLButtonElement>) => {
-								event.stopPropagation();
-								void handleLeave();
-							}}
-							disabled={!isMember || isLeavePending}
-						>
-							{isLeavePending ? (
-								<>
-									<Loader2 className="size-4 animate-spin" />
-									Leaving...
-								</>
-							) : (
-								<>
-									<LogOut className="size-4" />
-									Leave
-								</>
-							)}
-						</Button>
+						<Tooltip>
+							<TooltipTrigger asChild>
+								<Button
+									type="button"
+									size="sm"
+									variant="outline"
+									onClick={(event: MouseEvent<HTMLButtonElement>) => {
+										event.stopPropagation();
+										setIsLeaveConfirmOpen(true);
+									}}
+									disabled={!isMember || isLeavePending}
+									aria-label="Leave organization"
+								>
+									{isLeavePending ? (
+										<Loader2 className="size-4 animate-spin" />
+									) : (
+										<LogOut className="size-4" />
+									)}
+								</Button>
+							</TooltipTrigger>
+							<TooltipContent>Leave</TooltipContent>
+						</Tooltip>
+
+						<Tooltip>
+							<TooltipTrigger asChild>
+								<Button
+									type="button"
+									size="sm"
+									variant="outline"
+									onClick={(event: MouseEvent<HTMLButtonElement>) => {
+										event.stopPropagation();
+										setIsDeleteOpen(true);
+									}}
+									aria-label="Delete organization"
+								>
+									<Trash2 className="size-4" />
+								</Button>
+							</TooltipTrigger>
+							<TooltipContent>Delete</TooltipContent>
+						</Tooltip>
 					</div>
 				</button>
 
@@ -714,27 +748,13 @@ export function OrganizationRow({
 																		null)
 															}
 															onRoleChange={handleUpdateMemberRole}
-															onRemove={handleRemoveMember}
+															onRequestRemove={setMemberPendingRemoval}
 														/>
 													);
 												})
 											)}
 										</div>
 									) : null}
-								</div>
-								<div className="flex justify-end pt-1">
-									<Button
-										type="button"
-										size="sm"
-										variant="outline"
-										onClick={(event: MouseEvent<HTMLButtonElement>) => {
-											event.stopPropagation();
-											setIsDeleteOpen(true);
-										}}
-									>
-										<Trash2 className="size-4" />
-										Delete
-									</Button>
 								</div>
 							</>
 						) : null}
@@ -786,6 +806,93 @@ export function OrganizationRow({
 								</>
 							) : (
 								"Delete organization"
+							)}
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
+
+			<Dialog open={isLeaveConfirmOpen} onOpenChange={setIsLeaveConfirmOpen}>
+				<DialogContent>
+					<DialogHeader>
+						<DialogTitle>Leave organization</DialogTitle>
+						<DialogDescription>
+							{`You will leave ${organization.name} and lose access to its members and settings.`}
+						</DialogDescription>
+					</DialogHeader>
+					<DialogFooter className="gap-2">
+						<Button
+							type="button"
+							variant="outline"
+							onClick={() => setIsLeaveConfirmOpen(false)}
+							disabled={isLeavePending}
+						>
+							Cancel
+						</Button>
+						<Button
+							type="button"
+							variant="destructive"
+							onClick={() => {
+								void handleLeave();
+							}}
+							disabled={isLeavePending}
+						>
+							{isLeavePending ? (
+								<>
+									<Loader2 className="size-4 animate-spin" />
+									Leaving...
+								</>
+							) : (
+								"Leave organization"
+							)}
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
+
+			<Dialog
+				open={Boolean(memberPendingRemoval)}
+				onOpenChange={(open) => {
+					if (!open && memberActionType !== "remove") {
+						setMemberPendingRemoval(null);
+					}
+				}}
+			>
+				<DialogContent>
+					<DialogHeader>
+						<DialogTitle>Remove member</DialogTitle>
+						<DialogDescription>
+							{`This will remove ${
+								memberPendingRemoval?.user?.email ?? "this member"
+							} from ${organization.name}.`}
+						</DialogDescription>
+					</DialogHeader>
+					<DialogFooter className="gap-2">
+						<Button
+							type="button"
+							variant="outline"
+							onClick={() => setMemberPendingRemoval(null)}
+							disabled={memberActionType === "remove"}
+						>
+							Cancel
+						</Button>
+						<Button
+							type="button"
+							variant="destructive"
+							onClick={() => {
+								if (memberPendingRemoval) {
+									void handleRemoveMember(memberPendingRemoval);
+								}
+							}}
+							disabled={memberActionType === "remove"}
+						>
+							{memberActionType === "remove" ? (
+								<>
+									<Loader2 className="size-4 animate-spin" />
+									Removing...
+								</>
+							) : (
+								"Remove member"
 							)}
 						</Button>
 					</DialogFooter>

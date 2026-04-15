@@ -1,14 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Outlet } from "@tanstack/react-router";
-import {
-	Check,
-	Loader2,
-	MailPlus,
-	Plus,
-	RefreshCw,
-	Trash2,
-	X,
-} from "lucide-react";
+import { Check, Loader2, MailPlus, Plus, RefreshCw, X } from "lucide-react";
 import type { MouseEvent } from "react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -26,6 +18,11 @@ import {
 import { CopyButton } from "@/web/components/ui/copy-button";
 import { LabeledSwitch } from "@/web/components/ui/labeled-switch";
 import { Separator } from "@/web/components/ui/separator";
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "@/web/components/ui/tooltip";
 import { authClient } from "@/web/lib/auth-client";
 import { copyToClipboard } from "@/web/utils/clipboard";
 import type { OrganizationListItem } from "../-components/organizations/types";
@@ -479,28 +476,28 @@ function ManagementInvitationRow({
 					<CopyButton size="sm" variant="outline" onCopy={handleCopyLink}>
 						Link
 					</CopyButton>
-					<Button
-						type="button"
-						size="sm"
-						variant="outline"
-						onClick={(event: MouseEvent<HTMLButtonElement>) => {
-							event.stopPropagation();
-							cancelInvitationMutation.mutate();
-						}}
-						disabled={cancelInvitationMutation.isPending}
-					>
-						{cancelInvitationMutation.isPending ? (
-							<>
-								<Loader2 className="size-4 animate-spin" />
-								Canceling...
-							</>
-						) : (
-							<>
-								<Trash2 className="size-4" />
-								Cancel
-							</>
-						)}
-					</Button>
+					<Tooltip>
+						<TooltipTrigger asChild>
+							<Button
+								type="button"
+								size="sm"
+								variant="outline"
+								onClick={(event: MouseEvent<HTMLButtonElement>) => {
+									event.stopPropagation();
+									cancelInvitationMutation.mutate();
+								}}
+								disabled={cancelInvitationMutation.isPending}
+								aria-label="Cancel invitation"
+							>
+								{cancelInvitationMutation.isPending ? (
+									<Loader2 className="size-4 animate-spin" />
+								) : (
+									<X className="size-4" />
+								)}
+							</Button>
+						</TooltipTrigger>
+						<TooltipContent>Cancel</TooltipContent>
+					</Tooltip>
 				</div>
 			</div>
 
