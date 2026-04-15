@@ -103,6 +103,7 @@ function DetailCard({
 
 function MemberRow({
 	member,
+	role,
 	canManageMembers,
 	isUpdatingRole,
 	isRemovingMember,
@@ -110,6 +111,7 @@ function MemberRow({
 	onRemove,
 }: {
 	member: OrganizationMemberSummary;
+	role: string;
 	canManageMembers: boolean;
 	isUpdatingRole: boolean;
 	isRemovingMember: boolean;
@@ -117,7 +119,6 @@ function MemberRow({
 	onRemove: (member: OrganizationMemberSummary) => void;
 }) {
 	const email = member.user?.email?.trim() || "No email";
-	const role = member.role || "Unknown role";
 
 	return (
 		<div className="grid gap-3 rounded-lg border border-border/60 bg-background/50 px-3 py-3 md:grid-cols-[minmax(0,1fr)_auto_auto] md:items-center">
@@ -263,6 +264,9 @@ export function OrganizationRow({
 	const [memberActionType, setMemberActionType] = useState<
 		"role-update" | "remove" | null
 	>(null);
+	const [memberRoleOverrides, setMemberRoleOverrides] = useState<
+		Record<string, string>
+	>({});
 	const [isSetActivePending, setIsSetActivePending] = useState(false);
 	const [isLeavePending, setIsLeavePending] = useState(false);
 	const isActive = organization.id === activeOrganizationId;
@@ -371,6 +375,10 @@ export function OrganizationRow({
 				throw new Error(error.message || "Failed to update member role");
 			}
 
+			setMemberRoleOverrides((current) => ({
+				...current,
+				[member.id ?? member.userId ?? member.user?.id ?? ""]: nextRole,
+			}));
 			await queryClient.invalidateQueries({
 				queryKey: ["organization", "details", organization.id],
 			});
@@ -411,6 +419,11 @@ export function OrganizationRow({
 				throw new Error(error.message || "Failed to remove member");
 			}
 
+			setMemberRoleOverrides((current) => {
+				const next = { ...current };
+				delete next[member.id ?? member.userId ?? member.user?.id ?? ""];
+				return next;
+			});
 			await queryClient.invalidateQueries({
 				queryKey: ["organization", "details", organization.id],
 			});
@@ -623,12 +636,6 @@ export function OrganizationRow({
 
 									<div className="space-y-3">
 										<DetailCard
-											label="Members"
-											value={`${detailsQuery.data.members?.length ?? 0} member${
-												detailsQuery.data.members?.length === 1 ? "" : "s"
-											}`}
-										/>
-										<DetailCard
 											label="Logo"
 											value={detailsQuery.data.logo || "No logo configured"}
 										/>
@@ -646,7 +653,7 @@ export function OrganizationRow({
 											event.stopPropagation();
 											setIsMembersExpanded((current) => !current);
 										}}
-										className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-background/50"
+										className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
 									>
 										<div className="min-w-0">
 											<p className="font-medium text-sm">Members</p>
@@ -654,12 +661,14 @@ export function OrganizationRow({
 												Members: {membersCount}
 											</p>
 										</div>
-										<ChevronDown
-											className={cn(
-												"size-4 shrink-0 text-muted-foreground transition-transform duration-200",
-												isMembersExpanded && "rotate-180",
-											)}
-										/>
+										<span className="rounded-md p-1 transition-colors hover:bg-background/60">
+											<ChevronDown
+												className={cn(
+													"size-4 shrink-0 text-muted-foreground transition-transform duration-200",
+													isMembersExpanded && "rotate-180",
+												)}
+											/>
+										</span>
 									</button>
 
 									{isMembersExpanded ? (
@@ -669,32 +678,46 @@ export function OrganizationRow({
 													No members found.
 												</div>
 											) : (
-												members.map((member, index) => (
-													<MemberRow
-														key={member.userId ?? member.user?.id ?? index}
-														member={member}
-														canManageMembers={canManageMembers}
-														isUpdatingRole={
-															memberActionType === "role-update" &&
-															memberActionKey ===
-																(member.id ??
-																	member.userId ??
-																	member.user?.id ??
-																	null)
-														}
-														isRemovingMember={
-															memberActionType === "remove" &&
-															memberActionKey ===
-																(member.id ??
-																	member.userId ??
-																	member.user?.id ??
-																	member.user?.email ??
-																	null)
-														}
-														onRoleChange={handleUpdateMemberRole}
-														onRemove={handleRemoveMember}
-													/>
-												))
+												members.map((member, index) => {
+													const memberKey =
+														member.id ??
+														member.userId ??
+														member.user?.id ??
+														member.user?.email ??
+														String(index);
+													const resolvedRole =
+														memberRoleOverrides[memberKey] ??
+														member.role ??
+														"member";
+
+													return (
+														<MemberRow
+															key={member.userId ?? member.user?.id ?? index}
+															member={member}
+															role={resolvedRole}
+															canManageMembers={canManageMembers}
+															isUpdatingRole={
+																memberActionType === "role-update" &&
+																memberActionKey ===
+																	(member.id ??
+																		member.userId ??
+																		member.user?.id ??
+																		null)
+															}
+															isRemovingMember={
+																memberActionType === "remove" &&
+																memberActionKey ===
+																	(member.id ??
+																		member.userId ??
+																		member.user?.id ??
+																		member.user?.email ??
+																		null)
+															}
+															onRoleChange={handleUpdateMemberRole}
+															onRemove={handleRemoveMember}
+														/>
+													);
+												})
 											)}
 										</div>
 									) : null}
