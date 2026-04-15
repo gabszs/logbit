@@ -6,6 +6,7 @@ import {
 	useRouterState,
 } from "@tanstack/react-router";
 import { useMemo } from "react";
+import { useAuth } from "@/web/components/auth-provider";
 import { AppShellSkeleton } from "@/web/components/skeletons/app-skeleton";
 import { SETTINGS_NAV_ITEMS } from "@/web/lib/constants";
 import { requireAuthenticated } from "@/web/lib/route-guards";
@@ -30,16 +31,26 @@ export const Route = createFileRoute("/settings")({
 });
 
 function SettingsLayout() {
+	const auth = useAuth();
 	const location = useRouterState({ select: (state) => state.location });
 	const activePath = location.pathname ?? "";
+	const isPlatformAdmin = auth.session?.user?.role === "admin";
 
 	const navigationItems = useMemo(() => {
-		return SETTINGS_NAV_ITEMS.map((item) => {
+		const visibleItems = SETTINGS_NAV_ITEMS.filter((item) => {
+			if (item.to === "/settings/admin") {
+				return isPlatformAdmin;
+			}
+
+			return true;
+		});
+
+		return visibleItems.map((item) => {
 			const isActive =
 				activePath === item.to || activePath.startsWith(`${item.to}/`);
 			return { ...item, isActive };
 		});
-	}, [activePath]);
+	}, [activePath, isPlatformAdmin]);
 
 	return (
 		<div className="px-3 pt-19 pb-8 sm:px-5">

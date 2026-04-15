@@ -16,6 +16,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as SettingsProfileRouteImport } from './routes/settings/profile'
 import { Route as SettingsOrganizationsRouteImport } from './routes/settings/organizations'
 import { Route as SettingsAppearanceRouteImport } from './routes/settings/appearance'
+import { Route as SettingsAdminRouteImport } from './routes/settings/admin'
 import { Route as AuthSignUpRouteImport } from './routes/auth/sign-up'
 import { Route as AuthSignInRouteImport } from './routes/auth/sign-in'
 import { Route as SettingsInvitationsRouteRouteImport } from './routes/settings/invitations/route'
@@ -56,6 +57,11 @@ const SettingsAppearanceRoute = SettingsAppearanceRouteImport.update({
   path: '/appearance',
   getParentRoute: () => SettingsRouteRoute,
 } as any)
+const SettingsAdminRoute = SettingsAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => SettingsRouteRoute,
+} as any)
 const AuthSignUpRoute = AuthSignUpRouteImport.update({
   id: '/auth/sign-up',
   path: '/auth/sign-up',
@@ -87,6 +93,7 @@ export interface FileRoutesByFullPath {
   '/settings/invitations': typeof SettingsInvitationsRouteRouteWithChildren
   '/auth/sign-in': typeof AuthSignInRoute
   '/auth/sign-up': typeof AuthSignUpRoute
+  '/settings/admin': typeof SettingsAdminRoute
   '/settings/appearance': typeof SettingsAppearanceRoute
   '/settings/organizations': typeof SettingsOrganizationsRoute
   '/settings/profile': typeof SettingsProfileRoute
@@ -100,6 +107,7 @@ export interface FileRoutesByTo {
   '/settings/invitations': typeof SettingsInvitationsRouteRouteWithChildren
   '/auth/sign-in': typeof AuthSignInRoute
   '/auth/sign-up': typeof AuthSignUpRoute
+  '/settings/admin': typeof SettingsAdminRoute
   '/settings/appearance': typeof SettingsAppearanceRoute
   '/settings/organizations': typeof SettingsOrganizationsRoute
   '/settings/profile': typeof SettingsProfileRoute
@@ -114,6 +122,7 @@ export interface FileRoutesById {
   '/settings/invitations': typeof SettingsInvitationsRouteRouteWithChildren
   '/auth/sign-in': typeof AuthSignInRoute
   '/auth/sign-up': typeof AuthSignUpRoute
+  '/settings/admin': typeof SettingsAdminRoute
   '/settings/appearance': typeof SettingsAppearanceRoute
   '/settings/organizations': typeof SettingsOrganizationsRoute
   '/settings/profile': typeof SettingsProfileRoute
@@ -129,6 +138,7 @@ export interface FileRouteTypes {
     | '/settings/invitations'
     | '/auth/sign-in'
     | '/auth/sign-up'
+    | '/settings/admin'
     | '/settings/appearance'
     | '/settings/organizations'
     | '/settings/profile'
@@ -142,6 +152,7 @@ export interface FileRouteTypes {
     | '/settings/invitations'
     | '/auth/sign-in'
     | '/auth/sign-up'
+    | '/settings/admin'
     | '/settings/appearance'
     | '/settings/organizations'
     | '/settings/profile'
@@ -155,6 +166,7 @@ export interface FileRouteTypes {
     | '/settings/invitations'
     | '/auth/sign-in'
     | '/auth/sign-up'
+    | '/settings/admin'
     | '/settings/appearance'
     | '/settings/organizations'
     | '/settings/profile'
@@ -221,6 +233,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsAppearanceRouteImport
       parentRoute: typeof SettingsRouteRoute
     }
+    '/settings/admin': {
+      id: '/settings/admin'
+      path: '/admin'
+      fullPath: '/settings/admin'
+      preLoaderRoute: typeof SettingsAdminRouteImport
+      parentRoute: typeof SettingsRouteRoute
+    }
     '/auth/sign-up': {
       id: '/auth/sign-up'
       path: '/auth/sign-up'
@@ -268,6 +287,7 @@ const SettingsInvitationsRouteRouteWithChildren =
 
 interface SettingsRouteRouteChildren {
   SettingsInvitationsRouteRoute: typeof SettingsInvitationsRouteRouteWithChildren
+  SettingsAdminRoute: typeof SettingsAdminRoute
   SettingsAppearanceRoute: typeof SettingsAppearanceRoute
   SettingsOrganizationsRoute: typeof SettingsOrganizationsRoute
   SettingsProfileRoute: typeof SettingsProfileRoute
@@ -275,6 +295,7 @@ interface SettingsRouteRouteChildren {
 
 const SettingsRouteRouteChildren: SettingsRouteRouteChildren = {
   SettingsInvitationsRouteRoute: SettingsInvitationsRouteRouteWithChildren,
+  SettingsAdminRoute: SettingsAdminRoute,
   SettingsAppearanceRoute: SettingsAppearanceRoute,
   SettingsOrganizationsRoute: SettingsOrganizationsRoute,
   SettingsProfileRoute: SettingsProfileRoute,

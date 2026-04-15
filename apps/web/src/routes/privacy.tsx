@@ -1,11 +1,18 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { ErrorBoundary } from "@/web/components/error-boundary";
 import { DocumentSkeleton } from "@/web/components/skeletons/document-skeleton";
+import { requireAuthenticated } from "@/web/lib/route-guards";
 
 const subtleLinkClass =
 	"relative inline-block text-current no-underline after:absolute after:left-0 after:bottom-0 after:h-px after:w-0 after:bg-current after:transition-[width] after:duration-200 after:ease-out after:content-[''] hover:after:w-full focus-visible:after:w-full focus-visible:outline-none";
 
 export const Route = createFileRoute("/privacy")({
+	beforeLoad: async (opts) => {
+		await requireAuthenticated({
+			authClient: opts.context.authClient,
+			location: opts.location,
+		});
+	},
 	component: PrivacyRoute,
 	pendingComponent: DocumentSkeleton,
 	errorComponent: ErrorBoundary,
