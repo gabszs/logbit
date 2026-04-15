@@ -133,7 +133,9 @@ export function CreateUserDialog({
 						<Input
 							id="admin-create-name"
 							value={formValues.name}
-							onChange={(event) => handleFieldChange("name", event.target.value)}
+							onChange={(event) =>
+								handleFieldChange("name", event.target.value)
+							}
 							placeholder="Ada Lovelace"
 							disabled={isPending}
 						/>
@@ -145,7 +147,9 @@ export function CreateUserDialog({
 							id="admin-create-email"
 							type="email"
 							value={formValues.email}
-							onChange={(event) => handleFieldChange("email", event.target.value)}
+							onChange={(event) =>
+								handleFieldChange("email", event.target.value)
+							}
 							placeholder="ada@example.com"
 							disabled={isPending}
 						/>
@@ -202,7 +206,11 @@ export function CreateUserDialog({
 					>
 						Cancel
 					</Button>
-					<Button type="button" onClick={() => void handleSubmit()} disabled={isPending}>
+					<Button
+						type="button"
+						onClick={() => void handleSubmit()}
+						disabled={isPending}
+					>
 						{isPending ? <Loader2 className="size-4 animate-spin" /> : null}
 						Create user
 					</Button>

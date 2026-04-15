@@ -33,6 +33,7 @@ export type AdminCreateUserForm = {
 export type AdminBanForm = {
 	banReason: string;
 	banExpiresInHours: string;
+	isPermanent: boolean;
 };
 
 export const ADMIN_ROLE_OPTIONS = ["user", "admin"] as const;

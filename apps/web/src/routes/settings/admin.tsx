@@ -1,11 +1,16 @@
-import { queryOptions, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+	queryOptions,
+	useMutation,
+	useQuery,
+	useQueryClient,
+} from "@tanstack/react-query";
 import { createFileRoute, notFound, useRouter } from "@tanstack/react-router";
 import {
 	Ban,
 	KeyRound,
 	Loader2,
-	Pencil,
 	LogIn,
+	Pencil,
 	Plus,
 	RefreshCw,
 	Search,
@@ -20,7 +25,7 @@ import { useAuth } from "@/web/components/auth-provider";
 import { Alert, AlertDescription, AlertTitle } from "@/web/components/ui/alert";
 import { Badge } from "@/web/components/ui/badge";
 import { Button } from "@/web/components/ui/button";
-import { CopyButton } from "@/web/components/ui/copy-button";
+import { Checkbox } from "@/web/components/ui/checkbox";
 import {
 	Card,
 	CardContent,
@@ -28,6 +33,7 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/web/components/ui/card";
+import { CopyButton } from "@/web/components/ui/copy-button";
 import {
 	Dialog,
 	DialogContent,
@@ -38,7 +44,6 @@ import {
 } from "@/web/components/ui/dialog";
 import { Input } from "@/web/components/ui/input";
 import { Label } from "@/web/components/ui/label";
-import { Separator } from "@/web/components/ui/separator";
 import {
 	Select,
 	SelectContent,
@@ -46,6 +51,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/web/components/ui/select";
+import { Separator } from "@/web/components/ui/separator";
 import { Textarea } from "@/web/components/ui/textarea";
 import {
 	Tooltip,
@@ -57,9 +63,9 @@ import { CreateUserDialog } from "./-components/admin/create-user-dialog";
 import {
 	ADMIN_ROLE_OPTIONS,
 	type AdminBanForm,
-	type AdminRole,
 	type AdminEditableUserForm,
 	type AdminPasswordForm,
+	type AdminRole,
 	type AdminUserListItem,
 	type AdminUserSession,
 } from "./-components/admin/types";
@@ -68,7 +74,11 @@ import { SettingsError } from "./-components/settings-error";
 import { SettingsSectionSkeleton } from "./-components/settings-section-skeleton";
 
 const USERS_QUERY_KEY = ["better-auth", "admin", "users"] as const;
-const USER_SESSIONS_QUERY_KEY = ["better-auth", "admin", "user-sessions"] as const;
+const USER_SESSIONS_QUERY_KEY = [
+	"better-auth",
+	"admin",
+	"user-sessions",
+] as const;
 const PAGE_SIZE = 10;
 
 type AdminUsersQueryState = {
@@ -84,6 +94,7 @@ const DEFAULT_USERS_QUERY_STATE: AdminUsersQueryState = {
 const INITIAL_BAN_FORM: AdminBanForm = {
 	banReason: "",
 	banExpiresInHours: "",
+	isPermanent: false,
 };
 
 function isAdminRole(value: string): value is AdminRole {
@@ -211,7 +222,9 @@ function AdminSettingsPage() {
 	const [usersState, setUsersState] = useState(DEFAULT_USERS_QUERY_STATE);
 	const [isCreateOpen, setIsCreateOpen] = useState(false);
 	const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
-	const [deleteTarget, setDeleteTarget] = useState<AdminUserListItem | null>(null);
+	const [deleteTarget, setDeleteTarget] = useState<AdminUserListItem | null>(
+		null,
+	);
 	const [banTarget, setBanTarget] = useState<AdminUserListItem | null>(null);
 	const [banForm, setBanForm] = useState(INITIAL_BAN_FORM);
 
@@ -229,8 +242,10 @@ function AdminSettingsPage() {
 		}
 
 		setBanForm({
-			banReason: typeof banTarget.banReason === "string" ? banTarget.banReason : "",
+			banReason:
+				typeof banTarget.banReason === "string" ? banTarget.banReason : "",
 			banExpiresInHours: "",
+			isPermanent: Boolean(banTarget.banned && !banTarget.banExpires),
 		});
 	}, [banTarget]);
 
@@ -288,20 +303,22 @@ function AdminSettingsPage() {
 			form: AdminBanForm;
 		}) => {
 			const hoursValue = form.banExpiresInHours.trim();
-			const parsedHours = hoursValue ? Number(hoursValue) : undefined;
+			let banExpiresIn: number | undefined;
 
-			if (
-				parsedHours !== undefined &&
-				(!Number.isFinite(parsedHours) || parsedHours <= 0)
-			) {
-				throw new Error("Expire in must be a positive number of hours");
+			if (!form.isPermanent) {
+				const parsedHours = Number(hoursValue);
+
+				if (!hoursValue || !Number.isFinite(parsedHours) || parsedHours <= 0) {
+					throw new Error("Expire in must be a positive number of hours");
+				}
+
+				banExpiresIn = parsedHours * 60 * 60;
 			}
 
 			const { error } = await authClient.admin.banUser({
 				userId,
 				banReason: form.banReason.trim() || undefined,
-				banExpiresIn:
-					parsedHours === undefined ? undefined : parsedHours * 60 * 60,
+				banExpiresIn,
 			});
 
 			if (error) {
@@ -388,9 +405,7 @@ function AdminSettingsPage() {
 									type="button"
 									size="sm"
 									variant="outline"
-									onClick={() =>
-										void stopImpersonatingMutation.mutateAsync()
-									}
+									onClick={() => void stopImpersonatingMutation.mutateAsync()}
 									disabled={stopImpersonatingMutation.isPending}
 								>
 									{stopImpersonatingMutation.isPending ? (
@@ -416,7 +431,9 @@ function AdminSettingsPage() {
 						isDeleting={removeUserMutation.isPending}
 						deletingUserId={removeUserMutation.variables ?? null}
 						onToggleExpanded={(userId) =>
-							setExpandedUserId((current) => (current === userId ? null : userId))
+							setExpandedUserId((current) =>
+								current === userId ? null : userId,
+							)
 						}
 						onSearchChange={(searchValue) =>
 							setUsersState({
@@ -515,7 +532,7 @@ function AdminSettingsPage() {
 					<DialogHeader>
 						<DialogTitle>Ban user</DialogTitle>
 						<DialogDescription>
-							Add a reason and optional expire in hours.
+							Add a reason and choose a temporary or permanent ban.
 						</DialogDescription>
 					</DialogHeader>
 
@@ -536,6 +553,29 @@ function AdminSettingsPage() {
 							/>
 						</div>
 
+						<div className="flex items-start gap-3 rounded-xl border border-border/60 bg-background/40 px-4 py-3">
+							<Checkbox
+								id="admin-ban-permanent"
+								checked={banForm.isPermanent}
+								onCheckedChange={(checked) =>
+									setBanForm((current) => ({
+										...current,
+										isPermanent: checked === true,
+										banExpiresInHours:
+											checked === true ? "" : current.banExpiresInHours,
+									}))
+								}
+								disabled={banMutation.isPending}
+							/>
+							<div className="grid gap-1">
+								<Label htmlFor="admin-ban-permanent">Permanent ban</Label>
+								<p className="text-muted-foreground text-sm">
+									Disable expiration and keep the user banned until manual
+									unban.
+								</p>
+							</div>
+						</div>
+
 						<div className="grid gap-2">
 							<Label htmlFor="admin-ban-expire">Expire in</Label>
 							<Input
@@ -549,7 +589,7 @@ function AdminSettingsPage() {
 								}
 								placeholder="Hours"
 								inputMode="numeric"
-								disabled={banMutation.isPending}
+								disabled={banMutation.isPending || banForm.isPermanent}
 							/>
 						</div>
 					</div>
@@ -905,9 +945,7 @@ function AdminUserRow({
 			await router.navigate({ to: "/" });
 		},
 		onError: (error) => {
-			toast.error(
-				getMutationErrorMessage(error, "Failed to impersonate user"),
-			);
+			toast.error(getMutationErrorMessage(error, "Failed to impersonate user"));
 		},
 	});
 
@@ -1076,7 +1114,11 @@ function AdminUserRow({
 						<DetailCard label="Role" value={role} />
 						<DetailCard
 							label="Image"
-							value={typeof user.image === "string" && user.image ? user.image : "No image"}
+							value={
+								typeof user.image === "string" && user.image
+									? user.image
+									: "No image"
+							}
 						/>
 						{getBanReasonValue(user) ? (
 							<DetailCard
@@ -1149,7 +1191,9 @@ function AdminUserRow({
 													revokeOneSessionMutation.variables === session.token
 												}
 												onRevoke={() =>
-													void revokeOneSessionMutation.mutateAsync(session.token)
+													void revokeOneSessionMutation.mutateAsync(
+														session.token,
+													)
 												}
 											/>
 										))}
@@ -1163,10 +1207,7 @@ function AdminUserRow({
 						</ActionCard>
 
 						{user.banned ? (
-							<ActionCard
-								title="Ban"
-								description="Reverse the current ban."
-							>
+							<ActionCard title="Ban" description="Reverse the current ban.">
 								<div className="flex justify-end">
 									<Button
 										type="button"
@@ -1183,7 +1224,6 @@ function AdminUserRow({
 								</div>
 							</ActionCard>
 						) : null}
-
 					</div>
 				</div>
 			) : null}
@@ -1246,10 +1286,7 @@ function AdminUserRow({
 				</DialogContent>
 			</Dialog>
 
-			<Dialog
-				open={isImpersonateOpen}
-				onOpenChange={setIsImpersonateOpen}
-			>
+			<Dialog open={isImpersonateOpen} onOpenChange={setIsImpersonateOpen}>
 				<DialogContent
 					onClick={(event) => event.stopPropagation()}
 					onKeyDown={(event) => event.stopPropagation()}
@@ -1257,12 +1294,15 @@ function AdminUserRow({
 					<DialogHeader>
 						<DialogTitle>Impersonate user</DialogTitle>
 						<DialogDescription>
-							You will switch into {user.email}'s session until you stop impersonating.
+							You will switch into {user.email}'s session until you stop
+							impersonating.
 						</DialogDescription>
 					</DialogHeader>
 
 					<div className="rounded-xl border border-border/60 bg-background/40 px-4 py-3 text-sm">
-						<p className="font-medium">Confirm impersonation for {user.email}.</p>
+						<p className="font-medium">
+							Confirm impersonation for {user.email}.
+						</p>
 					</div>
 
 					<DialogFooter className="gap-2">
@@ -1399,7 +1439,9 @@ function ActionCard({
 	children: ReactNode;
 }) {
 	return (
-		<div className={`rounded-xl border border-border/60 bg-background/40 p-4 ${className ?? ""}`}>
+		<div
+			className={`rounded-xl border border-border/60 bg-background/40 p-4 ${className ?? ""}`}
+		>
 			<div className="space-y-1">
 				<h3 className="font-medium text-sm">{title}</h3>
 				<p className="text-muted-foreground text-sm">{description}</p>
