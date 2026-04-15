@@ -1,20 +1,26 @@
 import { queryOptions, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute, notFound } from "@tanstack/react-router";
+import { createFileRoute, notFound, useRouter } from "@tanstack/react-router";
 import {
 	Ban,
+	KeyRound,
 	Loader2,
+	Pencil,
+	LogIn,
 	Plus,
 	RefreshCw,
 	Search,
 	Shield,
+	ShieldCheck,
 	Trash2,
+	X,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/web/components/auth-provider";
 import { Alert, AlertDescription, AlertTitle } from "@/web/components/ui/alert";
 import { Badge } from "@/web/components/ui/badge";
 import { Button } from "@/web/components/ui/button";
+import { CopyButton } from "@/web/components/ui/copy-button";
 import {
 	Card,
 	CardContent,
@@ -52,13 +58,17 @@ import {
 	ADMIN_ROLE_OPTIONS,
 	type AdminBanForm,
 	type AdminRole,
+	type AdminEditableUserForm,
+	type AdminPasswordForm,
 	type AdminUserListItem,
+	type AdminUserSession,
 } from "./-components/admin/types";
 import { DetailCard } from "./-components/detail-card";
 import { SettingsError } from "./-components/settings-error";
 import { SettingsSectionSkeleton } from "./-components/settings-section-skeleton";
 
 const USERS_QUERY_KEY = ["better-auth", "admin", "users"] as const;
+const USER_SESSIONS_QUERY_KEY = ["better-auth", "admin", "user-sessions"] as const;
 const PAGE_SIZE = 10;
 
 type AdminUsersQueryState = {
@@ -106,6 +116,26 @@ function formatDate(value: Date | string | null | undefined) {
 	}).format(date);
 }
 
+function getBanReasonValue(user: AdminUserListItem) {
+	if (!user.banned) {
+		return null;
+	}
+
+	return user.banReason || "No ban reason";
+}
+
+function getBanExpiresValue(user: AdminUserListItem) {
+	if (!user.banned) {
+		return null;
+	}
+
+	if (!user.banExpires) {
+		return "Permanent";
+	}
+
+	return formatDate(user.banExpires);
+}
+
 function getUsersQueryOptions(state: AdminUsersQueryState) {
 	const trimmedSearchValue = state.searchValue.trim();
 
@@ -134,6 +164,24 @@ function getUsersQueryOptions(state: AdminUsersQueryState) {
 	});
 }
 
+function getUserSessionsQueryOptions(userId: string) {
+	return queryOptions({
+		queryKey: [...USER_SESSIONS_QUERY_KEY, userId] as const,
+		retry: false,
+		queryFn: async () => {
+			const { data, error } = await authClient.admin.listUserSessions({
+				userId,
+			});
+
+			if (error) {
+				throw new Error(error.message || "Failed to load sessions");
+			}
+
+			return data?.sessions ?? [];
+		},
+	});
+}
+
 function getMutationErrorMessage(error: unknown, fallback: string) {
 	return error instanceof Error ? error.message : fallback;
 }
@@ -158,6 +206,7 @@ export const Route = createFileRoute("/settings/admin")({
 
 function AdminSettingsPage() {
 	const auth = useAuth();
+	const router = useRouter();
 	const queryClient = useQueryClient();
 	const [usersState, setUsersState] = useState(DEFAULT_USERS_QUERY_STATE);
 	const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -171,6 +220,7 @@ function AdminSettingsPage() {
 	const totalUsers = usersQuery.data?.total ?? 0;
 	const totalPages = Math.max(1, Math.ceil(totalUsers / PAGE_SIZE));
 	const currentUserId = auth.session?.user?.id ?? null;
+	const impersonatedByUserId = auth.session?.session?.impersonatedBy ?? null;
 
 	useEffect(() => {
 		if (!banTarget) {
@@ -268,6 +318,26 @@ function AdminSettingsPage() {
 		},
 	});
 
+	const stopImpersonatingMutation = useMutation({
+		mutationFn: async () => {
+			const { error } = await authClient.admin.stopImpersonating();
+
+			if (error) {
+				throw new Error(error.message || "Failed to stop impersonating");
+			}
+		},
+		onSuccess: async () => {
+			toast.success("Returned to admin session");
+			await router.invalidate();
+			await refreshUsers();
+		},
+		onError: (error) => {
+			toast.error(
+				getMutationErrorMessage(error, "Failed to stop impersonating"),
+			);
+		},
+	});
+
 	return (
 		<>
 			<Card>
@@ -308,6 +378,30 @@ function AdminSettingsPage() {
 				<Separator />
 
 				<CardContent className="space-y-4">
+					{impersonatedByUserId ? (
+						<Alert>
+							<ShieldCheck className="size-4" />
+							<AlertTitle>Impersonation mode active</AlertTitle>
+							<AlertDescription className="flex flex-wrap items-center gap-3">
+								<span>Impersonated by admin ID {impersonatedByUserId}.</span>
+								<Button
+									type="button"
+									size="sm"
+									variant="outline"
+									onClick={() =>
+										void stopImpersonatingMutation.mutateAsync()
+									}
+									disabled={stopImpersonatingMutation.isPending}
+								>
+									{stopImpersonatingMutation.isPending ? (
+										<Loader2 className="size-4 animate-spin" />
+									) : null}
+									Stop impersonating
+								</Button>
+							</AlertDescription>
+						</Alert>
+					) : null}
+
 					<AdminUsersSection
 						users={users}
 						totalUsers={totalUsers}
@@ -652,10 +746,174 @@ function AdminUserRow({
 	onBan: () => void;
 }) {
 	const role = normalizeRole(user.role);
+	const router = useRouter();
+	const queryClient = useQueryClient();
+	const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
+	const [isPasswordOpen, setIsPasswordOpen] = useState(false);
+	const [isImpersonateOpen, setIsImpersonateOpen] = useState(false);
+	const [profileForm, setProfileForm] = useState<AdminEditableUserForm>({
+		email: user.email,
+		name: user.name ?? "",
+		image: typeof user.image === "string" ? user.image : "",
+		emailVerified: Boolean(user.emailVerified),
+	});
+	const [passwordForm, setPasswordForm] = useState<AdminPasswordForm>({
+		newPassword: "",
+	});
+	const sessionsQuery = useQuery({
+		...getUserSessionsQueryOptions(user.id),
+		enabled: isExpanded,
+	});
+
+	useEffect(() => {
+		setProfileForm({
+			email: user.email,
+			name: user.name ?? "",
+			image: typeof user.image === "string" ? user.image : "",
+			emailVerified: Boolean(user.emailVerified),
+		});
+	}, [user.email, user.name, user.image, user.emailVerified]);
+
+	const refreshUserState = async () => {
+		await queryClient.invalidateQueries({ queryKey: USERS_QUERY_KEY });
+		await queryClient.invalidateQueries({
+			queryKey: [...USER_SESSIONS_QUERY_KEY, user.id],
+		});
+	};
+
+	const updateUserMutation = useMutation({
+		mutationFn: async () => {
+			const { error } = await authClient.admin.updateUser({
+				userId: user.id,
+				data: {
+					email: profileForm.email.trim(),
+					name: profileForm.name.trim(),
+					image: profileForm.image.trim() || null,
+					emailVerified: profileForm.emailVerified,
+				},
+			});
+
+			if (error) {
+				throw new Error(error.message || "Failed to update user");
+			}
+		},
+		onSuccess: async () => {
+			toast.success("User updated");
+			await refreshUserState();
+		},
+		onError: (error) => {
+			toast.error(getMutationErrorMessage(error, "Failed to update user"));
+		},
+	});
+
+	const setPasswordMutation = useMutation({
+		mutationFn: async () => {
+			const newPassword = passwordForm.newPassword.trim();
+
+			if (!newPassword) {
+				throw new Error("Password is required");
+			}
+
+			const { error } = await authClient.admin.setUserPassword({
+				userId: user.id,
+				newPassword,
+			});
+
+			if (error) {
+				throw new Error(error.message || "Failed to set password");
+			}
+		},
+		onSuccess: () => {
+			setPasswordForm({ newPassword: "" });
+			toast.success("Password updated");
+		},
+		onError: (error) => {
+			toast.error(getMutationErrorMessage(error, "Failed to set password"));
+		},
+	});
+
+	const unbanMutation = useMutation({
+		mutationFn: async () => {
+			const { error } = await authClient.admin.unbanUser({
+				userId: user.id,
+			});
+
+			if (error) {
+				throw new Error(error.message || "Failed to unban user");
+			}
+		},
+		onSuccess: async () => {
+			toast.success("User unbanned");
+			await refreshUserState();
+		},
+		onError: (error) => {
+			toast.error(getMutationErrorMessage(error, "Failed to unban user"));
+		},
+	});
+
+	const revokeAllSessionsMutation = useMutation({
+		mutationFn: async () => {
+			const { error } = await authClient.admin.revokeUserSessions({
+				userId: user.id,
+			});
+
+			if (error) {
+				throw new Error(error.message || "Failed to revoke sessions");
+			}
+		},
+		onSuccess: async () => {
+			toast.success("All sessions revoked");
+			await refreshUserState();
+		},
+		onError: (error) => {
+			toast.error(getMutationErrorMessage(error, "Failed to revoke sessions"));
+		},
+	});
+
+	const revokeOneSessionMutation = useMutation({
+		mutationFn: async (sessionToken: string) => {
+			const { error } = await authClient.admin.revokeUserSession({
+				sessionToken,
+			});
+
+			if (error) {
+				throw new Error(error.message || "Failed to revoke session");
+			}
+		},
+		onSuccess: async () => {
+			toast.success("Session revoked");
+			await refreshUserState();
+		},
+		onError: (error) => {
+			toast.error(getMutationErrorMessage(error, "Failed to revoke session"));
+		},
+	});
+
+	const impersonateMutation = useMutation({
+		mutationFn: async () => {
+			const { error } = await authClient.admin.impersonateUser({
+				userId: user.id,
+			});
+
+			if (error) {
+				throw new Error(error.message || "Failed to impersonate user");
+			}
+		},
+		onSuccess: async () => {
+			toast.success("Impersonation started");
+			await router.invalidate();
+			await router.navigate({ to: "/" });
+		},
+		onError: (error) => {
+			toast.error(
+				getMutationErrorMessage(error, "Failed to impersonate user"),
+			);
+		},
+	});
 
 	return (
 		<div
-			className={`px-4 py-3 transition-colors ${isExpanded ? "bg-background/30" : ""}`}
+			className="px-4 py-3 transition-colors"
 			onClick={onToggleExpanded}
 			onKeyDown={(event) => {
 				if (event.key === "Enter" || event.key === " ") {
@@ -693,7 +951,7 @@ function AdminUserRow({
 
 								onRoleChange(value);
 							}}
-							disabled={isUpdatingRole}
+							disabled={isUpdatingRole || user.id === currentUserId}
 						>
 							<SelectTrigger size="sm" className="min-w-32">
 								<SelectValue placeholder="Select role" />
@@ -707,6 +965,23 @@ function AdminUserRow({
 							</SelectContent>
 						</Select>
 					</div>
+
+					<Tooltip>
+						<TooltipTrigger asChild>
+							<Button
+								type="button"
+								size="icon"
+								variant="outline"
+								onClick={(event) => {
+									event.stopPropagation();
+									setIsEditProfileOpen(true);
+								}}
+							>
+								<Pencil className="size-4" />
+							</Button>
+						</TooltipTrigger>
+						<TooltipContent>Edit profile</TooltipContent>
+					</Tooltip>
 
 					<Tooltip>
 						<TooltipTrigger asChild>
@@ -752,20 +1027,424 @@ function AdminUserRow({
 			</div>
 
 			{isExpanded ? (
-				<div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-					<DetailCard label="Email" value={user.email} />
-					<DetailCard label="Name" value={user.name || "No name"} />
-					<DetailCard label="Created" value={formatDate(user.createdAt)} />
-					<DetailCard
-						label="Ban Reason"
-						value={user.banReason || "No ban reason"}
-					/>
-					<DetailCard
-						label="Ban Expires"
-						value={formatDate(user.banExpires)}
-					/>
+				<div
+					className="mt-4 space-y-4"
+					onClick={(event) => event.stopPropagation()}
+					onKeyDown={(event) => event.stopPropagation()}
+				>
+					<div className="flex items-center gap-1 text-muted-foreground text-sm">
+						<span>{`id: ${user.id}`}</span>
+						<CopyButton
+							onCopy={async () => {
+								await navigator.clipboard.writeText(user.id);
+								toast.success("User ID copied");
+							}}
+							aria-label="Copy user ID"
+							variant="ghost"
+							size="icon"
+							className="size-7 rounded-md border-0 shadow-none hover:shadow-none"
+						/>
+					</div>
+
+					<div className="flex flex-wrap items-center gap-2">
+						<Button
+							type="button"
+							size="sm"
+							variant="outline"
+							onClick={() => setIsPasswordOpen(true)}
+						>
+							<KeyRound className="size-4" />
+							Set password
+						</Button>
+						<Button
+							type="button"
+							size="sm"
+							variant="outline"
+							onClick={() => setIsImpersonateOpen(true)}
+							disabled={user.id === currentUserId || role === "admin"}
+						>
+							<LogIn className="size-4" />
+							Impersonate
+						</Button>
+					</div>
+
+					<div className="grid gap-3 md:grid-cols-2">
+						<DetailCard label="Email" value={user.email} />
+						<DetailCard label="Name" value={user.name || "No name"} />
+						<DetailCard label="Created" value={formatDate(user.createdAt)} />
+						<DetailCard label="Updated" value={formatDate(user.updatedAt)} />
+						<DetailCard label="Role" value={role} />
+						<DetailCard
+							label="Image"
+							value={typeof user.image === "string" && user.image ? user.image : "No image"}
+						/>
+						{getBanReasonValue(user) ? (
+							<DetailCard
+								label="Ban Reason"
+								value={getBanReasonValue(user) || ""}
+							/>
+						) : null}
+						{getBanExpiresValue(user) ? (
+							<DetailCard
+								label="Ban Expires"
+								value={getBanExpiresValue(user) || ""}
+							/>
+						) : null}
+					</div>
+
+					<div className="grid gap-4 md:grid-cols-2">
+						<ActionCard
+							title="Sessions"
+							description="Inspect and revoke active sessions."
+							className={user.banned ? "" : "md:col-span-2"}
+						>
+							<div className="space-y-3">
+								<div className="flex justify-end gap-2">
+									<Button
+										type="button"
+										size="icon"
+										variant="outline"
+										onClick={() => {
+											void queryClient.invalidateQueries({
+												queryKey: [...USER_SESSIONS_QUERY_KEY, user.id],
+											});
+										}}
+										aria-label="Refresh sessions"
+									>
+										<RefreshCw className="size-4" />
+									</Button>
+									<Button
+										type="button"
+										size="sm"
+										variant="outline"
+										onClick={() => void revokeAllSessionsMutation.mutateAsync()}
+										disabled={revokeAllSessionsMutation.isPending}
+									>
+										{revokeAllSessionsMutation.isPending ? (
+											<Loader2 className="size-4 animate-spin" />
+										) : null}
+										Revoke all
+									</Button>
+								</div>
+								{sessionsQuery.isPending ? (
+									<div className="flex items-center gap-2 text-muted-foreground text-sm">
+										<Loader2 className="size-4 animate-spin" />
+										Loading sessions...
+									</div>
+								) : sessionsQuery.error ? (
+									<Alert variant="destructive">
+										<AlertTitle>Failed to load sessions</AlertTitle>
+										<AlertDescription>
+											{sessionsQuery.error.message}
+										</AlertDescription>
+									</Alert>
+								) : sessionsQuery.data?.length ? (
+									<div className="space-y-2">
+										{sessionsQuery.data.map((session) => (
+											<SessionItem
+												key={session.token}
+												session={session}
+												isPending={
+													revokeOneSessionMutation.isPending &&
+													revokeOneSessionMutation.variables === session.token
+												}
+												onRevoke={() =>
+													void revokeOneSessionMutation.mutateAsync(session.token)
+												}
+											/>
+										))}
+									</div>
+								) : (
+									<p className="text-muted-foreground text-sm">
+										No sessions found.
+									</p>
+								)}
+							</div>
+						</ActionCard>
+
+						{user.banned ? (
+							<ActionCard
+								title="Ban"
+								description="Reverse the current ban."
+							>
+								<div className="flex justify-end">
+									<Button
+										type="button"
+										size="sm"
+										variant="outline"
+										onClick={() => void unbanMutation.mutateAsync()}
+										disabled={unbanMutation.isPending}
+									>
+										{unbanMutation.isPending ? (
+											<Loader2 className="size-4 animate-spin" />
+										) : null}
+										Unban user
+									</Button>
+								</div>
+							</ActionCard>
+						) : null}
+
+					</div>
 				</div>
 			) : null}
+
+			<Dialog
+				open={isPasswordOpen}
+				onOpenChange={(open) => {
+					setIsPasswordOpen(open);
+					if (!open) {
+						setPasswordForm({ newPassword: "" });
+					}
+				}}
+			>
+				<DialogContent
+					onClick={(event) => event.stopPropagation()}
+					onKeyDown={(event) => event.stopPropagation()}
+				>
+					<DialogHeader>
+						<DialogTitle>Set password</DialogTitle>
+						<DialogDescription>
+							Define a new password for {user.email}.
+						</DialogDescription>
+					</DialogHeader>
+
+					<div className="grid gap-3">
+						<Input
+							type="password"
+							value={passwordForm.newPassword}
+							onChange={(event) =>
+								setPasswordForm({ newPassword: event.target.value })
+							}
+							placeholder="New password"
+						/>
+					</div>
+
+					<DialogFooter className="gap-2">
+						<Button
+							type="button"
+							variant="outline"
+							onClick={() => setIsPasswordOpen(false)}
+							disabled={setPasswordMutation.isPending}
+						>
+							Cancel
+						</Button>
+						<Button
+							type="button"
+							onClick={() => {
+								void setPasswordMutation.mutateAsync().then(() => {
+									setIsPasswordOpen(false);
+								});
+							}}
+							disabled={setPasswordMutation.isPending}
+						>
+							{setPasswordMutation.isPending ? (
+								<Loader2 className="size-4 animate-spin" />
+							) : null}
+							Confirm
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
+
+			<Dialog
+				open={isImpersonateOpen}
+				onOpenChange={setIsImpersonateOpen}
+			>
+				<DialogContent
+					onClick={(event) => event.stopPropagation()}
+					onKeyDown={(event) => event.stopPropagation()}
+				>
+					<DialogHeader>
+						<DialogTitle>Impersonate user</DialogTitle>
+						<DialogDescription>
+							You will switch into {user.email}'s session until you stop impersonating.
+						</DialogDescription>
+					</DialogHeader>
+
+					<div className="rounded-xl border border-border/60 bg-background/40 px-4 py-3 text-sm">
+						<p className="font-medium">Confirm impersonation for {user.email}.</p>
+					</div>
+
+					<DialogFooter className="gap-2">
+						<Button
+							type="button"
+							variant="outline"
+							onClick={() => setIsImpersonateOpen(false)}
+							disabled={impersonateMutation.isPending}
+						>
+							Cancel
+						</Button>
+						<Button
+							type="button"
+							onClick={() => {
+								void impersonateMutation.mutateAsync().then(() => {
+									setIsImpersonateOpen(false);
+								});
+							}}
+							disabled={impersonateMutation.isPending}
+						>
+							{impersonateMutation.isPending ? (
+								<Loader2 className="size-4 animate-spin" />
+							) : (
+								<LogIn className="size-4" />
+							)}
+							Confirm
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
+
+			<Dialog
+				open={isEditProfileOpen}
+				onOpenChange={(open) => {
+					setIsEditProfileOpen(open);
+				}}
+			>
+				<DialogContent
+					onClick={(event) => event.stopPropagation()}
+					onKeyDown={(event) => event.stopPropagation()}
+				>
+					<DialogHeader>
+						<DialogTitle>Edit profile</DialogTitle>
+						<DialogDescription>
+							Update editable fields for this user.
+						</DialogDescription>
+					</DialogHeader>
+
+					<div className="grid gap-3">
+						<Input
+							value={profileForm.email}
+							onChange={(event) =>
+								setProfileForm((current) => ({
+									...current,
+									email: event.target.value,
+								}))
+							}
+							placeholder="Email"
+						/>
+						<Input
+							value={profileForm.name}
+							onChange={(event) =>
+								setProfileForm((current) => ({
+									...current,
+									name: event.target.value,
+								}))
+							}
+							placeholder="Name"
+						/>
+						<Input
+							value={profileForm.image}
+							onChange={(event) =>
+								setProfileForm((current) => ({
+									...current,
+									image: event.target.value,
+								}))
+							}
+							placeholder="Image URL"
+						/>
+						<label className="flex items-center gap-2 text-sm">
+							<input
+								type="checkbox"
+								checked={profileForm.emailVerified}
+								onChange={(event) =>
+									setProfileForm((current) => ({
+										...current,
+										emailVerified: event.target.checked,
+									}))
+								}
+							/>
+							Email verified
+						</label>
+					</div>
+
+					<DialogFooter className="gap-2">
+						<Button
+							type="button"
+							variant="outline"
+							onClick={() => setIsEditProfileOpen(false)}
+							disabled={updateUserMutation.isPending}
+						>
+							Cancel
+						</Button>
+						<Button
+							type="button"
+							onClick={() => {
+								void updateUserMutation.mutateAsync().then(() => {
+									setIsEditProfileOpen(false);
+								});
+							}}
+							disabled={updateUserMutation.isPending}
+						>
+							{updateUserMutation.isPending ? (
+								<Loader2 className="size-4 animate-spin" />
+							) : null}
+							Save
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
+		</div>
+	);
+}
+
+function ActionCard({
+	title,
+	description,
+	className,
+	children,
+}: {
+	title: string;
+	description: string;
+	className?: string;
+	children: ReactNode;
+}) {
+	return (
+		<div className={`rounded-xl border border-border/60 bg-background/40 p-4 ${className ?? ""}`}>
+			<div className="space-y-1">
+				<h3 className="font-medium text-sm">{title}</h3>
+				<p className="text-muted-foreground text-sm">{description}</p>
+			</div>
+			<div className="mt-4">{children}</div>
+		</div>
+	);
+}
+
+function SessionItem({
+	session,
+	isPending,
+	onRevoke,
+}: {
+	session: AdminUserSession;
+	isPending: boolean;
+	onRevoke: () => void;
+}) {
+	return (
+		<div className="grid gap-2 rounded-lg border border-border/60 bg-background/30 px-3 py-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
+			<div className="min-w-0 text-sm">
+				<p className="truncate">{session.userAgent || "Unknown device"}</p>
+				<p className="truncate text-muted-foreground text-xs">
+					Expires {formatDate(session.expiresAt)}
+				</p>
+				{session.impersonatedBy ? (
+					<p className="truncate text-muted-foreground text-xs">
+						Impersonated by {session.impersonatedBy}
+					</p>
+				) : null}
+			</div>
+			<Button
+				type="button"
+				size="icon"
+				variant="outline"
+				onClick={onRevoke}
+				disabled={isPending}
+				aria-label="Revoke session"
+			>
+				{isPending ? (
+					<Loader2 className="size-4 animate-spin" />
+				) : (
+					<X className="size-4" />
+				)}
+			</Button>
 		</div>
 	);
 }
