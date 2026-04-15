@@ -49,6 +49,20 @@ import type {
 const MANAGEABLE_ROLES = new Set(["owner", "admin"]);
 const MEMBER_ROLE_OPTIONS = ["member", "admin", "owner"] as const;
 
+function getMemberKey(
+	member: OrganizationMemberSummary,
+	fallback?: string | null,
+) {
+	return (
+		member.id ??
+		member.userId ??
+		member.user?.id ??
+		member.user?.email ??
+		fallback ??
+		null
+	);
+}
+
 function formatMetadata(value: unknown) {
 	if (value == null || value === "") {
 		return "No metadata";
@@ -369,7 +383,7 @@ export function OrganizationRow({
 	) => {
 		if (!member.id || !organization.id || member.role === nextRole) return;
 
-		const memberKey = member.id ?? member.userId ?? member.user?.id ?? null;
+		const memberKey = getMemberKey(member);
 		setMemberActionKey(memberKey);
 		setMemberActionType("role-update");
 
@@ -386,7 +400,7 @@ export function OrganizationRow({
 
 			setMemberRoleOverrides((current) => ({
 				...current,
-				[member.id ?? member.userId ?? member.user?.id ?? ""]: nextRole,
+				[getMemberKey(member, "") ?? ""]: nextRole,
 			}));
 			await queryClient.invalidateQueries({
 				queryKey: ["organization", "details", organization.id],
@@ -409,12 +423,7 @@ export function OrganizationRow({
 		const memberIdOrEmail = member.id || member.user?.email;
 		if (!memberIdOrEmail || !organization.id) return;
 
-		const memberKey =
-			member.id ??
-			member.userId ??
-			member.user?.id ??
-			member.user?.email ??
-			null;
+		const memberKey = getMemberKey(member);
 		setMemberActionKey(memberKey);
 		setMemberActionType("remove");
 
@@ -430,7 +439,7 @@ export function OrganizationRow({
 
 			setMemberRoleOverrides((current) => {
 				const next = { ...current };
-				delete next[member.id ?? member.userId ?? member.user?.id ?? ""];
+				delete next[getMemberKey(member, "") ?? ""];
 				return next;
 			});
 			await queryClient.invalidateQueries({
@@ -533,19 +542,19 @@ export function OrganizationRow({
 	return (
 		<>
 			<div className="flex flex-col gap-4 p-4">
-				<button
-					type="button"
-					onClick={() => setIsExpanded((current) => !current)}
-					className="flex w-full flex-col gap-4 text-left sm:flex-row sm:items-center sm:justify-between"
-				>
-					<div className="min-w-0 flex-1">
+				<div className="flex w-full flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+					<button
+						type="button"
+						onClick={() => setIsExpanded((current) => !current)}
+						className="min-w-0 flex-1 text-left"
+					>
 						<div className="flex flex-wrap items-center gap-2">
 							<h3 className="font-semibold text-base">{organization.name}</h3>
 							{isMember && displayedRole ? (
 								<Badge variant="secondary">{displayedRole}</Badge>
 							) : null}
 						</div>
-					</div>
+					</button>
 
 					<div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
 						<Button
@@ -635,7 +644,7 @@ export function OrganizationRow({
 							<TooltipContent>Delete</TooltipContent>
 						</Tooltip>
 					</div>
-				</button>
+				</div>
 
 				{isExpanded ? (
 					<div className="space-y-3">
@@ -713,14 +722,9 @@ export function OrganizationRow({
 												</div>
 											) : (
 												members.map((member, index) => {
-													const memberKey =
-														member.id ??
-														member.userId ??
-														member.user?.id ??
-														member.user?.email ??
-														String(index);
+													const memberKey = getMemberKey(member, String(index));
 													const resolvedRole =
-														memberRoleOverrides[memberKey] ??
+														memberRoleOverrides[memberKey ?? String(index)] ??
 														member.role ??
 														"member";
 
@@ -732,20 +736,11 @@ export function OrganizationRow({
 															canManageMembers={canManageMembers}
 															isUpdatingRole={
 																memberActionType === "role-update" &&
-																memberActionKey ===
-																	(member.id ??
-																		member.userId ??
-																		member.user?.id ??
-																		null)
+																memberActionKey === getMemberKey(member)
 															}
 															isRemovingMember={
 																memberActionType === "remove" &&
-																memberActionKey ===
-																	(member.id ??
-																		member.userId ??
-																		member.user?.id ??
-																		member.user?.email ??
-																		null)
+																memberActionKey === getMemberKey(member)
 															}
 															onRoleChange={handleUpdateMemberRole}
 															onRequestRemove={setMemberPendingRemoval}

@@ -451,13 +451,13 @@ function ManagementInvitationRow({
 	};
 
 	return (
-		<button
-			type="button"
-			onClick={() => setIsExpanded((current) => !current)}
-			className="flex w-full flex-col gap-4 p-4 text-left"
-		>
+		<div className="flex flex-col gap-4 p-4">
 			<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-				<div className="min-w-0 flex-1">
+				<button
+					type="button"
+					onClick={() => setIsExpanded((current) => !current)}
+					className="min-w-0 flex-1 text-left"
+				>
 					<div className="flex flex-wrap items-center gap-2">
 						<h3 className="truncate font-semibold text-base">
 							{invitation.email}
@@ -470,7 +470,7 @@ function ManagementInvitationRow({
 							{invitation.status}
 						</Badge>
 					</div>
-				</div>
+				</button>
 
 				<div className="flex shrink-0 flex-col gap-2 sm:flex-row sm:items-center">
 					<CopyButton size="sm" variant="outline" onCopy={handleCopyLink}>
@@ -520,7 +520,7 @@ function ManagementInvitationRow({
 					</div>
 				</div>
 			) : null}
-		</button>
+		</div>
 	);
 }
 
