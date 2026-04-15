@@ -7,15 +7,27 @@ export interface OrganizationListItem {
 	createdAt?: Date | string;
 	role?: string | null;
 	memberId?: string | null;
-	members?: unknown[] | null;
+	members?: OrganizationMemberSummary[] | null;
+}
+
+export interface OrganizationMemberSummary {
+	id?: string;
+	userId?: string;
+	role?: string | null;
+	createdAt?: Date | string;
+	user?: {
+		id?: string;
+		name?: string | null;
+		email?: string | null;
+	};
 }
 
 export interface OrganizationListRow extends OrganizationListItem {
-	isMember: boolean;
+	hasExplicitMembership: boolean;
 }
 
 export interface OrganizationDetail extends OrganizationListItem {
-	members?: unknown[];
+	members?: OrganizationMemberSummary[];
 	invitations?: unknown[];
 	teams?: unknown[];
 }

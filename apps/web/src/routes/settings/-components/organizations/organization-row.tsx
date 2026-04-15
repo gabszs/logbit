@@ -1,7 +1,15 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, LogOut, Pencil, ShieldCheck, Trash2 } from "lucide-react";
+import {
+	ChevronDown,
+	Loader2,
+	LogOut,
+	Pencil,
+	RotateCcw,
+	ShieldCheck,
+	Trash2,
+} from "lucide-react";
 import type { MouseEvent } from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Alert, AlertDescription, AlertTitle } from "@/web/components/ui/alert";
 import { Badge } from "@/web/components/ui/badge";
@@ -15,10 +23,25 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/web/components/ui/dialog";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/web/components/ui/select";
 import { authClient } from "@/web/lib/auth-client";
 import { cn } from "@/web/utils/cn";
 import { OrganizationFormDialog } from "./organization-form-dialog";
-import type { OrganizationListItem, OrganizationListRow } from "./types";
+import type {
+	OrganizationDetail,
+	OrganizationListItem,
+	OrganizationListRow,
+	OrganizationMemberSummary,
+} from "./types";
+
+const MANAGEABLE_ROLES = new Set(["owner", "admin"]);
+const MEMBER_ROLE_OPTIONS = ["member", "admin", "owner"] as const;
 
 function formatMetadata(value: unknown) {
 	if (value == null || value === "") {
@@ -78,14 +101,155 @@ function DetailCard({
 	);
 }
 
+function MemberRow({
+	member,
+	canManageMembers,
+	isUpdatingRole,
+	isRemovingMember,
+	onRoleChange,
+	onRemove,
+}: {
+	member: OrganizationMemberSummary;
+	canManageMembers: boolean;
+	isUpdatingRole: boolean;
+	isRemovingMember: boolean;
+	onRoleChange: (member: OrganizationMemberSummary, nextRole: string) => void;
+	onRemove: (member: OrganizationMemberSummary) => void;
+}) {
+	const email = member.user?.email?.trim() || "No email";
+	const role = member.role || "Unknown role";
+
+	return (
+		<div className="grid gap-3 rounded-lg border border-border/60 bg-background/50 px-3 py-3 md:grid-cols-[minmax(0,1fr)_auto_auto] md:items-center">
+			<div className="min-w-0">
+				<p className="truncate text-sm">{email}</p>
+			</div>
+			{canManageMembers ? (
+				<div className="flex flex-wrap items-center justify-end gap-2">
+					<Select
+						value={role}
+						onValueChange={(nextRole) => onRoleChange(member, nextRole)}
+						disabled={isUpdatingRole || isRemovingMember}
+					>
+						<SelectTrigger size="sm" className="min-w-32">
+							<SelectValue placeholder="Select role" />
+						</SelectTrigger>
+						<SelectContent>
+							{MEMBER_ROLE_OPTIONS.map((option) => (
+								<SelectItem key={option} value={option}>
+									{option}
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
+
+					<Button
+						type="button"
+						size="sm"
+						variant="outline"
+						onClick={(event: MouseEvent<HTMLButtonElement>) => {
+							event.stopPropagation();
+							onRemove(member);
+						}}
+						disabled={isUpdatingRole || isRemovingMember}
+					>
+						{isRemovingMember ? (
+							<>
+								<Loader2 className="size-4 animate-spin" />
+								Removing...
+							</>
+						) : (
+							<>
+								<Trash2 className="size-4" />
+								Remove
+							</>
+						)}
+					</Button>
+				</div>
+			) : (
+				<div className="text-muted-foreground text-sm">{role}</div>
+			)}
+		</div>
+	);
+}
+
 type OrganizationRowProps = {
 	activeOrganizationId?: string | null;
+	currentUserId?: string | null;
 	onRefresh: () => Promise<void>;
 	organization: OrganizationListRow;
 };
 
+type MembershipState = "member" | "not-member" | "checking" | "unavailable";
+
+function getDisplayedRole({
+	details,
+	currentUserId,
+	fallbackRole,
+}: {
+	details?: OrganizationDetail;
+	currentUserId?: string | null;
+	fallbackRole?: string | null;
+}) {
+	const currentMember = details?.members?.find((member) => {
+		return member.userId === currentUserId || member.user?.id === currentUserId;
+	});
+
+	return currentMember?.role || fallbackRole || null;
+}
+
+function isCurrentUserMember(
+	members: OrganizationMemberSummary[] | null | undefined,
+	currentUserId: string | null | undefined,
+) {
+	if (!currentUserId || !members?.length) return false;
+
+	return members.some((member) => {
+		return member.userId === currentUserId || member.user?.id === currentUserId;
+	});
+}
+
+function getMembershipState({
+	currentUserId,
+	detailsError,
+	detailsPending,
+	details,
+	hasExplicitMembership,
+	isActive,
+}: {
+	currentUserId?: string | null;
+	detailsError: boolean;
+	detailsPending: boolean;
+	details?: OrganizationDetail;
+	hasExplicitMembership: boolean;
+	isActive: boolean;
+}): MembershipState {
+	if (!currentUserId) return "unavailable";
+
+	if (details?.members) {
+		return isCurrentUserMember(details.members, currentUserId)
+			? "member"
+			: "not-member";
+	}
+
+	if (hasExplicitMembership || isActive) {
+		return "member";
+	}
+
+	if (detailsPending) {
+		return "checking";
+	}
+
+	if (detailsError) {
+		return "unavailable";
+	}
+
+	return "checking";
+}
+
 export function OrganizationRow({
 	activeOrganizationId,
+	currentUserId,
 	onRefresh,
 	organization,
 }: OrganizationRowProps) {
@@ -94,18 +258,26 @@ export function OrganizationRow({
 	const [isDeleteOpen, setIsDeleteOpen] = useState(false);
 	const [isDeletePending, setIsDeletePending] = useState(false);
 	const [isEditOpen, setIsEditOpen] = useState(false);
+	const [isMembersExpanded, setIsMembersExpanded] = useState(false);
+	const [memberActionKey, setMemberActionKey] = useState<string | null>(null);
+	const [memberActionType, setMemberActionType] = useState<
+		"role-update" | "remove" | null
+	>(null);
 	const [isSetActivePending, setIsSetActivePending] = useState(false);
 	const [isLeavePending, setIsLeavePending] = useState(false);
+	const isActive = organization.id === activeOrganizationId;
 
-	const detailsQuery = useQuery({
+	const detailsQuery = useQuery<OrganizationDetail>({
 		queryKey: ["organization", "details", organization.id],
-		enabled: isExpanded,
+		enabled: Boolean(currentUserId),
 		retry: false,
 		queryFn: async () => {
 			const { data, error } = await authClient.organization.getFullOrganization(
 				{
-					organizationId: organization.id,
-					membersLimit: 1,
+					query: {
+						organizationId: organization.id,
+						membersLimit: 100,
+					},
 				},
 			);
 
@@ -120,12 +292,140 @@ export function OrganizationRow({
 			return data;
 		},
 	});
+	const currentMemberFromDetails = detailsQuery.data?.members?.find(
+		(member) => {
+			return (
+				member.userId === currentUserId || member.user?.id === currentUserId
+			);
+		},
+	);
+	const activeMemberRoleQuery = useQuery({
+		queryKey: ["organization", "active-member-role", organization.id],
+		enabled:
+			Boolean(currentUserId) &&
+			isActive &&
+			!currentMemberFromDetails?.role &&
+			isExpanded,
+		retry: false,
+		queryFn: async () => {
+			const { data, error } =
+				await authClient.organization.getActiveMemberRole();
 
-	const isActive = organization.id === activeOrganizationId;
+			if (error) {
+				throw new Error(error.message || "Failed to load active member role");
+			}
+
+			return data?.role ?? null;
+		},
+	});
+	const membershipState = getMembershipState({
+		currentUserId,
+		detailsError: detailsQuery.isError,
+		detailsPending: detailsQuery.isPending,
+		details: detailsQuery.data,
+		hasExplicitMembership: organization.hasExplicitMembership,
+		isActive,
+	});
+	const isMember = membershipState === "member";
+	const displayedRole = getDisplayedRole({
+		details: detailsQuery.data,
+		currentUserId,
+		fallbackRole:
+			currentMemberFromDetails?.role ??
+			activeMemberRoleQuery.data ??
+			organization.role,
+	});
 	const editableOrganization: OrganizationListItem = {
 		...organization,
 		logo: detailsQuery.data?.logo ?? organization.logo,
 		metadata: detailsQuery.data?.metadata ?? organization.metadata,
+	};
+	const members = detailsQuery.data?.members ?? [];
+	const membersCount = members.length;
+	const canManageMembers = MANAGEABLE_ROLES.has(String(displayedRole ?? ""));
+
+	useEffect(() => {
+		if (!isExpanded) {
+			setIsMembersExpanded(false);
+		}
+	}, [isExpanded]);
+
+	const handleUpdateMemberRole = async (
+		member: OrganizationMemberSummary,
+		nextRole: string,
+	) => {
+		if (!member.id || !organization.id || member.role === nextRole) return;
+
+		const memberKey = member.id ?? member.userId ?? member.user?.id ?? null;
+		setMemberActionKey(memberKey);
+		setMemberActionType("role-update");
+
+		try {
+			const { error } = await authClient.organization.updateMemberRole({
+				memberId: member.id,
+				role: nextRole,
+				organizationId: organization.id,
+			});
+
+			if (error) {
+				throw new Error(error.message || "Failed to update member role");
+			}
+
+			await queryClient.invalidateQueries({
+				queryKey: ["organization", "details", organization.id],
+			});
+			await queryClient.invalidateQueries({
+				queryKey: ["better-auth", "organizations", "list"],
+			});
+			toast.success("Member role updated");
+		} catch (error) {
+			const message =
+				error instanceof Error ? error.message : "Failed to update member role";
+			toast.error(message);
+		} finally {
+			setMemberActionKey(null);
+			setMemberActionType(null);
+		}
+	};
+
+	const handleRemoveMember = async (member: OrganizationMemberSummary) => {
+		const memberIdOrEmail = member.id || member.user?.email;
+		if (!memberIdOrEmail || !organization.id) return;
+
+		const memberKey =
+			member.id ??
+			member.userId ??
+			member.user?.id ??
+			member.user?.email ??
+			null;
+		setMemberActionKey(memberKey);
+		setMemberActionType("remove");
+
+		try {
+			const { error } = await authClient.organization.removeMember({
+				memberIdOrEmail,
+				organizationId: organization.id,
+			});
+
+			if (error) {
+				throw new Error(error.message || "Failed to remove member");
+			}
+
+			await queryClient.invalidateQueries({
+				queryKey: ["organization", "details", organization.id],
+			});
+			await queryClient.invalidateQueries({
+				queryKey: ["better-auth", "organizations", "list"],
+			});
+			toast.success("Member removed");
+		} catch (error) {
+			const message =
+				error instanceof Error ? error.message : "Failed to remove member";
+			toast.error(message);
+		} finally {
+			setMemberActionKey(null);
+			setMemberActionType(null);
+		}
 	};
 
 	const handleSetActive = async () => {
@@ -208,18 +508,18 @@ export function OrganizationRow({
 
 	return (
 		<>
-			<button
-				type="button"
-				onClick={() => setIsExpanded((current) => !current)}
-				className="flex w-full flex-col gap-4 p-4 text-left"
-			>
-				<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+			<div className="flex flex-col gap-4 p-4">
+				<button
+					type="button"
+					onClick={() => setIsExpanded((current) => !current)}
+					className="flex w-full flex-col gap-4 text-left sm:flex-row sm:items-center sm:justify-between"
+				>
 					<div className="min-w-0 flex-1">
 						<div className="flex flex-wrap items-center gap-2">
 							<h3 className="font-semibold text-base">{organization.name}</h3>
-							<Badge variant={organization.isMember ? "secondary" : "outline"}>
-								{organization.isMember ? "Member" : "Not a member"}
-							</Badge>
+							{isMember && displayedRole ? (
+								<Badge variant="secondary">{displayedRole}</Badge>
+							) : null}
 						</div>
 					</div>
 
@@ -232,7 +532,7 @@ export function OrganizationRow({
 								event.stopPropagation();
 								void handleSetActive();
 							}}
-							disabled={isActive || isSetActivePending}
+							disabled={!isMember || isActive || isSetActivePending}
 						>
 							{isSetActivePending ? (
 								<>
@@ -246,6 +546,11 @@ export function OrganizationRow({
 								</>
 							)}
 						</Button>
+						{activeMemberRoleQuery.isFetching ? (
+							<Button type="button" size="sm" variant="ghost" disabled>
+								<RotateCcw className="size-4 animate-spin" />
+							</Button>
+						) : null}
 
 						<Button
 							type="button"
@@ -268,7 +573,7 @@ export function OrganizationRow({
 								event.stopPropagation();
 								void handleLeave();
 							}}
-							disabled={isLeavePending}
+							disabled={!isMember || isLeavePending}
 						>
 							{isLeavePending ? (
 								<>
@@ -283,7 +588,7 @@ export function OrganizationRow({
 							)}
 						</Button>
 					</div>
-				</div>
+				</button>
 
 				{isExpanded ? (
 					<div className="space-y-3">
@@ -334,6 +639,66 @@ export function OrganizationRow({
 										/>
 									</div>
 								</div>
+								<div className="rounded-xl border border-border/70 bg-muted/20">
+									<button
+										type="button"
+										onClick={(event) => {
+											event.stopPropagation();
+											setIsMembersExpanded((current) => !current);
+										}}
+										className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-background/50"
+									>
+										<div className="min-w-0">
+											<p className="font-medium text-sm">Members</p>
+											<p className="text-muted-foreground text-xs">
+												Members: {membersCount}
+											</p>
+										</div>
+										<ChevronDown
+											className={cn(
+												"size-4 shrink-0 text-muted-foreground transition-transform duration-200",
+												isMembersExpanded && "rotate-180",
+											)}
+										/>
+									</button>
+
+									{isMembersExpanded ? (
+										<div className="space-y-2 border-border/60 border-t px-4 py-3">
+											{membersCount === 0 ? (
+												<div className="rounded-lg border border-border/60 border-dashed bg-background/50 px-3 py-4 text-center text-muted-foreground text-sm">
+													No members found.
+												</div>
+											) : (
+												members.map((member, index) => (
+													<MemberRow
+														key={member.userId ?? member.user?.id ?? index}
+														member={member}
+														canManageMembers={canManageMembers}
+														isUpdatingRole={
+															memberActionType === "role-update" &&
+															memberActionKey ===
+																(member.id ??
+																	member.userId ??
+																	member.user?.id ??
+																	null)
+														}
+														isRemovingMember={
+															memberActionType === "remove" &&
+															memberActionKey ===
+																(member.id ??
+																	member.userId ??
+																	member.user?.id ??
+																	member.user?.email ??
+																	null)
+														}
+														onRoleChange={handleUpdateMemberRole}
+														onRemove={handleRemoveMember}
+													/>
+												))
+											)}
+										</div>
+									) : null}
+								</div>
 								<div className="flex justify-end pt-1">
 									<Button
 										type="button"
@@ -352,7 +717,7 @@ export function OrganizationRow({
 						) : null}
 					</div>
 				) : null}
-			</button>
+			</div>
 
 			<OrganizationFormDialog
 				mode="edit"

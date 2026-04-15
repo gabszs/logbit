@@ -47,12 +47,8 @@ export const Route = createFileRoute("/settings/organizations")({
 	errorComponent: SettingsError,
 });
 
-function inferMembership(organization: OrganizationListItem) {
-	if (organization.memberId) return true;
-	if (organization.role) return true;
-	if (Array.isArray(organization.members))
-		return organization.members.length > 0;
-	return false;
+function hasExplicitMembership(organization: OrganizationListItem) {
+	return Boolean(organization.memberId || organization.role);
 }
 
 function OrganizationsSettingsPage() {
@@ -61,6 +57,7 @@ function OrganizationsSettingsPage() {
 	const [isCreateOpen, setIsCreateOpen] = useState(false);
 
 	const activeOrganizationId = auth.session?.session?.activeOrganizationId;
+	const currentUserId = auth.session?.user?.id;
 
 	const organizationsQuery = useQuery(organizationsQueryOptions);
 
@@ -68,7 +65,7 @@ function OrganizationsSettingsPage() {
 		organizationsQuery.data ?? []
 	).map((organization) => ({
 		...organization,
-		isMember: inferMembership(organization),
+		hasExplicitMembership: hasExplicitMembership(organization),
 	}));
 
 	const refreshOrganizations = async () => {
@@ -151,6 +148,7 @@ function OrganizationsSettingsPage() {
 									<OrganizationRow
 										organization={organization}
 										activeOrganizationId={activeOrganizationId}
+										currentUserId={currentUserId}
 										onRefresh={refreshOrganizations}
 									/>
 									{index < organizations.length - 1 ? (
