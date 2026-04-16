@@ -202,11 +202,17 @@ export function TwoFactorSettings() {
 			setUIState("idle");
 			setDisablePassword("");
 			setDisablePasswordError(null);
-			await queryClient.invalidateQueries({
-				queryKey: orpc.profile.get.queryOptions().queryKey,
-			});
-			await profile.refetch();
-			toast.success("Two-factor authentication disabled");
+			try {
+				await refreshProfileState();
+				toast.success("Two-factor authentication disabled");
+			} catch (error) {
+				toast.error(
+					getErrorMessage(
+						error,
+						"Two-factor was disabled, but profile refresh failed. Reload the page.",
+					),
+				);
+			}
 		},
 		onError: (error) => {
 			toast.error(
@@ -220,6 +226,13 @@ export function TwoFactorSettings() {
 		verifyMutation.isPending ||
 		disableMutation.isPending ||
 		isFinalizingEnable;
+
+	const refreshProfileState = async () => {
+		await queryClient.invalidateQueries({
+			queryKey: orpc.profile.get.queryOptions().queryKey,
+		});
+		await profile.refetch();
+	};
 
 	const resetEnableFlow = () => {
 		setSetupPassword("");
@@ -294,13 +307,17 @@ export function TwoFactorSettings() {
 		setBackupCodesError(null);
 		setIsFinalizingEnable(true);
 		try {
-			await queryClient.invalidateQueries({
-				queryKey: orpc.profile.get.queryOptions().queryKey,
-			});
-			await profile.refetch();
+			await refreshProfileState();
 			resetEnableFlow();
 			setUIState("idle");
 			toast.success("Two-factor authentication enabled");
+		} catch (error) {
+			toast.error(
+				getErrorMessage(
+					error,
+					"Two-factor was enabled, but profile refresh failed. Reload the page.",
+				),
+			);
 		} finally {
 			setIsFinalizingEnable(false);
 		}
@@ -357,11 +374,28 @@ export function TwoFactorSettings() {
 
 	const isDialogOpen = uiState !== "idle";
 
-	const closeFlowDialog = () => {
+	const closeFlowDialog = async () => {
 		if (isBusy) return;
+		if (uiState === "enableConfirm" && !backupCodesSaved) {
+			toast.error("Please confirm that you saved your backup codes first");
+			return;
+		}
+		const shouldSyncProfile = uiState === "enableConfirm";
 		resetEnableFlow();
 		resetDisableFlow();
 		setUIState("idle");
+		if (shouldSyncProfile) {
+			try {
+				await refreshProfileState();
+			} catch (error) {
+				toast.error(
+					getErrorMessage(
+						error,
+						"Two-factor status changed, but profile refresh failed. Reload the page.",
+					),
+				);
+			}
+		}
 	};
 
 	const getDialogContentMeta = () => {
@@ -438,7 +472,7 @@ export function TwoFactorSettings() {
 			<Dialog
 				open={isDialogOpen}
 				onOpenChange={(open) => {
-					if (!open) closeFlowDialog();
+					if (!open) void closeFlowDialog();
 				}}
 			>
 				<DialogContent className="sm:max-w-lg" onKeyDown={handleDialogKeyDown}>
@@ -474,7 +508,7 @@ export function TwoFactorSettings() {
 								<Button
 									type="button"
 									variant="outline"
-									onClick={closeFlowDialog}
+									onClick={() => void closeFlowDialog()}
 									disabled={isBusy}
 								>
 									Cancel
@@ -552,7 +586,7 @@ export function TwoFactorSettings() {
 								<Button
 									type="button"
 									variant="outline"
-									onClick={closeFlowDialog}
+									onClick={() => void closeFlowDialog()}
 									disabled={isBusy}
 								>
 									Cancel
@@ -641,7 +675,7 @@ export function TwoFactorSettings() {
 								<Button
 									type="button"
 									variant="outline"
-									onClick={closeFlowDialog}
+									onClick={() => void closeFlowDialog()}
 									disabled={isBusy}
 								>
 									Cancel
