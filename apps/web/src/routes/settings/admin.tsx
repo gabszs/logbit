@@ -25,7 +25,6 @@ import { useAuth } from "@/web/components/auth-provider";
 import { Alert, AlertDescription, AlertTitle } from "@/web/components/ui/alert";
 import { Badge } from "@/web/components/ui/badge";
 import { Button } from "@/web/components/ui/button";
-import { Checkbox } from "@/web/components/ui/checkbox";
 import {
 	Card,
 	CardContent,
@@ -33,6 +32,7 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/web/components/ui/card";
+import { Checkbox } from "@/web/components/ui/checkbox";
 import { CopyButton } from "@/web/components/ui/copy-button";
 import {
 	Dialog,
@@ -553,29 +553,6 @@ function AdminSettingsPage() {
 							/>
 						</div>
 
-						<div className="flex items-start gap-3 rounded-xl border border-border/60 bg-background/40 px-4 py-3">
-							<Checkbox
-								id="admin-ban-permanent"
-								checked={banForm.isPermanent}
-								onCheckedChange={(checked) =>
-									setBanForm((current) => ({
-										...current,
-										isPermanent: checked === true,
-										banExpiresInHours:
-											checked === true ? "" : current.banExpiresInHours,
-									}))
-								}
-								disabled={banMutation.isPending}
-							/>
-							<div className="grid gap-1">
-								<Label htmlFor="admin-ban-permanent">Permanent ban</Label>
-								<p className="text-muted-foreground text-sm">
-									Disable expiration and keep the user banned until manual
-									unban.
-								</p>
-							</div>
-						</div>
-
 						<div className="grid gap-2">
 							<Label htmlFor="admin-ban-expire">Expire in</Label>
 							<Input
@@ -591,6 +568,23 @@ function AdminSettingsPage() {
 								inputMode="numeric"
 								disabled={banMutation.isPending || banForm.isPermanent}
 							/>
+						</div>
+
+						<div className="flex items-center gap-3">
+							<Checkbox
+								id="admin-ban-permanent"
+								checked={banForm.isPermanent}
+								onCheckedChange={(checked) =>
+									setBanForm((current) => ({
+										...current,
+										isPermanent: checked === true,
+										banExpiresInHours:
+											checked === true ? "" : current.banExpiresInHours,
+									}))
+								}
+								disabled={banMutation.isPending}
+							/>
+							<Label htmlFor="admin-ban-permanent">Permanent ban</Label>
 						</div>
 					</div>
 
@@ -791,6 +785,7 @@ function AdminUserRow({
 	const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
 	const [isPasswordOpen, setIsPasswordOpen] = useState(false);
 	const [isImpersonateOpen, setIsImpersonateOpen] = useState(false);
+	const [isUnbanOpen, setIsUnbanOpen] = useState(false);
 	const [profileForm, setProfileForm] = useState<AdminEditableUserForm>({
 		email: user.email,
 		name: user.name ?? "",
@@ -949,22 +944,19 @@ function AdminUserRow({
 		},
 	});
 
+	const openUnbanConfirmation = () => {
+		setIsUnbanOpen(true);
+	};
+
 	return (
-		<div
-			className="px-4 py-3 transition-colors"
-			onClick={onToggleExpanded}
-			onKeyDown={(event) => {
-				if (event.key === "Enter" || event.key === " ") {
-					event.preventDefault();
-					onToggleExpanded();
-				}
-			}}
-			role="button"
-			tabIndex={0}
-			aria-expanded={isExpanded}
-		>
+		<div className="px-4 py-3 transition-colors">
 			<div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
-				<div className="min-w-0">
+				<button
+					type="button"
+					onClick={onToggleExpanded}
+					aria-expanded={isExpanded}
+					className="min-w-0 rounded-md text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+				>
 					<div className="flex flex-wrap items-center gap-2">
 						<p className="truncate font-medium text-sm">{user.email}</p>
 						{user.banned ? (
@@ -973,36 +965,31 @@ function AdminUserRow({
 							<Badge variant="outline">verified</Badge>
 						) : null}
 					</div>
-				</div>
+				</button>
 
 				<div className="flex flex-wrap items-center justify-end gap-2">
-					<div
-						onClick={(event) => event.stopPropagation()}
-						onKeyDown={(event) => event.stopPropagation()}
-					>
-						<Select
-							value={role}
-							onValueChange={(value) => {
-								if (!isAdminRole(value)) {
-									return;
-								}
+					<Select
+						value={role}
+						onValueChange={(value) => {
+							if (!isAdminRole(value)) {
+								return;
+							}
 
-								onRoleChange(value);
-							}}
-							disabled={isUpdatingRole || user.id === currentUserId}
-						>
-							<SelectTrigger size="sm" className="min-w-32">
-								<SelectValue placeholder="Select role" />
-							</SelectTrigger>
-							<SelectContent>
-								{ADMIN_ROLE_OPTIONS.map((option) => (
-									<SelectItem key={option} value={option}>
-										{option}
-									</SelectItem>
-								))}
-							</SelectContent>
-						</Select>
-					</div>
+							onRoleChange(value);
+						}}
+						disabled={isUpdatingRole || user.id === currentUserId}
+					>
+						<SelectTrigger size="sm" className="min-w-32">
+							<SelectValue placeholder="Select role" />
+						</SelectTrigger>
+						<SelectContent>
+							{ADMIN_ROLE_OPTIONS.map((option) => (
+								<SelectItem key={option} value={option}>
+									{option}
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
 
 					<Tooltip>
 						<TooltipTrigger asChild>
@@ -1010,8 +997,7 @@ function AdminUserRow({
 								type="button"
 								size="icon"
 								variant="outline"
-								onClick={(event) => {
-									event.stopPropagation();
+								onClick={() => {
 									setIsEditProfileOpen(true);
 								}}
 							>
@@ -1027,16 +1013,27 @@ function AdminUserRow({
 								type="button"
 								size="icon"
 								variant="outline"
-								onClick={(event) => {
-									event.stopPropagation();
+								onClick={() => {
+									if (user.banned) {
+										openUnbanConfirmation();
+										return;
+									}
+
 									onBan();
 								}}
-								disabled={user.id === currentUserId}
+								disabled={user.id === currentUserId || unbanMutation.isPending}
+								aria-label={user.banned ? "Unban user" : "Ban user"}
 							>
-								<Ban className="size-4" />
+								{unbanMutation.isPending ? (
+									<Loader2 className="size-4 animate-spin" />
+								) : (
+									<Ban className="size-4" />
+								)}
 							</Button>
 						</TooltipTrigger>
-						<TooltipContent>Ban user</TooltipContent>
+						<TooltipContent>
+							{user.banned ? "Unban user" : "Ban user"}
+						</TooltipContent>
 					</Tooltip>
 
 					<Tooltip>
@@ -1045,8 +1042,7 @@ function AdminUserRow({
 								type="button"
 								size="icon"
 								variant="outline"
-								onClick={(event) => {
-									event.stopPropagation();
+								onClick={() => {
 									onDelete();
 								}}
 								disabled={isDeleting || user.id === currentUserId}
@@ -1065,11 +1061,7 @@ function AdminUserRow({
 			</div>
 
 			{isExpanded ? (
-				<div
-					className="mt-4 space-y-4"
-					onClick={(event) => event.stopPropagation()}
-					onKeyDown={(event) => event.stopPropagation()}
-				>
+				<div className="mt-4 space-y-4">
 					<div className="flex items-center gap-1 text-muted-foreground text-sm">
 						<span>{`id: ${user.id}`}</span>
 						<CopyButton
@@ -1138,10 +1130,9 @@ function AdminUserRow({
 						<ActionCard
 							title="Sessions"
 							description="Inspect and revoke active sessions."
-							className={user.banned ? "" : "md:col-span-2"}
-						>
-							<div className="space-y-3">
-								<div className="flex justify-end gap-2">
+							className="md:col-span-2"
+							actions={
+								<div className="flex items-center gap-2">
 									<Button
 										type="button"
 										size="icon"
@@ -1168,6 +1159,9 @@ function AdminUserRow({
 										Revoke all
 									</Button>
 								</div>
+							}
+						>
+							<div className="space-y-3">
 								{sessionsQuery.isPending ? (
 									<div className="flex items-center gap-2 text-muted-foreground text-sm">
 										<Loader2 className="size-4 animate-spin" />
@@ -1205,25 +1199,6 @@ function AdminUserRow({
 								)}
 							</div>
 						</ActionCard>
-
-						{user.banned ? (
-							<ActionCard title="Ban" description="Reverse the current ban.">
-								<div className="flex justify-end">
-									<Button
-										type="button"
-										size="sm"
-										variant="outline"
-										onClick={() => void unbanMutation.mutateAsync()}
-										disabled={unbanMutation.isPending}
-									>
-										{unbanMutation.isPending ? (
-											<Loader2 className="size-4 animate-spin" />
-										) : null}
-										Unban user
-									</Button>
-								</div>
-							</ActionCard>
-						) : null}
 					</div>
 				</div>
 			) : null}
@@ -1334,6 +1309,49 @@ function AdminUserRow({
 				</DialogContent>
 			</Dialog>
 
+			<Dialog open={isUnbanOpen} onOpenChange={setIsUnbanOpen}>
+				<DialogContent
+					onClick={(event) => event.stopPropagation()}
+					onKeyDown={(event) => event.stopPropagation()}
+				>
+					<DialogHeader>
+						<DialogTitle>Unban user</DialogTitle>
+						<DialogDescription>
+							This will restore access for {user.email}.
+						</DialogDescription>
+					</DialogHeader>
+
+					<div className="rounded-xl border border-border/60 bg-background/40 px-4 py-3 text-sm">
+						<p className="font-medium">Confirm unban for {user.email}.</p>
+					</div>
+
+					<DialogFooter className="gap-2">
+						<Button
+							type="button"
+							variant="outline"
+							onClick={() => setIsUnbanOpen(false)}
+							disabled={unbanMutation.isPending}
+						>
+							Cancel
+						</Button>
+						<Button
+							type="button"
+							onClick={() => {
+								void unbanMutation.mutateAsync().then(() => {
+									setIsUnbanOpen(false);
+								});
+							}}
+							disabled={unbanMutation.isPending}
+						>
+							{unbanMutation.isPending ? (
+								<Loader2 className="size-4 animate-spin" />
+							) : null}
+							Confirm
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
+
 			<Dialog
 				open={isEditProfileOpen}
 				onOpenChange={(open) => {
@@ -1431,20 +1449,25 @@ function ActionCard({
 	title,
 	description,
 	className,
+	actions,
 	children,
 }: {
 	title: string;
 	description: string;
 	className?: string;
+	actions?: ReactNode;
 	children: ReactNode;
 }) {
 	return (
 		<div
 			className={`rounded-xl border border-border/60 bg-background/40 p-4 ${className ?? ""}`}
 		>
-			<div className="space-y-1">
-				<h3 className="font-medium text-sm">{title}</h3>
-				<p className="text-muted-foreground text-sm">{description}</p>
+			<div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+				<div className="space-y-1">
+					<h3 className="font-medium text-sm">{title}</h3>
+					<p className="text-muted-foreground text-sm">{description}</p>
+				</div>
+				{actions ? <div className="shrink-0">{actions}</div> : null}
 			</div>
 			<div className="mt-4">{children}</div>
 		</div>

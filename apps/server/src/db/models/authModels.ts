@@ -26,6 +26,7 @@ export const users = pgTable("users", {
 	banned: boolean("banned").default(false),
 	banReason: text("ban_reason"),
 	banExpires: timestamp("ban_expires"),
+	twoFactorEnabled: boolean("two_factor_enabled").default(false),
 });
 
 export const sessions = pgTable(
@@ -45,8 +46,8 @@ export const sessions = pgTable(
 		userId: uuid("user_id")
 			.notNull()
 			.references(() => users.id, { onDelete: "cascade" }),
-		activeOrganizationId: uuid("active_organization_id"),
 		impersonatedBy: uuid("impersonated_by"),
+		activeOrganizationId: uuid("active_organization_id"),
 	},
 	(table) => [index("sessions_userId_idx").on(table.userId)],
 );
@@ -189,12 +190,31 @@ export const invitations = pgTable(
 	],
 );
 
+export const twoFactors = pgTable(
+	"two_factors",
+	{
+		id: uuid("id")
+			.primaryKey()
+			.$defaultFn(() => Bun.randomUUIDv7()),
+		secret: text("secret").notNull(),
+		backupCodes: text("backup_codes").notNull(),
+		userId: uuid("user_id")
+			.notNull()
+			.references(() => users.id, { onDelete: "cascade" }),
+	},
+	(table) => [
+		index("twoFactors_secret_idx").on(table.secret),
+		index("twoFactors_userId_idx").on(table.userId),
+	],
+);
+
 export const userRelations = relations(users, ({ many }) => ({
 	sessions: many(sessions),
 	accounts: many(accounts),
 	apikeys: many(apikeys),
 	members: many(members),
 	invitations: many(invitations),
+	twoFactors: many(twoFactors),
 }));
 
 export const sessionRelations = relations(sessions, ({ one }) => ({
@@ -241,6 +261,13 @@ export const invitationRelations = relations(invitations, ({ one }) => ({
 	}),
 	users: one(users, {
 		fields: [invitations.inviterId],
+		references: [users.id],
+	}),
+}));
+
+export const twoFactorRelations = relations(twoFactors, ({ one }) => ({
+	users: one(users, {
+		fields: [twoFactors.userId],
 		references: [users.id],
 	}),
 }));

@@ -6,6 +6,7 @@ import { DeleteAccountButton } from "./-components/profile/delete-account-button
 import { ProfileInfo } from "./-components/profile/profile-info";
 import { SessionManager } from "./-components/profile/session-manager";
 import { SignOutButton } from "./-components/profile/sign-out-button";
+import { TwoFactorSettings } from "./-components/profile/two-factor-settings";
 import { SettingsError } from "./-components/settings-error";
 import { SettingsSectionSkeleton } from "./-components/settings-section-skeleton";
 
@@ -28,6 +29,10 @@ function ProfilePage() {
 		<Card>
 			<CardContent className="space-y-6">
 				<ProfileInfo />
+
+				<Separator />
+
+				<TwoFactorSettings />
 
 				<Separator />
 

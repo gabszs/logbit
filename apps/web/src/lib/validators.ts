@@ -26,3 +26,21 @@ export const signInOtpSchema = z.object({
 		.min(6, "Verification code must be 6 digits")
 		.max(6, "Verification code must be 6 digits"),
 });
+
+export const twoFactorEnableSchema = z.object({
+	password: z.string().min(8, "Password must be at least 8 characters"),
+});
+
+export const twoFactorDisableSchema = z.object({
+	password: z.string().min(8, "Password must be at least 8 characters"),
+});
+
+export const twoFactorVerifySchema = z.object({
+	code: z.string().regex(/^\d{6}$/, "Verification code must be 6 digits"),
+});
+
+export const twoFactorBackupConfirmSchema = z.object({
+	backupCodesSaved: z.boolean().refine((value) => value, {
+		message: "Please confirm that you saved your backup codes",
+	}),
+});

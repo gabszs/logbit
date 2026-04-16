@@ -1,11 +1,16 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { admin, apiKey, openAPI } from "better-auth/plugins";
-import { eq } from "drizzle-orm";
+import { APIError, createAuthMiddleware } from "better-auth/api";
+import {
+	admin,
+	apiKey,
+	openAPI,
+	organization,
+	twoFactor,
+} from "better-auth/plugins";
 import { settings } from "@/env";
 import "dotenv/config";
-import { APIError, createAuthMiddleware } from "better-auth/api";
-import { organization } from "better-auth/plugins";
+import { eq } from "drizzle-orm";
 import { db } from "../db";
 import { models } from "../db/models";
 
@@ -131,7 +136,7 @@ export const auth = betterAuth({
 	// ...(settings.REDIS_URL && {
 	// 	secondaryStorage: {
 	// 		get: async (key: string): Promise<string | null> => {
-	// 			return redis.get(key);
+	// 			return await redis.get(key);
 	// 		},
 	// 		set: async (key: string, value: string, ttl?: number): Promise<void> => {
 	// 			await redis.set(key, value);
@@ -172,6 +177,12 @@ export const auth = betterAuth({
 							"Only platform admins can create organizations. Check AUTH_ALLOWED_EMAIL_DOMAINS and AUTH_ALLOW_MULTIPLE_ROOT_USERS.",
 					});
 				},
+			},
+		}),
+		twoFactor({
+			issuer: "logbit",
+			backupCodeOptions: {
+				storeBackupCodes: "encrypted",
 			},
 		}),
 		openAPI({

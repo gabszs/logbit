@@ -43,6 +43,13 @@
 			"when": 1776060517608,
 			"tag": "0005_adding organaziation on user settings",
 			"breakpoints": true
+		},
+		{
+			"idx": 6,
+			"version": "7",
+			"when": 1776312441804,
+			"tag": "0006_adding totp two factor auth",
+			"breakpoints": true
 		}
 	]
 }
