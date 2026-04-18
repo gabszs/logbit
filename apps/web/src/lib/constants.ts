@@ -35,14 +35,9 @@ export const SETTINGS_NAV_ITEMS = [
 		description: "View session details",
 	},
 	{
-		to: "/settings/admin",
-		label: "Admin",
-		description: "Manage platform users and sessions",
-	},
-	{
-		to: "/settings/invitations",
-		label: "Invitations",
-		description: "Review pending organization invites",
+		to: "/settings/appearance",
+		label: "Appearance",
+		description: "Change theme & UI density",
 	},
 	{
 		to: "/settings/organizations",
@@ -50,9 +45,14 @@ export const SETTINGS_NAV_ITEMS = [
 		description: "Create and manage organizations",
 	},
 	{
-		to: "/settings/appearance",
-		label: "Appearance",
-		description: "Change theme & UI density",
+		to: "/settings/invitations",
+		label: "Invitations",
+		description: "Review pending organization invites",
+	},
+	{
+		to: "/settings/admin",
+		label: "Admin",
+		description: "Manage platform users and sessions",
 	},
 ] as const;
 

@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { ShieldCheck, ShieldX } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
 import { type KeyboardEvent as ReactKeyboardEvent, useState } from "react";
 import QRCode from "react-qr-code";
 import { toast } from "sonner";
@@ -438,35 +438,13 @@ export function TwoFactorSettings() {
 	return (
 		<div className="space-y-4">
 			<div className="flex items-start justify-between gap-4">
-				<div className="space-y-1">
-					<h2 className="font-semibold text-base">Two-factor authentication</h2>
-					<p className="text-muted-foreground text-sm">
-						Protect your account using a time-based code from an authenticator
-						app.
-					</p>
-				</div>
+				<h2 className="font-semibold text-base">Two-factor authentication</h2>
 				<Switch
 					checked={isTwoFactorEnabled}
 					onCheckedChange={handleToggleChange}
 					disabled={isBusy || !profile.data || uiState !== "idle"}
 					aria-label="Toggle two-factor authentication"
 				/>
-			</div>
-
-			<div className="flex items-center gap-2 text-sm">
-				{isTwoFactorEnabled ? (
-					<>
-						<ShieldCheck className="size-4 text-emerald-500" />
-						<span className="text-emerald-600">Two-factor is enabled</span>
-					</>
-				) : (
-					<>
-						<ShieldX className="size-4 text-muted-foreground" />
-						<span className="text-muted-foreground">
-							Two-factor is disabled
-						</span>
-					</>
-				)}
 			</div>
 
 			<Dialog

@@ -1,7 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import {
-	BookText,
 	CircleHelp,
 	House,
 	LogOut,
@@ -61,7 +60,7 @@ export function AppSidebar() {
 	const isAuthenticated = Boolean(auth.session?.user);
 
 	const navigationItems: Array<{
-		to: "/" | "/settings/profile";
+		to: "/";
 		label: string;
 		icon: LucideIcon;
 		isActive: boolean;
@@ -71,12 +70,6 @@ export function AppSidebar() {
 			label: "Home",
 			icon: House,
 			isActive: pathname === "/",
-		},
-		{
-			to: "/settings/profile",
-			label: "Settings",
-			icon: Settings,
-			isActive: pathname.startsWith("/settings"),
 		},
 	];
 
@@ -179,28 +172,17 @@ export function AppSidebar() {
 					isExpanded ? "items-start" : "items-center",
 				)}
 			>
-				{/* Help menu */}
-				<DropdownMenu>
-					<DropdownMenuTrigger asChild>
-						<Button
-							variant="ghost"
-							size={isExpanded ? "default" : "icon"}
-							className={cn(
-								"size-9",
-								isExpanded && "h-9 w-full justify-start gap-2",
-							)}
-						>
-							<CircleHelp className="size-4 shrink-0" />
-							{isExpanded && <span className="text-sm">Help</span>}
-						</Button>
-					</DropdownMenuTrigger>
-					<DropdownMenuContent side="right" align="start" className="w-48">
-						<DropdownMenuItem onClick={() => navigate({ to: "/docs" })}>
-							<BookText className="size-4" />
-							<span>Documentation</span>
-						</DropdownMenuItem>
-					</DropdownMenuContent>
-				</DropdownMenu>
+				<Button
+					asChild
+					variant="ghost"
+					size={isExpanded ? "default" : "icon"}
+					className={cn("size-9", isExpanded && "h-9 w-full justify-start gap-2")}
+				>
+					<Link to="/docs" preload="intent">
+						<CircleHelp className="size-4 shrink-0" />
+						{isExpanded && <span className="text-sm">Docs</span>}
+					</Link>
+				</Button>
 
 				{isAuthenticated ? (
 					<DropdownMenu>
@@ -257,7 +239,7 @@ export function AppSidebar() {
 							</DropdownMenuItem>
 							<DropdownMenuSeparator />
 							<DropdownMenuItem
-								onClick={() => navigate({ to: "/settings/appearance" })}
+								onClick={() => navigate({ to: "/settings/profile" })}
 							>
 								<Settings className="size-4" />
 								<span>Settings</span>

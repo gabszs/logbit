@@ -17,6 +17,7 @@ import { Route as SettingsProfileRouteImport } from './routes/settings/profile'
 import { Route as SettingsOrganizationsRouteImport } from './routes/settings/organizations'
 import { Route as SettingsAppearanceRouteImport } from './routes/settings/appearance'
 import { Route as SettingsAdminRouteImport } from './routes/settings/admin'
+import { Route as AuthTwoFactorRouteImport } from './routes/auth/two-factor'
 import { Route as AuthSignUpRouteImport } from './routes/auth/sign-up'
 import { Route as AuthSignInRouteImport } from './routes/auth/sign-in'
 import { Route as SettingsInvitationsRouteRouteImport } from './routes/settings/invitations/route'
@@ -62,6 +63,11 @@ const SettingsAdminRoute = SettingsAdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => SettingsRouteRoute,
 } as any)
+const AuthTwoFactorRoute = AuthTwoFactorRouteImport.update({
+  id: '/auth/two-factor',
+  path: '/auth/two-factor',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthSignUpRoute = AuthSignUpRouteImport.update({
   id: '/auth/sign-up',
   path: '/auth/sign-up',
@@ -93,6 +99,7 @@ export interface FileRoutesByFullPath {
   '/settings/invitations': typeof SettingsInvitationsRouteRouteWithChildren
   '/auth/sign-in': typeof AuthSignInRoute
   '/auth/sign-up': typeof AuthSignUpRoute
+  '/auth/two-factor': typeof AuthTwoFactorRoute
   '/settings/admin': typeof SettingsAdminRoute
   '/settings/appearance': typeof SettingsAppearanceRoute
   '/settings/organizations': typeof SettingsOrganizationsRoute
@@ -107,6 +114,7 @@ export interface FileRoutesByTo {
   '/settings/invitations': typeof SettingsInvitationsRouteRouteWithChildren
   '/auth/sign-in': typeof AuthSignInRoute
   '/auth/sign-up': typeof AuthSignUpRoute
+  '/auth/two-factor': typeof AuthTwoFactorRoute
   '/settings/admin': typeof SettingsAdminRoute
   '/settings/appearance': typeof SettingsAppearanceRoute
   '/settings/organizations': typeof SettingsOrganizationsRoute
@@ -122,6 +130,7 @@ export interface FileRoutesById {
   '/settings/invitations': typeof SettingsInvitationsRouteRouteWithChildren
   '/auth/sign-in': typeof AuthSignInRoute
   '/auth/sign-up': typeof AuthSignUpRoute
+  '/auth/two-factor': typeof AuthTwoFactorRoute
   '/settings/admin': typeof SettingsAdminRoute
   '/settings/appearance': typeof SettingsAppearanceRoute
   '/settings/organizations': typeof SettingsOrganizationsRoute
@@ -138,6 +147,7 @@ export interface FileRouteTypes {
     | '/settings/invitations'
     | '/auth/sign-in'
     | '/auth/sign-up'
+    | '/auth/two-factor'
     | '/settings/admin'
     | '/settings/appearance'
     | '/settings/organizations'
@@ -152,6 +162,7 @@ export interface FileRouteTypes {
     | '/settings/invitations'
     | '/auth/sign-in'
     | '/auth/sign-up'
+    | '/auth/two-factor'
     | '/settings/admin'
     | '/settings/appearance'
     | '/settings/organizations'
@@ -166,6 +177,7 @@ export interface FileRouteTypes {
     | '/settings/invitations'
     | '/auth/sign-in'
     | '/auth/sign-up'
+    | '/auth/two-factor'
     | '/settings/admin'
     | '/settings/appearance'
     | '/settings/organizations'
@@ -180,6 +192,7 @@ export interface RootRouteChildren {
   PrivacyRoute: typeof PrivacyRoute
   AuthSignInRoute: typeof AuthSignInRoute
   AuthSignUpRoute: typeof AuthSignUpRoute
+  AuthTwoFactorRoute: typeof AuthTwoFactorRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -239,6 +252,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/settings/admin'
       preLoaderRoute: typeof SettingsAdminRouteImport
       parentRoute: typeof SettingsRouteRoute
+    }
+    '/auth/two-factor': {
+      id: '/auth/two-factor'
+      path: '/auth/two-factor'
+      fullPath: '/auth/two-factor'
+      preLoaderRoute: typeof AuthTwoFactorRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/auth/sign-up': {
       id: '/auth/sign-up'
@@ -312,6 +332,7 @@ const rootRouteChildren: RootRouteChildren = {
   PrivacyRoute: PrivacyRoute,
   AuthSignInRoute: AuthSignInRoute,
   AuthSignUpRoute: AuthSignUpRoute,
+  AuthTwoFactorRoute: AuthTwoFactorRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

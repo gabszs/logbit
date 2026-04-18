@@ -13,11 +13,7 @@ export function sanitizeRedirect(rawRedirect: string | undefined): string {
 		return FALLBACK_REDIRECT;
 	}
 
-	if (rawRedirect.startsWith("/auth/sign-in")) {
-		return FALLBACK_REDIRECT;
-	}
-
-	if (rawRedirect.startsWith("/auth/sign-up")) {
+	if (rawRedirect === "/auth" || rawRedirect.startsWith("/auth/")) {
 		return FALLBACK_REDIRECT;
 	}
 

@@ -11,10 +11,17 @@ import { useAppForm } from "@/web/components/ui/tanstack-form";
 import { authClient } from "@/web/lib/auth-client";
 import { SIGN_IN_FORM } from "@/web/lib/constants";
 import { signInSchema } from "@/web/lib/validators";
+import { FALLBACK_REDIRECT } from "../-utils/redirect";
 
 interface SignInFormProps {
 	redirectPath: string;
 }
+
+const shouldStartTwoFactorFlow = (value: unknown): boolean => {
+	if (typeof value !== "object" || value === null) return false;
+	if (!("twoFactorRedirect" in value)) return false;
+	return Reflect.get(value, "twoFactorRedirect") === true;
+};
 
 export function SignInForm({ redirectPath }: SignInFormProps) {
 	const navigate = useNavigate();
@@ -30,9 +37,26 @@ export function SignInForm({ redirectPath }: SignInFormProps) {
 			if (result.error) {
 				throw result.error;
 			}
-			return result.data;
+			return {
+				data: result.data,
+				username: email,
+			};
 		},
-		onSuccess: async () => {
+		onSuccess: async ({ data, username }) => {
+			if (shouldStartTwoFactorFlow(data)) {
+				await navigate({
+					to: "/auth/two-factor",
+					replace: true,
+					search: {
+						...(redirectPath !== FALLBACK_REDIRECT
+							? { redirect: redirectPath }
+							: {}),
+						username,
+					},
+				});
+				return;
+			}
+
 			toast.success(SIGN_IN_FORM.SUCCESS_MESSAGES.SIGN_IN_SUCCESS);
 			await router.invalidate();
 			await navigate({
