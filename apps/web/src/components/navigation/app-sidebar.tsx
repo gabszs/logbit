@@ -176,7 +176,10 @@ export function AppSidebar() {
 					asChild
 					variant="ghost"
 					size={isExpanded ? "default" : "icon"}
-					className={cn("size-9", isExpanded && "h-9 w-full justify-start gap-2")}
+					className={cn(
+						"size-9",
+						isExpanded && "h-9 w-full justify-start gap-2",
+					)}
 				>
 					<Link to="/docs" preload="intent">
 						<CircleHelp className="size-4 shrink-0" />
