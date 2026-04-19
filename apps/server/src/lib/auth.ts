@@ -104,7 +104,6 @@ export const auth = betterAuth({
 							logo: "",
 							createdAt: now,
 						});
-
 						await db.insert(models.members).values({
 							organizationId,
 							userId: user.id,
@@ -116,6 +115,7 @@ export const auth = betterAuth({
 					await db.insert(models.userSettings).values({
 						userId: user.id,
 						theme: "system",
+						organizationId,
 						createdAt: now,
 						updatedAt: now,
 					});

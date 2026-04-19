@@ -17,6 +17,7 @@ export async function getUserSettings(db: Context["db"], userId: string) {
 
 	return {
 		theme: row.theme ?? DEFAULT_SETTINGS.theme,
+		organizationId: row.organizationId ?? DEFAULT_SETTINGS.organizationId,
 	};
 }
 
@@ -39,7 +40,7 @@ export async function insertSettingsRow(
 export async function updateUserSettings(
 	db: Context["db"],
 	userId: string,
-	updates: { theme?: string },
+	updates: { theme?: string; organizationId?: string | null },
 ) {
 	await insertSettingsRow(db, userId);
 
@@ -49,6 +50,10 @@ export async function updateUserSettings(
 
 	if (updates.theme !== undefined) {
 		set.theme = updates.theme;
+	}
+
+	if (updates.organizationId !== undefined) {
+		set.organizationId = updates.organizationId;
 	}
 
 	if (Object.keys(set).length > 1) {

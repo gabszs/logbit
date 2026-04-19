@@ -1,5 +1,5 @@
 import { index, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
-import { users } from "./authModels";
+import { organizations, users } from "./authModels";
 
 export const userSettings = pgTable(
 	"user_settings",
@@ -8,6 +8,9 @@ export const userSettings = pgTable(
 			.primaryKey()
 			.$defaultFn(() => Bun.randomUUIDv7()),
 		theme: text("theme").notNull().default("system"),
+		organizationId: uuid("organization_id").references(() => organizations.id, {
+			onDelete: "set null",
+		}),
 		userId: uuid("user_id")
 			.notNull()
 			.unique()

@@ -1,6 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { Building2, Check, ChevronsUpDown, Plus, Search } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/web/components/auth-provider";
 import { Button } from "@/web/components/ui/button";
@@ -11,6 +11,10 @@ import {
 	DropdownMenuTrigger,
 } from "@/web/components/ui/dropdown-menu";
 import { Input } from "@/web/components/ui/input";
+import {
+	useUpdateUserSettings,
+	useUserSettings,
+} from "@/web/hooks/use-user-settings";
 import { authClient } from "@/web/lib/auth-client";
 import { cn } from "@/web/utils/cn";
 
@@ -21,22 +25,30 @@ export function OrganizationSwitcher() {
 	const [search, setSearch] = useState("");
 	const [isSwitching, setIsSwitching] = useState(false);
 
+	const { data: settings } = useUserSettings();
+	const updateSettings = useUpdateUserSettings();
+
 	const {
 		data: organizations,
 		error: organizationsError,
 		isPending: isOrganizationsPending,
 	} = authClient.useListOrganizations();
-	const { data: activeOrganization } = authClient.useActiveOrganization();
-
-	const activeOrganizationId = activeOrganization?.id;
 
 	const selectedOrganizationId =
-		activeOrganizationId &&
-		organizations?.some(
-			(organization) => organization.id === activeOrganizationId,
-		)
-			? activeOrganizationId
+		settings?.organizationId &&
+		organizations?.some((o) => o.id === settings.organizationId)
+			? settings.organizationId
 			: undefined;
+
+	const activeOrg = organizations?.find((o) => o.id === selectedOrganizationId);
+
+	// Sync the saved organizationId into the Better Auth session on load
+	useEffect(() => {
+		if (!settings?.organizationId) return;
+		authClient.organization.setActive({
+			organizationId: settings.organizationId,
+		});
+	}, [settings?.organizationId]);
 
 	const filteredOrganizations = useMemo(() => {
 		const normalizedSearch = search.trim().toLowerCase();
@@ -60,9 +72,12 @@ export function OrganizationSwitcher() {
 		);
 
 		try {
-			const { error } = await authClient.organization.setActive({
-				organizationId: nextOrganizationId,
-			});
+			const [{ error }] = await Promise.all([
+				authClient.organization.setActive({
+					organizationId: nextOrganizationId,
+				}),
+				updateSettings({ organizationId: nextOrganizationId }),
+			]);
 
 			if (error) {
 				toast.error(error.message || "Failed to switch organization");
@@ -84,8 +99,8 @@ export function OrganizationSwitcher() {
 		}
 	};
 
-	const triggerLabel = activeOrganization?.name
-		? activeOrganization.name
+	const triggerLabel = activeOrg?.name
+		? activeOrg.name
 		: isOrganizationsPending
 			? "Loading organization..."
 			: organizationsError
