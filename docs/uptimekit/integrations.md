@@ -89,7 +89,7 @@ integrationRegistry.register(alertManagerIntegration);
 
 ```typescript
 // ConfigSchema
-{ url: z.string().url(), secret: z.string().optional() }
+{ url: z.url(), secret: z.string().optional() }
 
 // Eventos: created, resolved, acknowledged, comment_added
 // (não tem integration.test)

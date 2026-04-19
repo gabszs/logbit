@@ -1,10 +1,10 @@
-import { z } from "zod";
+import { userSettingsSchema } from "@/db/models";
 import { protectedProcedure } from "@/lib/orpc";
 import { getUserSettings, updateUserSettings } from "./queries";
 
-const updateSettingsSchema = z.object({
-	theme: z.string().optional(),
-	organizationId: z.uuid().nullable().optional(),
+const updateSettingsSchema = userSettingsSchema.pick({
+	theme: true,
+	organizationId: true,
 });
 
 export const settingsRouter = {
