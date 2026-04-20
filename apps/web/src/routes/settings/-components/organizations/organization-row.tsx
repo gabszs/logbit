@@ -5,7 +5,6 @@ import {
 	LogOut,
 	Pencil,
 	RotateCcw,
-	ShieldCheck,
 	Trash2,
 	X,
 } from "lucide-react";
@@ -248,7 +247,6 @@ export function OrganizationRow({
 	const [memberRoleOverrides, setMemberRoleOverrides] = useState<
 		Record<string, string>
 	>({});
-	const [isSetActivePending, setIsSetActivePending] = useState(false);
 	const [isLeavePending, setIsLeavePending] = useState(false);
 	const isActive = organization.id === activeOrganizationId;
 
@@ -418,33 +416,6 @@ export function OrganizationRow({
 		}
 	};
 
-	const handleSetActive = async () => {
-		if (isActive) return;
-
-		setIsSetActivePending(true);
-
-		try {
-			const { error } = await authClient.organization.setActive({
-				organizationId: organization.id,
-			});
-
-			if (error) {
-				throw new Error(error.message || "Failed to set active organization");
-			}
-
-			await queryClient.invalidateQueries();
-			toast.success(`Active organization set to ${organization.name}`);
-		} catch (error) {
-			const message =
-				error instanceof Error
-					? error.message
-					: "Failed to set active organization";
-			toast.error(message);
-		} finally {
-			setIsSetActivePending(false);
-		}
-	};
-
 	const handleLeave = async () => {
 		setIsLeavePending(true);
 
@@ -515,28 +486,6 @@ export function OrganizationRow({
 					</button>
 
 					<div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
-						<Button
-							type="button"
-							size="sm"
-							variant="outline"
-							onClick={(event: MouseEvent<HTMLButtonElement>) => {
-								event.stopPropagation();
-								void handleSetActive();
-							}}
-							disabled={!isMember || isActive || isSetActivePending}
-						>
-							{isSetActivePending ? (
-								<>
-									<Loader2 className="size-4 animate-spin" />
-									Switching...
-								</>
-							) : (
-								<>
-									<ShieldCheck className="size-4" />
-									Set active
-								</>
-							)}
-						</Button>
 						{activeMemberRoleQuery.isFetching ? (
 							<Button type="button" size="sm" variant="ghost" disabled>
 								<RotateCcw className="size-4 animate-spin" />

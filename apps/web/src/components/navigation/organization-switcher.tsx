@@ -1,6 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { Building2, Check, ChevronsUpDown, Plus, Search } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/web/components/auth-provider";
 import { Button } from "@/web/components/ui/button";
@@ -21,6 +21,7 @@ import { cn } from "@/web/utils/cn";
 export function OrganizationSwitcher() {
 	const auth = useAuth();
 	const queryClient = useQueryClient();
+	const autoSyncedOrganizationIdRef = useRef<string | null>(null);
 	const [isOpen, setIsOpen] = useState(false);
 	const [search, setSearch] = useState("");
 	const [isSwitching, setIsSwitching] = useState(false);
@@ -41,14 +42,25 @@ export function OrganizationSwitcher() {
 			: undefined;
 
 	const activeOrg = organizations?.find((o) => o.id === selectedOrganizationId);
+	const activeOrganizationId = auth.session?.session?.activeOrganizationId;
 
 	// Sync the saved organizationId into the Better Auth session on load
 	useEffect(() => {
 		if (!settings?.organizationId) return;
-		authClient.organization.setActive({
+		if (activeOrganizationId) return;
+
+		const hasMatchingOrganization = organizations?.some(
+			(organization) => organization.id === settings.organizationId,
+		);
+
+		if (!hasMatchingOrganization) return;
+		if (autoSyncedOrganizationIdRef.current === settings.organizationId) return;
+
+		autoSyncedOrganizationIdRef.current = settings.organizationId;
+		void authClient.organization.setActive({
 			organizationId: settings.organizationId,
 		});
-	}, [settings?.organizationId]);
+	}, [activeOrganizationId, organizations, settings?.organizationId]);
 
 	const filteredOrganizations = useMemo(() => {
 		const normalizedSearch = search.trim().toLowerCase();
