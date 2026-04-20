@@ -2,7 +2,10 @@ import z from "zod";
 
 const envSchema = z.object({
 	// GENERAL SETTINGS
-	SERVE_STATIC: z.coerce.boolean().default(false),
+	SERVE_STATIC: z
+		.string()
+		.transform((v) => v !== "false")
+		.default(false),
 	HOSTNAME: z.string().default("localhost:5051"), // corrijir depois para abrajer edge cases
 	API_PORT: z.coerce.number().default(5051),
 	VITE_WEB_URL: z.string().default("http://localhost:5052"),
@@ -36,7 +39,10 @@ const envSchema = z.object({
 			"laserwave",
 		])
 		.default("deepSpace"), // TODO: migrate to settings.SCALAR_THEME
-	ENABLE_OPEN_API: z.coerce.boolean().default(true),
+	ENABLE_OPEN_API: z
+		.string()
+		.transform((v) => v !== "false")
+		.default(true),
 
 	// Auth settings
 	AUTH_SECRET: z.string().default("supersecret"),
@@ -44,18 +50,27 @@ const envSchema = z.object({
 	AUTH_SESSION_DURATION_SECONDS: z.coerce.number().default(1209600), // DEFAULT 14 DAYS
 	AUTH_BASE_PATH: z.string().default("/v1/auth"),
 	AUTH_OPEN_API_PATH: z.string().default("/docs"),
-	AUTH_ENABLE_DELETE_ACCOUNT: z.coerce.boolean().default(true),
+	AUTH_ENABLE_DELETE_ACCOUNT: z
+		.string()
+		.transform((v) => v !== "false")
+		.default(true),
 	AUTH_ALLOWED_EMAIL_DOMAINS: z
 		.string()
 		.transform((val) => val.split(","))
 		.optional(),
 
 	// rate-limit
-	RATE_LIMIT_ENABLED: z.coerce.boolean().default(true),
+	RATE_LIMIT_ENABLED: z
+		.string()
+		.transform((v) => v !== "false")
+		.default(true),
 	RATE_LIMIT_MAX_REQUESTS: z.coerce.number().default(1000),
 	RATE_LIMIT_WINDOW_SECONDS: z.coerce.number().default(60),
 	RATE_LIMIT_KEY_HEADER: z.string().default("x-forwarded-for"),
-	RATE_LIMIT_SLIDING_WINDOW: z.coerce.boolean().default(true),
+	RATE_LIMIT_SLIDING_WINDOW: z
+		.string()
+		.transform((v) => v !== "false")
+		.default(true),
 	RATE_LIMIT_HEADERS: z
 		.union([z.enum(["draft-6", "draft-7"]), z.coerce.boolean()])
 		.default("draft-7"),

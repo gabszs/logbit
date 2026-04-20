@@ -1,7 +1,7 @@
+import { apiKey } from "@better-auth/api-key";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { APIError, createAuthMiddleware } from "better-auth/api";
-import { apiKey } from "@better-auth/api-key";
 import {
 	admin,
 	openAPI,
@@ -14,6 +14,7 @@ import "dotenv/config";
 import { eq } from "drizzle-orm";
 import { db } from "../db";
 import { models } from "../db/models";
+import { redis } from "./cache";
 
 const hasAllowedEmailDomain = (email: string): boolean => {
 	if (!settings.AUTH_ALLOWED_EMAIL_DOMAINS?.length) return true;
@@ -64,7 +65,7 @@ export const auth = betterAuth({
 	},
 	advanced: {
 		database: {
-			generateId: false,
+			generateId: () => Bun.randomUUIDv7(),
 		},
 	},
 	user: {
@@ -134,20 +135,20 @@ export const auth = betterAuth({
 			});
 		}),
 	},
-	// ...(settings.REDIS_URL && {
-	// 	secondaryStorage: {
-	// 		get: async (key: string): Promise<string | null> => {
-	// 			return await redis.get(key);
-	// 		},
-	// 		set: async (key: string, value: string, ttl?: number): Promise<void> => {
-	// 			await redis.set(key, value);
-	// 			if (ttl) await redis.expire(key, ttl);
-	// 		},
-	// 		delete: async (key: string): Promise<void> => {
-	// 			await redis.del(key);
-	// 		},
-	// 	},
-	// }),
+	...(settings.REDIS_URL && {
+		secondaryStorage: {
+			get: async (key: string): Promise<string | null> => {
+				return await redis.get(key);
+			},
+			set: async (key: string, value: string, ttl?: number): Promise<void> => {
+				await redis.set(key, value);
+				if (ttl) await redis.expire(key, ttl);
+			},
+			delete: async (key: string): Promise<void> => {
+				await redis.del(key);
+			},
+		},
+	}),
 	session: {
 		expiresIn: settings.AUTH_SESSION_DURATION_SECONDS,
 	},

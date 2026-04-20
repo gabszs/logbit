@@ -190,7 +190,7 @@ if (events.length > 0) {
     await clickhouse.insert({
         table: "uptimekit.monitor_events",
         values: events.map((e) => ({
-            id: crypto.randomUUID(),
+            id: Bun.randomUUIDv7(),
             monitorId: e.monitorId,
             status: e.status,
             latency: e.latency,

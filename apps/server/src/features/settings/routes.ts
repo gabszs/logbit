@@ -5,7 +5,7 @@ import { userSettingsSchema } from "./schemas";
 const updateSettingsSchema = userSettingsSchema.pick({
 	theme: true,
 	organizationId: true,
-});
+}).partial();
 
 export const settingsRouter = {
 	get: protectedProcedure.handler(async ({ context }) => {

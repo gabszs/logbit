@@ -122,7 +122,7 @@ const keyHint = `${rawKey.substring(0, 11)}...`;  // "uk_abc1234..."
 
 // Insere worker
 const [newWorker] = await db.insert(worker).values({
-    id: crypto.randomUUID(),
+    id: Bun.randomUUIDv7(),
     name: input.name,
     location: input.location,
     active: true,
@@ -130,7 +130,7 @@ const [newWorker] = await db.insert(worker).values({
 
 // Insere chave (apenas hash)
 await db.insert(workerApiKey).values({
-    id: crypto.randomUUID(),
+    id: Bun.randomUUIDv7(),
     keyHash,
     keyHint,
     workerId: newWorker.id,
@@ -346,7 +346,7 @@ const keyHint = `${rawKey.substring(0, 11)}...`;
 
 // 3. Deleta chaves antigas, insere nova
 await db.delete(workerApiKey).where(eq(workerApiKey.workerId, input.id));
-await db.insert(workerApiKey).values({ id: crypto.randomUUID(), keyHash, keyHint, workerId: input.id });
+await db.insert(workerApiKey).values({ id: Bun.randomUUIDv7(), keyHash, keyHint, workerId: input.id });
 
 // 4. Invalida cache imediatamente
 for (const oldKey of oldKeys) {

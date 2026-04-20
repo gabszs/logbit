@@ -7,6 +7,7 @@ import { serveStatic } from "hono/bun";
 import { compress } from "hono/compress";
 import { cors } from "hono/cors";
 import { showRoutes } from "hono/dev";
+import { HTTPException } from "hono/http-exception";
 import { problemDetailsHandler } from "hono-problem-details";
 import { MemoryStore, rateLimiter } from "hono-rate-limiter";
 import { db, pgClient } from "./db";
@@ -53,8 +54,9 @@ app.onError(
 	problemDetailsHandler({
 		// includeStack: settings.NODE_ENV === "development",
 		mapError: (err) => {
-			console.error(err);
-			return undefined; // undefined = segue o comportamento padrão
+			const status = err instanceof HTTPException ? err.status : 500;
+			if (status >= 500) console.error(err);
+			return undefined;
 		},
 	}),
 );
@@ -160,7 +162,7 @@ if (settings.SERVE_STATIC) {
 	app.get("*", serveStatic({ path: "./build/index.html" }));
 }
 
-showRoutes(app);
+if (settings.NODE_ENV !== "test") showRoutes(app);
 
 export const shutdownDependencies = async () => {
 	await pgClient.close(); // drena conexões ativas e fecha o pool
@@ -172,6 +174,7 @@ export const shutdownDependencies = async () => {
 	process.on(event, shutdownDependencies);
 });
 
+export { app };
 export type AppType = typeof app;
 export default {
 	port: settings.API_PORT,
