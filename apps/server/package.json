@@ -34,6 +34,7 @@
 		"@scalar/openapi-to-markdown": "^0.4.7",
 		"better-auth": "1.4.10",
 		"better-auth-cloudflare": "^0.2.9",
+		"cloudflare": "^5.2.0",
 		"drizzle-orm": "^0.45.1",
 		"drizzle-zod": "^0.8.3",
 		"hono": "catalog:",
