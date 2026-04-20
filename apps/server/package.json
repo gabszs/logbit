@@ -5,6 +5,7 @@
 	"private": true,
 	"dependencies": {
 		"@ai-sdk/openai": "^3.0.51",
+		"@better-auth/api-key": "^1.6.2",
 		"@better-auth/redis-storage": "^1.5.5",
 		"@bufbuild/protobuf": "^2.11.0",
 		"@clickhouse/client": "^1.18.2",
@@ -32,7 +33,7 @@
 		"@orpc/server": "^1.13.2",
 		"@scalar/hono-api-reference": "^0.9.30",
 		"@scalar/openapi-to-markdown": "^0.4.7",
-		"better-auth": "1.4.10",
+		"better-auth": "catalog:",
 		"better-auth-cloudflare": "^0.2.9",
 		"cloudflare": "^5.2.0",
 		"drizzle-orm": "^0.45.1",
