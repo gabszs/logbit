@@ -49,7 +49,6 @@ const envSchema = z.object({
 		.string()
 		.transform((val) => val.split(","))
 		.optional(),
-	AUTH_ENABLE_TWO_FACTOR: z.coerce.boolean().default(false),
 
 	// rate-limit
 	RATE_LIMIT_ENABLED: z.coerce.boolean().default(true),

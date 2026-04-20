@@ -52,6 +52,9 @@
 	"scripts": {
 		"build": "bun run typecheck",
 		"typecheck": "tsc -b",
+		"test": "bun test ./test/src",
+		"test:auth": "bun test ./test/src/features/auth",
+		"test:auth:delete-off": "bun test ./test/src/features/auth/delete-account-flag-off.integration.test.ts",
 		"compile": "bun build --compile --minify --sourcemap --bytecode ./src/index.ts --outfile server",
 		"dev": "bun --hot src/index.ts",
 		"otel-dev": "bun --hot --preload src/otel.ts src/index.ts",
@@ -63,9 +66,9 @@
 		"proto:gen": "buf generate"
 	},
 	"devDependencies": {
+		"@better-auth/cli": "1.4.3",
 		"@bufbuild/buf": "^1.66.1",
 		"@bufbuild/protoc-gen-es": "^2.11.0",
-		"@better-auth/cli": "1.4.3",
 		"@types/node": "catalog:",
 		"bun-types": "^1.3.11",
 		"dotenv": "catalog:",
@@ -73,6 +76,7 @@
 		"kysely-codegen": "^0.20.0",
 		"mastra": "^1.3.20",
 		"openapi-types": "^12.1.3",
+		"testcontainers": "^11.14.0",
 		"tsdown": "catalog:",
 		"tsx": "^4.21.0",
 		"typescript": "catalog:",
