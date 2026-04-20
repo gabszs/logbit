@@ -36,7 +36,7 @@ export const searchOptionsSchema = z.object({
 		.describe("Filter by creation date on or after (ISO 8601)"),
 });
 
-export type searchOptionsSchema = z.infer<typeof searchOptionsSchema>;
+export type searchOptionsSchemaType = z.infer<typeof searchOptionsSchema>;
 
 const errorItemSchema = z.object({
 	code: z.string().describe("Error code"),

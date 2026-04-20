@@ -1,8 +1,6 @@
-import type { z } from "zod";
 import type { IRepository } from "../repository/IRepository";
-import type { searchOptionsSchema } from "../schemas/baseSchemas";
+import type { searchOptionsSchemaType } from "../schemas/baseSchemas";
 
-type SearchOptions = z.infer<typeof searchOptionsSchema>;
 type FilterValue = string | number | boolean | Date | null;
 export type Filters = Record<string, FilterValue>;
 
@@ -10,10 +8,10 @@ export abstract class BaseService<
 	TData = object,
 	TCreate = Partial<TData>,
 	TUpdate = Partial<TCreate>,
-	TSearchOptions extends SearchOptions = SearchOptions,
+	TSearchOptions extends searchOptionsSchemaType = searchOptionsSchemaType,
 	TFilters extends Filters = Filters,
 	TMutationResult = TData | null,
-	TDeleteResult = object,
+	TDeleteResult = void,
 > {
 	protected repository: IRepository<
 		TData,

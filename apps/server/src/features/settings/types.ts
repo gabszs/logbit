@@ -1,4 +1,4 @@
-import type { UserSettingsType } from "@/db/models";
+import type { UserSettingsType } from "./schemas";
 
 export type UserSettingsRecord = Pick<
 	UserSettingsType,

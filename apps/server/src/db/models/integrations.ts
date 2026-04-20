@@ -29,13 +29,12 @@ export const integrations = pgTable(
 		organizationId: uuid("organization_id")
 			.notNull()
 			.references(() => organizations.id, { onDelete: "cascade" }),
-		config: jsonb("config")
-			.$type<Record<string, string | number | boolean>>()
-			.notNull(),
+		config: jsonb("config").$type<Record<string, unknown>>().notNull(),
 		isActive: boolean("is_active").default(true).notNull(),
 		isDefault: boolean("is_default").default(false).notNull(),
-		createdAt: timestamp("created_at").notNull(),
+		createdAt: timestamp("created_at").defaultNow().notNull(),
 		updatedAt: timestamp("updated_at")
+			.defaultNow()
 			.$onUpdate(() => new Date())
 			.notNull(),
 	},

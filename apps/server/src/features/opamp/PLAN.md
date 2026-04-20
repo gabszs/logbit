@@ -55,7 +55,7 @@ export const opampAgents = pgTable("opamp_agents", {
   desiredConfig: jsonb("desired_config"),               // toJson(AgentRemoteConfigSchema, ...) set pela management API
   desiredConfigHash: text("desired_config_hash"),       // hex SHA-256 — do servidor, para comparação
   lastSeen: timestamp("last_seen").notNull().$defaultFn(() => new Date()),
-  createdAt: timestamp("created_at").notNull().$defaultFn(() => new Date()),
+  createdAt: timestamp("created_at").defaultNow().notNull().$defaultFn(() => new Date()),
   updatedAt: timestamp("updated_at").notNull().$defaultFn(() => new Date()).$onUpdate(() => new Date()),
 }, (table) => [
   index("opamp_agents_instance_uid_idx").on(table.instanceUid),

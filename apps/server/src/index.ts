@@ -12,12 +12,14 @@ import { MemoryStore, rateLimiter } from "hono-rate-limiter";
 import { db, pgClient } from "./db";
 import { settings } from "./env";
 import authRouter from "./features/auth/routes";
+import integrationsRouter from "./features/integrations/routes";
 import logsRouter from "./features/logs/routes";
 import opampRouter from "./features/opamp/routes";
 import { profileRouter } from "./features/profile/routes";
 import { settingsRouter } from "./features/settings/routes";
 import utilityRoutes from "./features/utils/routes";
 import { BunRedisStore, redis } from "./lib/cache";
+import { authenticateSession } from "./lib/middleware";
 import { setupOpenApi } from "./lib/openapi";
 import { createContext } from "./lib/orpc";
 import { injectOtelTraceHeader, logger } from "./lib/telemetry";
@@ -135,8 +137,12 @@ app.use(`${apiPrefix}/orpc/*`, async (c) => {
 	}
 });
 
+// AUTH Middleware
+app.use(`${apiPrefix}/v1/*`, authenticateSession);
+
 // V1 Routes
 app.route(`${apiPrefix}/v1`, authRouter);
+app.route(`${apiPrefix}/v1`, integrationsRouter);
 app.route(`${apiPrefix}/v1`, opampRouter);
 app.route(`${apiPrefix}/v1`, logsRouter);
 

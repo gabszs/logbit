@@ -1,7 +1,6 @@
-import type { ZodUUID, z } from "zod";
-import type { searchOptionsSchema } from "../schemas/baseSchemas";
+import type { ZodUUID } from "zod";
+import type { searchOptionsSchemaType } from "../schemas/baseSchemas";
 
-type SearchOptions = z.infer<typeof searchOptionsSchema>;
 type FilterValue = string | number | boolean | Date | ZodUUID | null;
 export type Filters = Record<string, FilterValue>;
 
@@ -13,16 +12,16 @@ export interface IRepository<
 	TData = object,
 	TCreate = Partial<TData>,
 	TUpdate = Partial<TCreate>,
-	TSearchOptions extends SearchOptions = SearchOptions,
+	TSearchOptions extends searchOptionsSchemaType = searchOptionsSchemaType,
 	TFilters extends Filters = Filters,
 	TMutationResult = TData | null,
-	TDeleteResult = object,
+	TDeleteResult = void,
 > {
 	getAll(searchOptions: TSearchOptions, filters?: TFilters): Promise<TData[]>;
 
 	getById(id: string, filters?: TFilters): Promise<TData | null>;
 
-	create(data: TCreate): Promise<TMutationResult>;
+	create(data: TCreate): Promise<TData>;
 
 	update?(
 		id: string,

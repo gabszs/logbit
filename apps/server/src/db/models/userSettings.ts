@@ -15,7 +15,7 @@ export const userSettings = pgTable(
 			.notNull()
 			.unique()
 			.references(() => users.id, { onDelete: "cascade" }),
-		createdAt: timestamp("created_at").notNull(),
+		createdAt: timestamp("created_at").defaultNow().notNull(),
 		updatedAt: timestamp("updated_at")
 			.$onUpdate(() => new Date())
 			.notNull(),

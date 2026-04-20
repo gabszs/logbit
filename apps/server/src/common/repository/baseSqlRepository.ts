@@ -16,7 +16,7 @@ import {
 import type { AnyPgSelect, PgColumn, PgTable } from "drizzle-orm/pg-core";
 import type { ZodUUID } from "zod";
 import type { dbType } from "@/db";
-import type { searchOptionsSchema } from "../schemas/baseSchemas";
+import type { searchOptionsSchemaType } from "../schemas/baseSchemas";
 import type { IRepository } from "./IRepository";
 
 type FilterValue = string | number | boolean | Date | ZodUUID | null;
@@ -28,7 +28,7 @@ export abstract class BaseSqlRepository<Model extends PgTable>
 			InferSelectModel<Model>, // TData
 			InferInsertModel<Model>, // TCreate
 			Partial<InferInsertModel<Model>>, // TUpdate
-			searchOptionsSchema, // TSearchOptions
+			searchOptionsSchemaType, // TSearchOptions
 			Filters, // TFilters
 			InferSelectModel<Model> | null, // TMutationResult
 			void
@@ -51,7 +51,7 @@ export abstract class BaseSqlRepository<Model extends PgTable>
 	 */
 	protected buildWhereConditions(
 		filters?: Filters | null,
-		searchOptions?: searchOptionsSchema | null,
+		searchOptions?: searchOptionsSchemaType | null,
 	): SQL<unknown> | undefined {
 		const conditions: SQL<unknown>[] = [];
 		const columns = getTableColumns(this.model);
@@ -98,7 +98,7 @@ export abstract class BaseSqlRepository<Model extends PgTable>
 	 */
 	protected applySelectOptions(
 		query: AnyPgSelect,
-		searchOptions?: searchOptionsSchema | null,
+		searchOptions?: searchOptionsSchemaType | null,
 		filters?: Filters | null,
 	): AnyPgSelect {
 		const condition = this.buildWhereConditions(filters, searchOptions);
@@ -132,7 +132,7 @@ export abstract class BaseSqlRepository<Model extends PgTable>
 	}
 
 	async getAll(
-		searchOptions: searchOptionsSchema,
+		searchOptions: searchOptionsSchemaType,
 		filters?: Filters,
 	): Promise<InferSelectModel<Model>[]> {
 		const query = this.applySelectOptions(

@@ -18,7 +18,7 @@ export const users = pgTable("users", {
 	email: text("email").notNull().unique(),
 	emailVerified: boolean("email_verified").default(false).notNull(),
 	image: text("image"),
-	createdAt: timestamp("created_at").notNull(),
+	createdAt: timestamp("created_at").defaultNow().notNull(),
 	updatedAt: timestamp("updated_at")
 		.$onUpdate(() => new Date())
 		.notNull(),
@@ -37,7 +37,7 @@ export const sessions = pgTable(
 			.$defaultFn(() => Bun.randomUUIDv7()),
 		expiresAt: timestamp("expires_at").notNull(),
 		token: text("token").notNull().unique(),
-		createdAt: timestamp("created_at").notNull(),
+		createdAt: timestamp("created_at").defaultNow().notNull(),
 		updatedAt: timestamp("updated_at")
 			.$onUpdate(() => new Date())
 			.notNull(),
@@ -70,7 +70,7 @@ export const accounts = pgTable(
 		refreshTokenExpiresAt: timestamp("refresh_token_expires_at"),
 		scope: text("scope"),
 		password: text("password"),
-		createdAt: timestamp("created_at").notNull(),
+		createdAt: timestamp("created_at").defaultNow().notNull(),
 		updatedAt: timestamp("updated_at")
 			.$onUpdate(() => new Date())
 			.notNull(),
@@ -87,7 +87,7 @@ export const verifications = pgTable(
 		identifier: text("identifier").notNull(),
 		value: text("value").notNull(),
 		expiresAt: timestamp("expires_at").notNull(),
-		createdAt: timestamp("created_at").notNull(),
+		createdAt: timestamp("created_at").defaultNow().notNull(),
 		updatedAt: timestamp("updated_at")
 			.$onUpdate(() => new Date())
 			.notNull(),
@@ -119,7 +119,7 @@ export const apikeys = pgTable(
 		remaining: integer("remaining"),
 		lastRequest: timestamp("last_request"),
 		expiresAt: timestamp("expires_at"),
-		createdAt: timestamp("created_at").notNull(),
+		createdAt: timestamp("created_at").defaultNow().notNull(),
 		updatedAt: timestamp("updated_at").notNull(),
 		permissions: text("permissions"),
 		metadata: text("metadata"),
@@ -139,7 +139,7 @@ export const organizations = pgTable(
 		name: text("name").notNull(),
 		slug: text("slug").notNull().unique(),
 		logo: text("logo"),
-		createdAt: timestamp("created_at").notNull(),
+		createdAt: timestamp("created_at").defaultNow().notNull(),
 		metadata: text("metadata"),
 	},
 	(table) => [uniqueIndex("organizations_slug_uidx").on(table.slug)],
@@ -158,7 +158,7 @@ export const members = pgTable(
 			.notNull()
 			.references(() => users.id, { onDelete: "cascade" }),
 		role: text("role").default("member").notNull(),
-		createdAt: timestamp("created_at").notNull(),
+		createdAt: timestamp("created_at").defaultNow().notNull(),
 	},
 	(table) => [
 		index("members_organizationId_idx").on(table.organizationId),
@@ -179,7 +179,7 @@ export const invitations = pgTable(
 		role: text("role"),
 		status: text("status").default("pending").notNull(),
 		expiresAt: timestamp("expires_at").notNull(),
-		createdAt: timestamp("created_at").notNull(),
+		createdAt: timestamp("created_at").defaultNow().notNull(),
 		inviterId: uuid("inviter_id")
 			.notNull()
 			.references(() => users.id, { onDelete: "cascade" }),

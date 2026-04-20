@@ -1,6 +1,6 @@
-import { userSettingsSchema } from "@/db/models";
 import { protectedProcedure } from "@/lib/orpc";
 import { getUserSettings, updateUserSettings } from "./queries";
+import { userSettingsSchema } from "./schemas";
 
 const updateSettingsSchema = userSettingsSchema.pick({
 	theme: true,

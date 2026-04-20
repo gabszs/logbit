@@ -1,0 +1,1 @@
+- adicionar permissao por granulidade de organization role e user.role nos endpoints

@@ -1,16 +1,13 @@
-import type { ZodUUID } from "zod";
-import { httpErrors } from "../lib/errors";
-
 export function checkForChanges(
-	payload: Record<string, string | number | ZodUUID>,
-	existing: Record<string, string | number>,
+	payload: Record<string, unknown>,
+	existing: Record<string, unknown>,
 ) {
 	for (const key of Object.keys(payload)) {
 		if (payload[key] !== existing[key]) {
-			return;
+			return true;
 		}
 	}
-	throw httpErrors.noChangesDetected();
+	return false;
 }
 
 /**

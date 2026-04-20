@@ -31,7 +31,7 @@ export const contactPoints = pgTable(
 			.$type<Record<string, string | number | boolean>>()
 			.notNull(),
 		isDefault: boolean("is_default").default(false).notNull(),
-		createdAt: timestamp("created_at").notNull(),
+		createdAt: timestamp("created_at").defaultNow().notNull(),
 		updatedAt: timestamp("updated_at")
 			.$onUpdate(() => new Date())
 			.notNull(),

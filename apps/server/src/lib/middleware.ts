@@ -2,7 +2,7 @@ import { createMiddleware } from "hono/factory";
 import { HTTPException } from "hono/http-exception";
 import type { AppContext, AuthAppContext } from "../types";
 import { auth } from "./auth";
-import { error } from "./errors";
+import { httpErrors } from "./errors";
 
 // DEVO USAR SINGLETON NO AUTH OU CRIOU TODA VEZ????
 export const authenticateSession = createMiddleware<AuthAppContext>(
@@ -26,7 +26,7 @@ export const requireContentType = (allowedContentTypes: string[]) =>
 			!contentType ||
 			!allowedContentTypes.some((type) => contentType.includes(type))
 		) {
-			throw error.unsupportedMediaType({
+			throw httpErrors.unsupportedMediaType({
 				title: "Unsupported Media Type",
 				detail: `Content-Type ${contentType ?? "none"} is not supported. Supported types are: ${allowedContentTypes.join(" and ")}`,
 			});

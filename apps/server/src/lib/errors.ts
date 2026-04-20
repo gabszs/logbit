@@ -64,7 +64,7 @@ const resolveBadRequestArgs = (
 	};
 };
 
-export const error = {
+export const httpErrors = {
 	tooManyRequests: (options: ErrorOptions = {}) =>
 		createStatusError(status.TOO_MANY_REQUESTS, undefined, options),
 
@@ -72,6 +72,13 @@ export const error = {
 		createStatusError(
 			status.UNAUTHORIZED,
 			"The 'Authorization' header must be provided in the format: 'Bearer <token>'",
+			options,
+		),
+
+	notFound: (options: ErrorOptions = {}) =>
+		createStatusError(
+			status.NOT_FOUND,
+			"The requested resource was not found",
 			options,
 		),
 
@@ -189,5 +196,3 @@ export const error = {
 			options,
 		),
 };
-
-export const httpErrors = error;

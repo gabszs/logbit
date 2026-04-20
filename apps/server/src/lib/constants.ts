@@ -7,7 +7,7 @@ export const EMAIL_FROM_ADDRESS = "noreply@imob.io";
 export const GITHUB_REPO_URL = "https://github.com/imob";
 export const MAIN_SITE_URL = "https://imob.io";
 
-export const ContentTypes: Record<string, string> = {
+export const ContentTypes = {
 	X_PROTOBUF: "application/x-protobuf",
 	PROTOBUF: "application/protobuf",
 	JSON: "application/json",
@@ -149,6 +149,10 @@ export const status = {
 		code: 201,
 		title: "Created",
 		detail: "Resource created successfully.",
+		response: <TSchema>(
+			schema: TSchema,
+			description = "Request completed successfully.",
+		) => createHttpResponse(schema, description),
 	},
 	ACCEPTED: {
 		code: 202,

@@ -1,3 +1,4 @@
 import { BaseService } from "@/common/services/baseService";
+import type { IntegrationsType } from "./schemas";
 
-export class IntegrationsService extends BaseService {}
+export class IntegrationService extends BaseService<IntegrationsType> {}
