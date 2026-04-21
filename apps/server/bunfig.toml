@@ -1,2 +1,3 @@
 [test]
 pathIgnorePatterns = ["dist/**"]
+preload = ["./test/src/setup/containers.ts"]
