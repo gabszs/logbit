@@ -1,7 +1,7 @@
-import { models } from "@/db/models";
-import type { TestHelpers } from "better-auth/plugins";
 import { afterEach, beforeAll, describe, expect, it } from "bun:test";
+import type { TestHelpers } from "better-auth/plugins";
 import { eq } from "drizzle-orm";
+import { models } from "@/db/models";
 import { truncateAllTables } from "../../setup/db";
 import { isolateTestSettings } from "../../setup/settings";
 

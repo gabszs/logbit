@@ -1,7 +1,7 @@
 // REDIS_URL está definido pelo preload — secondaryStorage em auth.ts fica ativo
 
-import type { TestHelpers } from "better-auth/plugins";
 import { afterEach, beforeAll, describe, expect, it } from "bun:test";
+import type { TestHelpers } from "better-auth/plugins";
 import { truncateAllTables } from "../../setup/db";
 import { isolateTestSettings } from "../../setup/settings";
 

@@ -1,7 +1,7 @@
-import { models } from "@/db/models"; // não importa @/env, seguro como estático
-import type { TestHelpers } from "better-auth/plugins";
 import { afterEach, beforeAll, describe, expect, it } from "bun:test";
+import type { TestHelpers } from "better-auth/plugins";
 import { eq } from "drizzle-orm";
+import { models } from "@/db/models"; // não importa @/env, seguro como estático
 import { isolateTestSettings } from "../../setup/settings";
 
 isolateTestSettings({

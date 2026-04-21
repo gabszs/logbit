@@ -1,5 +1,5 @@
-import type { TestHelpers } from "better-auth/plugins";
 import { afterEach, beforeAll, describe, expect, it } from "bun:test";
+import type { TestHelpers } from "better-auth/plugins";
 import { isolateTestSettings } from "../../setup/settings";
 
 isolateTestSettings({
