@@ -2,8 +2,8 @@
 
 import { afterEach, beforeAll, describe, expect, it } from "bun:test";
 import type { TestHelpers } from "better-auth/plugins";
-import { isolateTestSettings } from "../../setup/settings";
 import { truncateAllTables } from "../../setup/db";
+import { isolateTestSettings } from "../../setup/settings";
 
 isolateTestSettings({
 	REDIS_URL: process.env.REDIS_URL,

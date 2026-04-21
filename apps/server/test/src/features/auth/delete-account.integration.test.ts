@@ -2,8 +2,8 @@ import { afterEach, beforeAll, describe, expect, it } from "bun:test";
 import type { TestHelpers } from "better-auth/plugins";
 import { eq } from "drizzle-orm";
 import { models } from "@/db/models";
-import { isolateTestSettings } from "../../setup/settings";
 import { truncateAllTables } from "../../setup/db";
+import { isolateTestSettings } from "../../setup/settings";
 
 isolateTestSettings({
 	AUTH_ENABLE_DELETE_ACCOUNT: true,

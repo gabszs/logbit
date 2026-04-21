@@ -1,8 +1,8 @@
 import { afterEach, beforeAll, describe, expect, it } from "bun:test";
 import type { TestHelpers } from "better-auth/plugins";
 import { models } from "@/db/models";
-import { isolateTestSettings } from "../../setup/settings";
 import { truncateAllTables } from "../../setup/db";
+import { isolateTestSettings } from "../../setup/settings";
 
 isolateTestSettings();
 
@@ -66,7 +66,10 @@ describe("POST /v1/auth/sign-in/email", () => {
 	it("rejeita usuário com email não verificado", async () => {
 		// Salva um primeiro usuário para que isOnlyUser não eleve o próximo para admin+verified
 		await auth_client.saveUser(
-			auth_client.createUser({ id: Bun.randomUUIDv7(), email: "first@example.com" }),
+			auth_client.createUser({
+				id: Bun.randomUUIDv7(),
+				email: "first@example.com",
+			}),
 		);
 
 		const user = auth_client.createUser({

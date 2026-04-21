@@ -1,10 +1,10 @@
-import { createSelectSchema } from "drizzle-zod";
-import { z } from "zod";
 import { models } from "@/db/models";
 import {
 	supportedIntegrationSchemas,
 	supportedIntegrationTypes,
 } from "@/integrations/senderFactory";
+import { createSelectSchema } from "drizzle-zod";
+import { z } from "zod";
 import { searchOptionsSchema } from "../../common/schemas/baseSchemas";
 
 export const baseIntegrationsSchema = createSelectSchema(

@@ -9,14 +9,9 @@ import {
 	varchar,
 } from "drizzle-orm/pg-core";
 import { organizations } from "./authModels";
+import { supportedIntegrationTypes } from "@/integrations/senderFactory";
 
-export const integrationTypeEnum = pgEnum("type", [
-	"discord",
-	"telegram",
-	"webhook",
-	"cloudflare_email",
-	"resend",
-]);
+export const integrationTypeEnum = pgEnum("type", supportedIntegrationTypes);
 
 export const integrations = pgTable(
 	"integrations",

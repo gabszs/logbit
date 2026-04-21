@@ -27,4 +27,3 @@ export const isolateTestSettings = (overrides: SettingsOverrides = {}) => {
 	beforeAll(() => applyTestSettings(overrides));
 	afterAll(() => resetTestSettings());
 };
-
