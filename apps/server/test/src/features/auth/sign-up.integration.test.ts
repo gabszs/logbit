@@ -1,10 +1,14 @@
 import { afterEach, beforeAll, describe, expect, it } from "bun:test";
 import type { TestHelpers } from "better-auth/plugins";
 import { eq } from "drizzle-orm";
-import { db } from "@/db";
 import { models } from "@/db/models";
-import { auth } from "@/lib/auth";
+import { isolateTestSettings } from "../../setup/settings";
 import { truncateAllTables } from "../../setup/db";
+
+isolateTestSettings();
+
+const { db } = await import("@/db");
+const { auth } = await import("@/lib/auth");
 
 let auth_client: TestHelpers;
 

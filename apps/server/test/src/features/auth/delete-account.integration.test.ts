@@ -1,11 +1,17 @@
 import { afterEach, beforeAll, describe, expect, it } from "bun:test";
 import type { TestHelpers } from "better-auth/plugins";
 import { eq } from "drizzle-orm";
-import { db } from "@/db";
 import { models } from "@/db/models";
-import { app } from "@/index";
-import { auth } from "@/lib/auth";
+import { isolateTestSettings } from "../../setup/settings";
 import { truncateAllTables } from "../../setup/db";
+
+isolateTestSettings({
+	AUTH_ENABLE_DELETE_ACCOUNT: true,
+});
+
+const { db } = await import("@/db");
+const { app } = await import("@/index");
+const { auth } = await import("@/lib/auth");
 
 let auth_client: TestHelpers;
 

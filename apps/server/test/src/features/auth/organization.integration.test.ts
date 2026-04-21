@@ -1,8 +1,12 @@
 import { afterEach, beforeAll, describe, expect, it } from "bun:test";
 import type { TestHelpers } from "better-auth/plugins";
-import { app } from "@/index";
-import { auth } from "@/lib/auth";
+import { isolateTestSettings } from "../../setup/settings";
 import { truncateAllTables } from "../../setup/db";
+
+isolateTestSettings();
+
+const { app } = await import("@/index");
+const { auth } = await import("@/lib/auth");
 
 type OrgResult = { id: string; name: string; slug: string };
 type InvitationResult = { id: string; email: string; status: string };

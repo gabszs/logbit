@@ -1,9 +1,10 @@
-// ESM hoista imports estáticos — AUTH_ENABLE_DELETE_ACCOUNT deve ser setado ANTES
-// que @/env seja carregado via qualquer import transitivo.
-process.env.AUTH_ENABLE_DELETE_ACCOUNT = "false";
-
 import { afterEach, beforeAll, describe, expect, it } from "bun:test";
 import type { TestHelpers } from "better-auth/plugins";
+import { isolateTestSettings } from "../../setup/settings";
+
+isolateTestSettings({
+	AUTH_ENABLE_DELETE_ACCOUNT: false,
+});
 
 // Dynamic: todos os módulos que transitivamente importam @/env
 const { auth } = await import("@/lib/auth");
@@ -38,7 +39,6 @@ describe("DELETE /v1/auth/delete-user (flag desabilitada)", () => {
 			headers,
 			body: JSON.stringify({}),
 		});
-
 		expect([404, 405]).toContain(res.status);
 	});
 });

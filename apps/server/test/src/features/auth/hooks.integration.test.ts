@@ -1,11 +1,12 @@
-// ESM hoista imports estáticos — env override DEVE vir antes de qualquer
-// módulo que importe @/env (como @/db e @/lib/auth).
-process.env.AUTH_ALLOWED_EMAIL_DOMAINS = "testdomain.com";
-
 import { afterEach, beforeAll, describe, expect, it } from "bun:test";
 import type { TestHelpers } from "better-auth/plugins";
 import { eq } from "drizzle-orm";
 import { models } from "@/db/models"; // não importa @/env, seguro como estático
+import { isolateTestSettings } from "../../setup/settings";
+
+isolateTestSettings({
+	AUTH_ALLOWED_EMAIL_DOMAINS: ["testdomain.com"],
+});
 
 // Dynamic: todos os módulos que transitivamente importam @/env
 const { db } = await import("@/db");
