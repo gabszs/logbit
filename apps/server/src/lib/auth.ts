@@ -48,6 +48,7 @@ const getDefaultOrganizationSlug = (email: string) =>
 		.replace(/^-+|-+$/g, "")}-organization`;
 
 export const auth = betterAuth({
+	baseURL: settings.HOSTNAME,
 	basePath: settings.AUTH_BASE_PATH,
 	secret: settings.AUTH_SECRET,
 	trustedOrigins: settings.CORS_ORIGIN,
@@ -127,6 +128,9 @@ export const auth = betterAuth({
 	},
 	hooks: {
 		before: createAuthMiddleware(async (ctx) => {
+			if (ctx.path === "/delete-user" && !settings.AUTH_ENABLE_DELETE_ACCOUNT) {
+				throw new APIError("NOT_FOUND", { message: "Not found" });
+			}
 			if (ctx.path !== "/sign-up/email") return;
 			if (!(await hasAnyUser())) return;
 			throw new APIError("FORBIDDEN", {
@@ -201,4 +205,7 @@ export type AuthSession = NonNullable<
 	Awaited<ReturnType<typeof auth.api.getSession>>
 >;
 export type AuthUser = AuthSession["user"];
-export type AuthSessionData = AuthSession["session"];
+export type AuthSessionData = AuthSession["session"] & {
+	activeOrganizationId: string | null;
+	impersonatedBy: string | null;
+};

@@ -1,7 +1,7 @@
-import { afterEach, beforeAll, describe, expect, it } from "bun:test";
-import type { TestHelpers } from "better-auth/plugins";
-import { eq } from "drizzle-orm";
 import { models } from "@/db/models";
+import type { TestHelpers } from "better-auth/plugins";
+import { afterEach, beforeAll, describe, expect, it } from "bun:test";
+import { eq } from "drizzle-orm";
 import { truncateAllTables } from "../../setup/db";
 import { isolateTestSettings } from "../../setup/settings";
 
@@ -13,18 +13,18 @@ const { db } = await import("@/db");
 const { app } = await import("@/index");
 const { auth } = await import("@/lib/auth");
 
-let auth_client: TestHelpers;
-
-beforeAll(async () => {
-	const ctx = await auth.$context;
-	auth_client = ctx.test;
-});
-
-afterEach(async () => {
-	await truncateAllTables();
-});
-
 describe("DELETE /v1/auth/delete-user (flag habilitada)", () => {
+	let auth_client: TestHelpers;
+
+	beforeAll(async () => {
+		const ctx = await auth.$context;
+		auth_client = ctx.test;
+	});
+
+	afterEach(async () => {
+		await truncateAllTables();
+	});
+
 	it("deleta a conta do usuário autenticado", async () => {
 		const user = auth_client.createUser({
 			id: Bun.randomUUIDv7(),

@@ -1,7 +1,7 @@
-import { afterEach, beforeAll, describe, expect, it } from "bun:test";
-import type { TestHelpers } from "better-auth/plugins";
-import { eq } from "drizzle-orm";
 import { models } from "@/db/models"; // não importa @/env, seguro como estático
+import type { TestHelpers } from "better-auth/plugins";
+import { afterEach, beforeAll, describe, expect, it } from "bun:test";
+import { eq } from "drizzle-orm";
 import { isolateTestSettings } from "../../setup/settings";
 
 isolateTestSettings({
@@ -14,18 +14,18 @@ const { auth } = await import("@/lib/auth");
 const { app } = await import("@/index");
 const { truncateAllTables } = await import("../../setup/db");
 
-let auth_client: TestHelpers;
-
-beforeAll(async () => {
-	const ctx = await auth.$context;
-	auth_client = ctx.test;
-});
-
-afterEach(async () => {
-	await truncateAllTables();
-});
-
 describe("databaseHook: user.create.before — restrição de domínio", () => {
+	let auth_client: TestHelpers;
+
+	beforeAll(async () => {
+		const ctx = await auth.$context;
+		auth_client = ctx.test;
+	});
+
+	afterEach(async () => {
+		await truncateAllTables();
+	});
+
 	it("bloqueia signup com domínio não permitido", async () => {
 		const res = await app.request("/v1/auth/sign-up/email", {
 			method: "POST",
@@ -56,6 +56,17 @@ describe("databaseHook: user.create.before — restrição de domínio", () => {
 });
 
 describe("databaseHook: user.create.after — provisionamento do primeiro usuário", () => {
+	let auth_client: TestHelpers;
+
+	beforeAll(async () => {
+		const ctx = await auth.$context;
+		auth_client = ctx.test;
+	});
+
+	afterEach(async () => {
+		await truncateAllTables();
+	});
+
 	it("primeiro usuário recebe role=admin e emailVerified=true", async () => {
 		await auth.api.signUpEmail({
 			body: {
@@ -155,6 +166,17 @@ describe("databaseHook: user.create.after — provisionamento do primeiro usuár
 });
 
 describe("hook.before — bloqueio de signup após primeiro usuário", () => {
+	let auth_client: TestHelpers;
+
+	beforeAll(async () => {
+		const ctx = await auth.$context;
+		auth_client = ctx.test;
+	});
+
+	afterEach(async () => {
+		await truncateAllTables();
+	});
+
 	it("bloqueia signup para segundo usuário", async () => {
 		const first = auth_client.createUser({
 			id: Bun.randomUUIDv7(),

@@ -1,7 +1,7 @@
 // REDIS_URL está definido pelo preload — secondaryStorage em auth.ts fica ativo
 
-import { afterEach, beforeAll, describe, expect, it } from "bun:test";
 import type { TestHelpers } from "better-auth/plugins";
+import { afterEach, beforeAll, describe, expect, it } from "bun:test";
 import { truncateAllTables } from "../../setup/db";
 import { isolateTestSettings } from "../../setup/settings";
 
@@ -13,18 +13,18 @@ const { app } = await import("@/index");
 const { auth } = await import("@/lib/auth");
 const { redis } = await import("@/lib/cache");
 
-let auth_client: TestHelpers;
-
-beforeAll(async () => {
-	const ctx = await auth.$context;
-	auth_client = ctx.test;
-});
-
-afterEach(async () => {
-	await truncateAllTables();
-});
-
 describe("Sessions com Redis secondary storage", () => {
+	let auth_client: TestHelpers;
+
+	beforeAll(async () => {
+		const ctx = await auth.$context;
+		auth_client = ctx.test;
+	});
+
+	afterEach(async () => {
+		await truncateAllTables();
+	});
+
 	it("cria sessão e armazena no Redis", async () => {
 		const user = auth_client.createUser({
 			id: Bun.randomUUIDv7(),

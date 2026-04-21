@@ -1,6 +1,6 @@
-import { afterEach, beforeAll, describe, expect, it } from "bun:test";
-import type { TestHelpers } from "better-auth/plugins";
 import { models } from "@/db/models";
+import type { TestHelpers } from "better-auth/plugins";
+import { afterEach, beforeAll, describe, expect, it } from "bun:test";
 import { truncateAllTables } from "../../setup/db";
 import { isolateTestSettings } from "../../setup/settings";
 
@@ -10,18 +10,17 @@ const { db } = await import("@/db");
 const { app } = await import("@/index");
 const { auth } = await import("@/lib/auth");
 
-let auth_client: TestHelpers;
-
-beforeAll(async () => {
-	const ctx = await auth.$context;
-	auth_client = ctx.test;
-});
-
-afterEach(async () => {
-	await truncateAllTables();
-});
-
 describe("POST /v1/auth/sign-in/email", () => {
+	let auth_client: TestHelpers;
+
+	beforeAll(async () => {
+		const ctx = await auth.$context;
+		auth_client = ctx.test;
+	});
+
+	afterEach(async () => {
+		await truncateAllTables();
+	});
 	it("retorna sessão para credenciais válidas", async () => {
 		// signUpEmail cria o primeiro usuário (sem bloqueio) e o after-hook seta emailVerified=true
 		await auth.api.signUpEmail({

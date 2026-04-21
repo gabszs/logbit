@@ -1,5 +1,5 @@
-import { afterEach, beforeAll, describe, expect, it } from "bun:test";
 import type { TestHelpers } from "better-auth/plugins";
+import { afterEach, beforeAll, describe, expect, it } from "bun:test";
 import { isolateTestSettings } from "../../setup/settings";
 
 isolateTestSettings({
@@ -11,18 +11,18 @@ const { auth } = await import("@/lib/auth");
 const { app } = await import("@/index");
 const { truncateAllTables } = await import("../../setup/db");
 
-let auth_client: TestHelpers;
-
-beforeAll(async () => {
-	const ctx = await auth.$context;
-	auth_client = ctx.test;
-});
-
-afterEach(async () => {
-	await truncateAllTables();
-});
-
 describe("GET /v1/auth/get-session", () => {
+	let auth_client: TestHelpers;
+
+	beforeAll(async () => {
+		const ctx = await auth.$context;
+		auth_client = ctx.test;
+	});
+
+	afterEach(async () => {
+		await truncateAllTables();
+	});
+
 	it("returns 200 with null body without session cookie", async () => {
 		const res = await app.request("/v1/auth/get-session");
 		expect(res.status).toBe(200);

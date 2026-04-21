@@ -1,7 +1,7 @@
-import { afterEach, beforeAll, describe, expect, it } from "bun:test";
-import type { TestHelpers } from "better-auth/plugins";
-import { eq } from "drizzle-orm";
 import { models } from "@/db/models";
+import type { TestHelpers } from "better-auth/plugins";
+import { afterEach, beforeAll, describe, expect, it } from "bun:test";
+import { eq } from "drizzle-orm";
 import { truncateAllTables } from "../../setup/db";
 import { isolateTestSettings } from "../../setup/settings";
 
@@ -10,18 +10,17 @@ isolateTestSettings();
 const { db } = await import("@/db");
 const { auth } = await import("@/lib/auth");
 
-let auth_client: TestHelpers;
-
-beforeAll(async () => {
-	const ctx = await auth.$context;
-	auth_client = ctx.test;
-});
-
-afterEach(async () => {
-	await truncateAllTables();
-});
-
 describe("POST /v1/auth/sign-up/email", () => {
+	let auth_client: TestHelpers;
+
+	beforeAll(async () => {
+		const ctx = await auth.$context;
+		auth_client = ctx.test;
+	});
+
+	afterEach(async () => {
+		await truncateAllTables();
+	});
 	it("first user becomes admin with emailVerified=true", async () => {
 		await auth.api.signUpEmail({
 			body: {

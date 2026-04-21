@@ -1,5 +1,5 @@
-import { afterEach, beforeAll, describe, expect, it } from "bun:test";
 import type { TestHelpers } from "better-auth/plugins";
+import { afterEach, beforeAll, describe, expect, it } from "bun:test";
 import { isolateTestSettings } from "../../setup/settings";
 
 isolateTestSettings({
@@ -11,18 +11,18 @@ const { auth } = await import("@/lib/auth");
 const { app } = await import("@/index");
 const { truncateAllTables } = await import("../../setup/db");
 
-let auth_client: TestHelpers;
-
-beforeAll(async () => {
-	const ctx = await auth.$context;
-	auth_client = ctx.test;
-});
-
-afterEach(async () => {
-	await truncateAllTables();
-});
-
 describe("DELETE /v1/auth/delete-user (flag desabilitada)", () => {
+	let auth_client: TestHelpers;
+
+	beforeAll(async () => {
+		const ctx = await auth.$context;
+		auth_client = ctx.test;
+	});
+
+	afterEach(async () => {
+		await truncateAllTables();
+	});
+
 	it("retorna 404 quando AUTH_ENABLE_DELETE_ACCOUNT=false", async () => {
 		const user = auth_client.createUser({
 			id: Bun.randomUUIDv7(),

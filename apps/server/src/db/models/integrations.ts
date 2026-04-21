@@ -5,11 +5,13 @@ import {
 	pgEnum,
 	pgTable,
 	timestamp,
+	uniqueIndex,
 	uuid,
 	varchar,
 } from "drizzle-orm/pg-core";
-import { organizations } from "./authModels";
+import { sql } from "drizzle-orm";
 import { supportedIntegrationTypes } from "@/integrations/senderFactory";
+import { organizations } from "./authModels";
 
 export const integrationTypeEnum = pgEnum("type", supportedIntegrationTypes);
 
@@ -36,5 +38,8 @@ export const integrations = pgTable(
 	(table) => [
 		index("integrations_organization_id_idx").on(table.organizationId),
 		index("integrations_id_idx").on(table.id),
+		uniqueIndex("integrations_single_default_per_org_uidx")
+			.on(table.organizationId)
+			.where(sql`${table.isDefault} = true`),
 	],
 );

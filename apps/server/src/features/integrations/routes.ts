@@ -32,7 +32,6 @@ integrationsRouter.use(async (c, next) => {
 	const integrationRepository = new IntegrationRepository(db);
 	const integrationService = new IntegrationService(integrationRepository);
 	const session = c.get("session");
-	console.log("Session in integrations router middleware:", session);
 	const activeOrganizationId = session.activeOrganizationId;
 	if (activeOrganizationId == null) {
 		throw httpErrors.forbidden({
@@ -154,10 +153,14 @@ integrationsRouter.openapi(
 		const body = c.req.valid("json");
 		const service = c.get("service");
 		const activeOrganizationId = c.get("activeOrganizationId");
-		const integration = await service.create({
+		const integrationData = {
 			...body,
 			organizationId: activeOrganizationId,
-		});
+		};
+		const integration =
+			body.isDefault === true
+				? await service.createWithDefaultPromotion(integrationData)
+				: await service.create(integrationData);
 
 		return c.json(
 			{
@@ -177,7 +180,7 @@ integrationsRouter.openapi(
 	createRoute({
 		tags: ["Integrations"],
 		summary: "Update an integration",
-			method: "patch",
+		method: "patch",
 		path: "/integrations/{id}",
 		request: {
 			params: uuidIdParamSchema,
@@ -225,9 +228,16 @@ integrationsRouter.openapi(
 			...body,
 		};
 
-		const integration = await service.update(id, updatedIntegration, {
-			organizationId: activeOrganizationId,
-		});
+		const integration =
+			body.isDefault === true
+				? await service.updateWithDefaultPromotion(
+						id,
+						updatedIntegration,
+						activeOrganizationId,
+					)
+				: await service.update(id, updatedIntegration, {
+						organizationId: activeOrganizationId,
+					});
 
 		return c.json({
 			message: "Integration successfully updated",

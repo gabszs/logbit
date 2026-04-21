@@ -1,5 +1,5 @@
-import { afterEach, beforeAll, describe, expect, it } from "bun:test";
 import type { TestHelpers } from "better-auth/plugins";
+import { afterEach, beforeAll, describe, expect, it } from "bun:test";
 import { truncateAllTables } from "../../setup/db";
 import { isolateTestSettings } from "../../setup/settings";
 
@@ -11,18 +11,18 @@ const { auth } = await import("@/lib/auth");
 type OrgResult = { id: string; name: string; slug: string };
 type InvitationResult = { id: string; email: string; status: string };
 
-let auth_client: TestHelpers;
-
-beforeAll(async () => {
-	const ctx = await auth.$context;
-	auth_client = ctx.test;
-});
-
-afterEach(async () => {
-	await truncateAllTables();
-});
-
 describe("POST /v1/auth/organization/create", () => {
+	let auth_client: TestHelpers;
+
+	beforeAll(async () => {
+		const ctx = await auth.$context;
+		auth_client = ctx.test;
+	});
+
+	afterEach(async () => {
+		await truncateAllTables();
+	});
+
 	it("admin pode criar uma organização", async () => {
 		const admin = auth_client.createUser({
 			id: Bun.randomUUIDv7(),
@@ -61,6 +61,17 @@ describe("POST /v1/auth/organization/create", () => {
 });
 
 describe("Convites de membros", () => {
+	let auth_client: TestHelpers;
+
+	beforeAll(async () => {
+		const ctx = await auth.$context;
+		auth_client = ctx.test;
+	});
+
+	afterEach(async () => {
+		await truncateAllTables();
+	});
+
 	it("admin pode convidar membro para uma organização", async () => {
 		const admin = auth_client.createUser({
 			id: Bun.randomUUIDv7(),
@@ -142,6 +153,17 @@ describe("Convites de membros", () => {
 });
 
 describe("Gerenciamento de membros", () => {
+	let auth_client: TestHelpers;
+
+	beforeAll(async () => {
+		const ctx = await auth.$context;
+		auth_client = ctx.test;
+	});
+
+	afterEach(async () => {
+		await truncateAllTables();
+	});
+
 	it("admin pode remover membro de uma organização", async () => {
 		const admin = auth_client.createUser({
 			id: Bun.randomUUIDv7(),

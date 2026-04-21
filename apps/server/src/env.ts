@@ -6,7 +6,7 @@ const envSchema = z.object({
 		.string()
 		.transform((v) => v !== "false")
 		.default(false),
-	HOSTNAME: z.string().default("localhost:5051"), // corrijir depois para abrajer edge cases
+	HOSTNAME: z.string().default("http://localhost:5051"), // corrijir depois para abrajer edge cases
 	API_PORT: z.coerce.number().default(5051),
 	VITE_WEB_URL: z.string().default("http://localhost:5052"),
 	REDIS_URL: z.string().startsWith("redis://").optional(),
@@ -46,7 +46,6 @@ const envSchema = z.object({
 
 	// Auth settings
 	AUTH_SECRET: z.string().default("supersecret"),
-	AUTH_SALT: z.string().default("supersalt"),
 	AUTH_SESSION_DURATION_SECONDS: z.coerce.number().default(1209600), // DEFAULT 14 DAYS
 	AUTH_BASE_PATH: z.string().default("/v1/auth"),
 	AUTH_OPEN_API_PATH: z.string().default("/docs"),
