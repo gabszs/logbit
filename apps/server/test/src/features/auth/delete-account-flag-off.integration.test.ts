@@ -1,4 +1,4 @@
-import { afterEach, beforeAll, describe, expect, it } from "bun:test";
+import { afterEach, beforeAll, beforeEach, describe, expect, it } from "bun:test";
 import type { TestHelpers } from "better-auth/plugins";
 import { isolateTestSettings } from "../../setup/settings";
 
@@ -17,6 +17,10 @@ describe("DELETE /v1/auth/delete-user (flag desabilitada)", () => {
 	beforeAll(async () => {
 		const ctx = await auth.$context;
 		auth_client = ctx.test;
+	});
+
+	beforeEach(async () => {
+		await truncateAllTables();
 	});
 
 	afterEach(async () => {

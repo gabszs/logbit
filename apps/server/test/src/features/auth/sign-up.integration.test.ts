@@ -5,7 +5,9 @@ import { models } from "@/db/models";
 import { truncateAllTables } from "../../setup/db";
 import { isolateTestSettings } from "../../setup/settings";
 
-isolateTestSettings();
+isolateTestSettings({
+	AUTH_ALLOWED_EMAIL_DOMAINS: undefined,
+});
 
 const { db } = await import("@/db");
 const { auth } = await import("@/lib/auth");

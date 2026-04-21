@@ -215,6 +215,28 @@ describe("Integrations routes", () => {
 		expect(res.status).toBe(404);
 	});
 
+	it("PATCH /v1/integrations/{id} returns 404 for integration from another org", async () => {
+		const ctx = await createAuthContextWithActiveOrganization(
+			"route-patch-cross-org@example.com",
+		);
+		const secondOrganizationId = await createSecondOrganization();
+		const otherOrgIntegrationId = await insertOrganizationDefaultIntegration({
+			organizationId: secondOrganizationId,
+			name: "Other Org Integration Patch",
+		});
+
+		const res = await requestWithAuth(
+			`/v1/integrations/${otherOrgIntegrationId}`,
+			{
+				method: "PATCH",
+				headers: ctx.headers,
+				body: { name: "nope" },
+			},
+		);
+
+		expect(res.status).toBe(404);
+	});
+
 	it("DELETE /v1/integrations/{id} returns 204 when integration exists", async () => {
 		const ctx = await createAuthContextWithActiveOrganization(
 			"route-delete-ok@example.com",
@@ -238,6 +260,27 @@ describe("Integrations routes", () => {
 			method: "DELETE",
 			headers: ctx.headers,
 		});
+
+		expect(res.status).toBe(404);
+	});
+
+	it("DELETE /v1/integrations/{id} returns 404 for integration from another org", async () => {
+		const ctx = await createAuthContextWithActiveOrganization(
+			"route-delete-cross-org@example.com",
+		);
+		const secondOrganizationId = await createSecondOrganization();
+		const otherOrgIntegrationId = await insertOrganizationDefaultIntegration({
+			organizationId: secondOrganizationId,
+			name: "Other Org Integration Delete",
+		});
+
+		const res = await requestWithAuth(
+			`/v1/integrations/${otherOrgIntegrationId}`,
+			{
+				method: "DELETE",
+				headers: ctx.headers,
+			},
+		);
 
 		expect(res.status).toBe(404);
 	});

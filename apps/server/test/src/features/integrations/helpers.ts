@@ -94,13 +94,11 @@ export const buildIntegrationPayload = (
 	options?: {
 		name?: string;
 		isActive?: boolean;
-		isDefault?: boolean;
 	},
 ) => {
 	const base = {
 		name: options?.name ?? `integration-${Bun.randomUUIDv7()}`,
 		isActive: options?.isActive ?? true,
-		isDefault: options?.isDefault ?? false,
 		type,
 	};
 
@@ -154,15 +152,13 @@ export const requestWithAuth = async (
 export const createIntegration = async ({
 	headers,
 	type = "webhook",
-	isDefault = false,
 	name,
 }: {
 	headers: Headers;
 	type?: IntegrationType;
-	isDefault?: boolean;
 	name?: string;
 }) => {
-	const payload = buildIntegrationPayload(type, { isDefault, name });
+	const payload = buildIntegrationPayload(type, { name });
 	const res = await requestWithAuth("/v1/integrations", {
 		method: "POST",
 		headers,
@@ -178,7 +174,6 @@ export const getOrganizationDefaults = async (organizationId: string) => {
 	return await db
 		.select({
 			id: models.integrations.id,
-			isDefault: models.integrations.isDefault,
 		})
 		.from(models.integrations)
 		.where(eq(models.integrations.organizationId, organizationId));
@@ -199,7 +194,6 @@ export const insertOrganizationDefaultIntegration = async ({
 		organizationId,
 		config: { url: "https://example.com/org" },
 		isActive: true,
-		isDefault: true,
 	});
 	return id;
 };
@@ -222,7 +216,6 @@ export const countOrganizationDefaults = async (organizationId: string) => {
 		.where(
 			and(
 				eq(models.integrations.organizationId, organizationId),
-				eq(models.integrations.isDefault, true),
 			),
 		);
 	return defaults.length;

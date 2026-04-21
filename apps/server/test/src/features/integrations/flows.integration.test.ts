@@ -3,14 +3,12 @@ import { eq } from "drizzle-orm";
 import {
 	createAuthContextWithActiveOrganization,
 	createIntegration,
-	getOrganizationDefaults,
 	requestWithAuth,
 	setupIntegrationTestLifecycle,
 } from "./helpers";
 
 const { db } = await import("@/db");
 const { models } = await import("@/db/models");
-
 
 describe("Integrations flows", () => {
 	setupIntegrationTestLifecycle();
@@ -41,11 +39,14 @@ describe("Integrations flows", () => {
 		});
 		expect(getRes.status).toBe(200);
 
-		const patchRes = await requestWithAuth(`/v1/integrations/${integrationId}`, {
-			method: "PATCH",
-			headers: ctx.headers,
-			body: { name: "flow-main-updated" },
-		});
+		const patchRes = await requestWithAuth(
+			`/v1/integrations/${integrationId}`,
+			{
+				method: "PATCH",
+				headers: ctx.headers,
+				body: { name: "flow-main-updated" },
+			},
+		);
 		expect(patchRes.status).toBe(200);
 
 		const row = await db
@@ -55,10 +56,13 @@ describe("Integrations flows", () => {
 			.limit(1);
 		expect(row[0]?.name).toBe("flow-main-updated");
 
-		const deleteRes = await requestWithAuth(`/v1/integrations/${integrationId}`, {
-			method: "DELETE",
-			headers: ctx.headers,
-		});
+		const deleteRes = await requestWithAuth(
+			`/v1/integrations/${integrationId}`,
+			{
+				method: "DELETE",
+				headers: ctx.headers,
+			},
+		);
 		expect(deleteRes.status).toBe(204);
 
 		const getAfterDeleteRes = await requestWithAuth(
@@ -71,32 +75,47 @@ describe("Integrations flows", () => {
 		expect(getAfterDeleteRes.status).toBe(404);
 	});
 
-	it("multi-endpoint flow with default promotion", async () => {
+	it("updates integration type and config together with valid payload", async () => {
 		const ctx = await createAuthContextWithActiveOrganization(
-			"flow-default@example.com",
+			"flow-type-switch@example.com",
 		);
-
-		const integrationAId = await createIntegration({
+		const integrationId = await createIntegration({
 			headers: ctx.headers,
-			name: "Integration A",
-			isDefault: true,
-		});
-		const integrationBId = await createIntegration({
-			headers: ctx.headers,
-			name: "Integration B",
-			isDefault: false,
+			type: "webhook",
+			name: "flow-type-switch",
 		});
 
-		const promoteRes = await requestWithAuth(`/v1/integrations/${integrationBId}`, {
-			method: "PATCH",
-			headers: ctx.headers,
-			body: { isDefault: true },
-		});
-		expect(promoteRes.status).toBe(200);
+		const patchRes = await requestWithAuth(
+			`/v1/integrations/${integrationId}`,
+			{
+				method: "PATCH",
+				headers: ctx.headers,
+				body: {
+					type: "resend",
+					config: {
+						apiKey: "re_test_key",
+						from: "sender@example.com",
+						to: ["ops@example.com"],
+					},
+				},
+			},
+		);
+		expect(patchRes.status).toBe(200);
 
-		const rows = await getOrganizationDefaults(ctx.organizationId);
-		expect(rows.find((row) => row.id === integrationAId)?.isDefault).toBe(false);
-		expect(rows.find((row) => row.id === integrationBId)?.isDefault).toBe(true);
-		expect(rows.filter((row) => row.isDefault).length).toBe(1);
+		const row = await db
+			.select({
+				type: models.integrations.type,
+				config: models.integrations.config,
+			})
+			.from(models.integrations)
+			.where(eq(models.integrations.id, integrationId))
+			.limit(1);
+
+		expect(row[0]?.type).toBe("resend");
+		expect(row[0]?.config).toEqual({
+			apiKey: "re_test_key",
+			from: "sender@example.com",
+			to: ["ops@example.com"],
+		});
 	});
 });
