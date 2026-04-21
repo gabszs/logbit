@@ -15,6 +15,7 @@ import {
 	integrationsSchema,
 	integrationsSuccessSchema,
 	integrationsUpsertSchema,
+	integrationUpdateSchema,
 } from "./schemas";
 import { IntegrationService } from "./service";
 
@@ -73,6 +74,11 @@ integrationsRouter.openapi(
 		const integration = await service.getById(id, {
 			organizationId: activeOrganizationId,
 		});
+
+		if (!integration)
+			throw httpErrors.notFound({
+				detail: "The requested integration was not found",
+			});
 
 		return c.json(integration);
 	},
@@ -153,9 +159,17 @@ integrationsRouter.openapi(
 			organizationId: activeOrganizationId,
 		});
 
-		return c.json(integration, status.CREATED.code, {
-			location: `${c.req.url}/${integration.id}`,
-		});
+		return c.json(
+			{
+				message: "Integration successfully created",
+				data: integration,
+				metadata: null,
+			},
+			status.CREATED.code,
+			{
+				location: `${c.req.url}/${integration.id}`,
+			},
+		);
 	},
 );
 
@@ -163,7 +177,7 @@ integrationsRouter.openapi(
 	createRoute({
 		tags: ["Integrations"],
 		summary: "Update an integration",
-		method: "put",
+			method: "patch",
 		path: "/integrations/{id}",
 		request: {
 			params: uuidIdParamSchema,
@@ -171,7 +185,7 @@ integrationsRouter.openapi(
 			body: {
 				content: {
 					[ContentTypes.JSON]: {
-						schema: integrationsUpsertSchema.partial(),
+						schema: integrationUpdateSchema,
 					},
 				},
 			},
@@ -215,7 +229,11 @@ integrationsRouter.openapi(
 			organizationId: activeOrganizationId,
 		});
 
-		return c.json(integration);
+		return c.json({
+			message: "Integration successfully updated",
+			data: integration,
+			metadata: null,
+		});
 	},
 );
 

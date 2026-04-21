@@ -1,10 +1,9 @@
-import { models } from "@/db/models";
-import {
-	supportedIntegrationSchemas,
-	supportedIntegrationTypes,
-} from "@/integrations/senderFactory";
 import { createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
+import { models } from "@/db/models";
+import { CloudflareEmailConfigSchema } from "@/integrations/cloudflare/email/schemas";
+import { ResendConfigSchema } from "@/integrations/resend/api/schemas";
+import { WebhookConfigSchema } from "@/integrations/webhook/http/schemas";
 import { searchOptionsSchema } from "../../common/schemas/baseSchemas";
 
 export const baseIntegrationsSchema = createSelectSchema(
@@ -17,24 +16,135 @@ export const baseIntegrationsSchema = createSelectSchema(
 
 export type IntegrationsType = z.infer<typeof baseIntegrationsSchema>;
 
-export const integrationsSchema = baseIntegrationsSchema.extend({
-	type: z.enum(supportedIntegrationTypes),
-	config: supportedIntegrationSchemas,
+const integrationCommonSchema = baseIntegrationsSchema.omit({
+	type: true,
+	config: true,
 });
 
-export const integrationsUpsertSchema = integrationsSchema
-	.omit({
-		id: true,
-		organizationId: true,
-		createdAt: true,
-		updatedAt: true,
-	})
+const webhookIntegrationSchema = integrationCommonSchema.extend({
+	type: z.literal("webhook"),
+	config: WebhookConfigSchema,
+});
+
+const cloudflareEmailIntegrationSchema = integrationCommonSchema.extend({
+	type: z.literal("cloudflare_email"),
+	config: CloudflareEmailConfigSchema,
+});
+
+const resendIntegrationSchema = integrationCommonSchema.extend({
+	type: z.literal("resend"),
+	config: ResendConfigSchema,
+});
+
+const integrationTypeConfigPairSchema = z.discriminatedUnion("type", [
+	z.object({
+		type: z.literal("webhook"),
+		config: WebhookConfigSchema,
+	}),
+	z.object({
+		type: z.literal("cloudflare_email"),
+		config: CloudflareEmailConfigSchema,
+	}),
+	z.object({
+		type: z.literal("resend"),
+		config: ResendConfigSchema,
+	}),
+]);
+
+export const integrationsSchema = z.discriminatedUnion("type", [
+	webhookIntegrationSchema,
+	cloudflareEmailIntegrationSchema,
+	resendIntegrationSchema,
+]);
+
+const integrationCommonUpsertSchema = integrationCommonSchema.omit({
+	id: true,
+	organizationId: true,
+	createdAt: true,
+	updatedAt: true,
+});
+
+const webhookIntegrationUpsertSchema = integrationCommonUpsertSchema.extend({
+	type: z.literal("webhook"),
+	config: WebhookConfigSchema,
+});
+
+const cloudflareEmailIntegrationUpsertSchema =
+	integrationCommonUpsertSchema.extend({
+		type: z.literal("cloudflare_email"),
+		config: CloudflareEmailConfigSchema,
+	});
+
+const resendIntegrationUpsertSchema = integrationCommonUpsertSchema.extend({
+	type: z.literal("resend"),
+	config: ResendConfigSchema,
+});
+
+export const integrationsUpsertSchema = z
+	.discriminatedUnion("type", [
+		webhookIntegrationUpsertSchema,
+		cloudflareEmailIntegrationUpsertSchema,
+		resendIntegrationUpsertSchema,
+	])
 	.openapi("IntegrationsUpsert");
 
-export const integrationUpdateSchema = integrationsUpsertSchema
-	.partial()
-	.refine((value) => Object.keys(value).length > 0, {
-		message: "At least one field is required",
+const integrationTypeSchema = z.enum(["webhook", "cloudflare_email", "resend"]);
+
+const integrationConfigSchema = z.union([
+	WebhookConfigSchema,
+	CloudflareEmailConfigSchema,
+	ResendConfigSchema,
+]);
+
+const partialIntegrationFieldsSchema = integrationCommonUpsertSchema.partial();
+
+type PartialIntegrationUpdate = z.infer<
+	typeof partialIntegrationFieldsSchema
+> & {
+	type?: z.infer<typeof integrationTypeSchema>;
+	config?: z.infer<typeof integrationConfigSchema>;
+};
+
+export const integrationUpdateSchema = partialIntegrationFieldsSchema
+	.extend({
+		type: integrationTypeSchema.optional(),
+		config: integrationConfigSchema.optional(),
+	})
+	.superRefine((value: PartialIntegrationUpdate, ctx: z.RefinementCtx) => {
+		if (Object.keys(value).length === 0) {
+			ctx.addIssue({
+				code: "custom",
+				message: "At least one field is required",
+			});
+		}
+
+		const hasType = value.type !== undefined;
+		const hasConfig = value.config !== undefined;
+
+		if (hasType !== hasConfig) {
+			ctx.addIssue({
+				code: "custom",
+				message: "type and config must be provided together",
+				path: hasType ? ["config"] : ["type"],
+			});
+			return;
+		}
+
+		if (hasType && hasConfig) {
+			const result = integrationTypeConfigPairSchema.safeParse({
+				type: value.type,
+				config: value.config,
+			});
+			if (!result.success) {
+				for (const issue of result.error.issues) {
+					ctx.addIssue({
+						code: "custom",
+						message: issue.message,
+						path: issue.path,
+					});
+				}
+			}
+		}
 	});
 
 export const sendIntegrationEmailSchema = z.object({
