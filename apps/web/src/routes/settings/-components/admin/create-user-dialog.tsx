@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Alert, AlertDescription, AlertTitle } from "@/web/components/ui/alert";
 import { Button } from "@/web/components/ui/button";
+import { Checkbox } from "@/web/components/ui/checkbox";
 import {
 	Dialog,
 	DialogContent,
@@ -38,6 +39,7 @@ const INITIAL_VALUES: AdminCreateUserForm = {
 	name: "",
 	password: "",
 	role: "user",
+	emailVerified: true,
 };
 
 function isAdminRole(value: string): value is AdminRole {
@@ -98,6 +100,9 @@ export function CreateUserDialog({
 				name,
 				password,
 				role,
+				data: {
+					emailVerified: formValues.emailVerified,
+				},
 			});
 
 			if (error) {
@@ -169,14 +174,14 @@ export function CreateUserDialog({
 						/>
 					</div>
 
-					<div className="grid gap-2">
+					<div className="flex items-center justify-between gap-3">
 						<Label>Role</Label>
 						<Select
 							value={formValues.role}
 							onValueChange={(value) => handleFieldChange("role", value)}
 							disabled={isPending}
 						>
-							<SelectTrigger>
+							<SelectTrigger className="w-44">
 								<SelectValue placeholder="Select role" />
 							</SelectTrigger>
 							<SelectContent>
@@ -187,6 +192,22 @@ export function CreateUserDialog({
 								))}
 							</SelectContent>
 						</Select>
+					</div>
+
+					<div className="flex items-center gap-3">
+						<Checkbox
+							id="admin-create-email-verified"
+							checked={formValues.emailVerified}
+							onCheckedChange={(checked) => {
+								setFormError(null);
+								setFormValues((current) => ({
+									...current,
+									emailVerified: checked === true,
+								}));
+							}}
+							disabled={isPending}
+						/>
+						<Label htmlFor="admin-create-email-verified">Email verified</Label>
 					</div>
 
 					{formError ? (
