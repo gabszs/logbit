@@ -155,9 +155,21 @@ describe("Integrations business rules and validations", () => {
 			}),
 		]);
 
-		expect([resA.status, resB.status].some((status) => status === 200)).toBe(
+		const statuses = [resA.status, resB.status];
+		expect(statuses.some((status) => status === 200)).toBe(true);
+		expect(statuses.every((status) => status === 200 || status === 409)).toBe(
 			true,
 		);
+
+		for (const res of [resA, resB]) {
+			if (res.status === 409) {
+				const body = (await res.json()) as { detail?: string };
+				expect(body.detail).toBe(
+					"Only one default integration is allowed per organization.",
+				);
+			}
+		}
+
 		expect(
 			await countOrganizationDefaults(ctx.organizationId),
 		).toBeLessThanOrEqual(1);

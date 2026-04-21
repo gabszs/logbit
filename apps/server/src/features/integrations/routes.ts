@@ -4,7 +4,6 @@ import {
 	searchOptionsSchema,
 	uuidIdParamSchema,
 } from "@/common/schemas/baseSchemas";
-import { checkForChanges } from "@/common/utils";
 import { db } from "@/db";
 import { ContentTypes, status } from "@/lib/constants";
 import { httpErrors } from "@/lib/errors";
@@ -153,14 +152,7 @@ integrationsRouter.openapi(
 		const body = c.req.valid("json");
 		const service = c.get("service");
 		const activeOrganizationId = c.get("activeOrganizationId");
-		const integrationData = {
-			...body,
-			organizationId: activeOrganizationId,
-		};
-		const integration =
-			body.isDefault === true
-				? await service.createWithDefaultPromotion(integrationData)
-				: await service.create(integrationData);
+		const integration = await service.createIntegration(body, activeOrganizationId);
 
 		return c.json(
 			{
@@ -211,33 +203,11 @@ integrationsRouter.openapi(
 		const body = c.req.valid("json");
 		const service = c.get("service");
 		const activeOrganizationId = c.get("activeOrganizationId");
-
-		const existingIntegration = await service.getById(id, {
-			organizationId: activeOrganizationId,
-		});
-		if (!existingIntegration)
-			throw httpErrors.notFound({
-				detail: "The requested integration was not found",
-			});
-		if (!checkForChanges(existingIntegration, body)) {
-			throw httpErrors.noChangesDetected();
-		}
-
-		const updatedIntegration = {
-			...existingIntegration,
-			...body,
-		};
-
-		const integration =
-			body.isDefault === true
-				? await service.updateWithDefaultPromotion(
-						id,
-						updatedIntegration,
-						activeOrganizationId,
-					)
-				: await service.update(id, updatedIntegration, {
-						organizationId: activeOrganizationId,
-					});
+		const integration = await service.updateIntegration(
+			id,
+			body,
+			activeOrganizationId,
+		);
 
 		return c.json({
 			message: "Integration successfully updated",
@@ -273,18 +243,7 @@ integrationsRouter.openapi(
 		const { id } = c.req.param();
 		const service = c.get("service");
 		const activeOrganizationId = c.get("activeOrganizationId");
-		const existingIntegration = await service.getById(id, {
-			organizationId: activeOrganizationId,
-		});
-
-		if (!existingIntegration)
-			throw httpErrors.notFound({
-				detail: "The requested integration was not found",
-			});
-
-		await service.delete(id, {
-			organizationId: activeOrganizationId,
-		});
+		await service.deleteIntegration(id, activeOrganizationId);
 
 		return c.body(null, 204);
 	},
