@@ -78,6 +78,13 @@
 			"when": 1776749279216,
 			"tag": "0010_unique_default_integration_per_org",
 			"breakpoints": true
+		},
+		{
+			"idx": 11,
+			"version": "7",
+			"when": 1776805183138,
+			"tag": "0011_adding new settings fields",
+			"breakpoints": true
 		}
 	]
 }

@@ -1,6 +1,6 @@
 import z from "zod";
 
-const envSchema = z.object({
+export const envSchema = z.object({
 	// GENERAL SETTINGS
 	SERVE_STATIC: z
 		.string()
@@ -88,4 +88,17 @@ const envSchema = z.object({
 	OTEL_LOG_LEVEL: z.string().default("warn"),
 });
 
-export const settings = envSchema.parse(process.env);
+export type Settings = z.infer<typeof envSchema>;
+
+export const parseSettings = (
+	source: NodeJS.ProcessEnv = process.env,
+	overrides: Partial<Settings> = {},
+): Settings => {
+	const parsed = envSchema.parse(source);
+	return {
+		...parsed,
+		...overrides,
+	};
+};
+
+export const settings = parseSettings(process.env);
