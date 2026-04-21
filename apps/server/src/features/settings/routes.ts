@@ -6,6 +6,8 @@ const updateSettingsSchema = userSettingsSchema
 	.pick({
 		theme: true,
 		organizationId: true,
+		sourceId: true,
+		integrationId: true,
 	})
 	.partial();
 

@@ -118,6 +118,8 @@ export const auth = betterAuth({
 					await db.insert(models.userSettings).values({
 						userId: user.id,
 						theme: "system",
+						sourceId: null,
+						integrationId: null,
 						organizationId,
 						createdAt: now,
 						updatedAt: now,

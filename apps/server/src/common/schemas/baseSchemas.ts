@@ -69,6 +69,13 @@ export const uuidIdParamSchema = z.object({
 	}),
 });
 
+export const uuidV7IdParamSchema = z.object({
+	id: z.uuidv7().openapi({
+		description: "Unique UUIDv7 that identifies the source.",
+		format: "uuid",
+	}),
+});
+
 export const authorizationHeaderSchema = z.object({
 	authorization: z
 		.string()

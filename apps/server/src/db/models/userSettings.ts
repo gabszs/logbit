@@ -8,6 +8,8 @@ export const userSettings = pgTable(
 			.primaryKey()
 			.$defaultFn(() => Bun.randomUUIDv7()),
 		theme: text("theme").notNull().default("system"),
+		sourceId: uuid("source_id"),
+		integrationId: uuid("integration_id"),
 		organizationId: uuid("organization_id").references(() => organizations.id, {
 			onDelete: "set null",
 		}),

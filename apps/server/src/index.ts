@@ -14,10 +14,10 @@ import { db, pgClient } from "./db";
 import { settings } from "./env";
 import authRouter from "./features/auth/routes";
 import integrationsRouter from "./features/integrations/routes";
-import logsRouter from "./features/logs/routes";
 import opampRouter from "./features/opamp/routes";
 import { profileRouter } from "./features/profile/routes";
 import { settingsRouter } from "./features/settings/routes";
+import sourcesRouter from "./features/sources/routes";
 import utilityRoutes from "./features/utils/routes";
 import { BunRedisStore, redis } from "./lib/cache";
 import { authenticateSession } from "./lib/middleware";
@@ -146,7 +146,7 @@ app.use(`${apiPrefix}/v1/*`, authenticateSession);
 app.route(`${apiPrefix}/v1`, authRouter);
 app.route(`${apiPrefix}/v1`, integrationsRouter);
 app.route(`${apiPrefix}/v1`, opampRouter);
-app.route(`${apiPrefix}/v1`, logsRouter);
+app.route(`${apiPrefix}/v1`, sourcesRouter);
 
 // utilities routes
 app.route(`${apiPrefix}/`, utilityRoutes);

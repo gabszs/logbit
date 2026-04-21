@@ -1,10 +1,9 @@
 import { ClickhouseDialect } from "@founderpath/kysely-clickhouse";
 import { SQL } from "bun";
-import { settings } from "@/env";
 import "dotenv/config";
 import { drizzle } from "drizzle-orm/bun-sql";
-
 import { Kysely } from "kysely";
+import { settings } from "@/env";
 import type { chDB } from "./clickhouse/types";
 import { models } from "./models";
 
