@@ -202,3 +202,67 @@ Uso esperado:
 - `implicitColumnExpression`: alvo de busca livre sem campo
 - `bodyExpression`: mensagem principal do log
 - `traceIdExpression` / `spanIdExpression`: correlação com tracing
+
+---
+
+## Matriz de validação por campo (log source)
+
+Base: `otel/hyperdx/packages/common-utils/src/types.ts` (`BaseSourceSchema` + `LogSourceSchema`) e uso em `POST/PUT` com `validateRequest` (`otel/hyperdx/packages/api/src/routers/api/sources.ts`).
+
+Legenda:
+- "Aceita `null`" aqui significa **na validação da API** (Zod).
+- Campos `z.string().optional()` aceitam ausência (`undefined`), mas **não** `null`.
+
+| Campo | Obrigatório | Min | Max | Default | Aceita `null` | Observação |
+|---|---|---|---|---|---|---|
+| `id` (PUT) | Sim | - | - | - | Não | String; no POST (`SourceSchemaNoId`) não é enviado. |
+| `name` | Sim | 1 | - | - | Não | `z.string().min(1)` |
+| `kind` | Sim | - | - | - | Não | Literal `"log"` |
+| `connection` | Sim | 1 | - | - | Não | `z.string().min(1)` |
+| `from.databaseName` | Sim | 1 | - | - | Não | `z.string().min(1)` |
+| `from.tableName` | Sim | 1 | - | - | Não | `z.string().min(1)` |
+| `querySettings` | Não | - | 10 itens | - | Não | Se presente, array de até 10 itens. |
+| `querySettings[].setting` | Sim (quando item existe) | 1 | - | - | Não | `z.string().min(1)` |
+| `querySettings[].value` | Sim (quando item existe) | 1 | - | - | Não | `z.string().min(1)` |
+| `timestampValueExpression` | Sim | 1 | - | - | Não | `z.string().min(1)` |
+| `defaultTableSelectExpression` | Sim | 1 | - | - | Não | `z.string().min(1)` |
+| `serviceNameExpression` | Não | - | - | - | Não | `z.string().optional()` |
+| `severityTextExpression` | Não | - | - | - | Não | `z.string().optional()` |
+| `bodyExpression` | Não | - | - | - | Não | `z.string().optional()` |
+| `eventAttributesExpression` | Não | - | - | - | Não | `z.string().optional()` |
+| `resourceAttributesExpression` | Não | - | - | - | Não | `z.string().optional()` |
+| `displayedTimestampValueExpression` | Não | - | - | - | Não | `z.string().optional()` |
+| `metricSourceId` | Não | - | - | - | Não | `z.string().optional()` |
+| `traceSourceId` | Não | - | - | - | Não | `z.string().optional()` |
+| `traceIdExpression` | Não | - | - | - | Não | `z.string().optional()` |
+| `spanIdExpression` | Não | - | - | - | Não | `z.string().optional()` |
+| `implicitColumnExpression` | Não | - | - | - | Não | `z.string().optional()` |
+| `uniqueRowIdExpression` | Não | - | - | - | Não | `z.string().optional()` |
+| `tableFilterExpression` | Não | - | - | - | Não | `z.string().optional()` |
+| `highlightedTraceAttributeExpressions` | Não | - | - | - | Não | Array opcional. |
+| `highlightedTraceAttributeExpressions[].sqlExpression` | Sim (quando item existe) | 1 | - | - | Não | `z.string().min(1)` |
+| `highlightedTraceAttributeExpressions[].luceneExpression` | Não | - | - | - | Não | `z.string().optional()` |
+| `highlightedTraceAttributeExpressions[].alias` | Não | - | - | - | Não | `z.string().optional()` |
+| `highlightedRowAttributeExpressions` | Não | - | - | - | Não | Array opcional. |
+| `highlightedRowAttributeExpressions[].sqlExpression` | Sim (quando item existe) | 1 | - | - | Não | `z.string().min(1)` |
+| `highlightedRowAttributeExpressions[].luceneExpression` | Não | - | - | - | Não | `z.string().optional()` |
+| `highlightedRowAttributeExpressions[].alias` | Não | - | - | - | Não | `z.string().optional()` |
+| `materializedViews` | Não | - | - | - | Não | Array opcional. |
+| `orderByExpression` | Não | - | - | - | Não | `z.string().optional()` |
+
+### Campos de `materializedViews` (quando usados)
+
+| Campo | Obrigatório | Min | Max | Default | Aceita `null` | Observação |
+|---|---|---|---|---|---|---|
+| `databaseName` | Sim | 1 | - | - | Não | `z.string().min(1)` |
+| `tableName` | Sim | 1 | - | - | Não | `z.string().min(1)` |
+| `dimensionColumns` | Sim | - | - | - | Não | `z.string()` |
+| `minGranularity` | Sim | - | - | - | Não | String em formato de intervalo SQL |
+| `minDate` | Não | - | - | - | Sim | `z.string().datetime().nullish()` |
+| `timestampColumn` | Sim | 1 | - | - | Não | `z.string().min(1)` |
+| `aggregatedColumns` | Sim | 1 item | - | - | Não | Array com mínimo de 1 item |
+
+### Observação importante de persistência (Mongo/Mongoose)
+
+No schema Mongoose (`otel/hyperdx/packages/api/src/models/source.ts`), quase todos os campos de log estão como `String` sem `required`, sem `minlength` e sem `default` (exceto validações específicas de `querySettings` e limite de 10 itens).  
+Ou seja: a **API** restringe bem via Zod; porém, no nível de persistência, documentos legados ou inserções fora da API podem existir com shape mais flexível.
