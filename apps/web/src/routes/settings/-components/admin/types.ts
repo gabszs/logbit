@@ -28,6 +28,7 @@ export type AdminCreateUserForm = {
 	name: string;
 	password: string;
 	role: AdminRole;
+	emailVerified: boolean;
 };
 
 export type AdminBanForm = {
