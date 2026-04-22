@@ -5,12 +5,11 @@ import {
 	createAuthContextWithoutActiveOrganization,
 	createIntegration,
 	createSecondOrganization,
+	getIntegrationTestRuntime,
 	insertOrganizationDefaultIntegration,
 	requestWithAuth,
 	setupIntegrationTestLifecycle,
 } from "./helpers";
-const { app } = await import("@/index");
-
 
 describe("Integrations routes", () => {
 	setupIntegrationTestLifecycle();
@@ -38,7 +37,8 @@ describe("Integrations routes", () => {
 	});
 
 	it("GET /v1/integrations returns 401 without session", async () => {
-		const res = await app.request("/v1/integrations");
+		const runtime = getIntegrationTestRuntime();
+		const res = await runtime.app.request("/v1/integrations");
 		expect(res.status).toBe(401);
 	});
 
@@ -76,10 +76,13 @@ describe("Integrations routes", () => {
 			"route-get-404@example.com",
 		);
 
-		const res = await requestWithAuth(`/v1/integrations/${Bun.randomUUIDv7()}`, {
-			method: "GET",
-			headers: ctx.headers,
-		});
+		const res = await requestWithAuth(
+			`/v1/integrations/${Bun.randomUUIDv7()}`,
+			{
+				method: "GET",
+				headers: ctx.headers,
+			},
+		);
 		expect(res.status).toBe(404);
 	});
 
@@ -206,11 +209,14 @@ describe("Integrations routes", () => {
 			"route-patch-404@example.com",
 		);
 
-		const res = await requestWithAuth(`/v1/integrations/${Bun.randomUUIDv7()}`, {
-			method: "PATCH",
-			headers: ctx.headers,
-			body: { name: "nope" },
-		});
+		const res = await requestWithAuth(
+			`/v1/integrations/${Bun.randomUUIDv7()}`,
+			{
+				method: "PATCH",
+				headers: ctx.headers,
+				body: { name: "nope" },
+			},
+		);
 
 		expect(res.status).toBe(404);
 	});
@@ -256,10 +262,13 @@ describe("Integrations routes", () => {
 			"route-delete-404@example.com",
 		);
 
-		const res = await requestWithAuth(`/v1/integrations/${Bun.randomUUIDv7()}`, {
-			method: "DELETE",
-			headers: ctx.headers,
-		});
+		const res = await requestWithAuth(
+			`/v1/integrations/${Bun.randomUUIDv7()}`,
+			{
+				method: "DELETE",
+				headers: ctx.headers,
+			},
+		);
 
 		expect(res.status).toBe(404);
 	});

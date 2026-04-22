@@ -1,21 +1,17 @@
-import { afterEach, beforeAll, expect } from "bun:test";
+import { afterAll, afterEach, beforeAll, expect } from "bun:test";
 import type { TestHelpers } from "better-auth/plugins";
 import { and, eq } from "drizzle-orm";
-import { isolateTestSettings } from "../../setup/settings";
 
-isolateTestSettings({
-	REDIS_URL: undefined,
-});
-
-const { auth } = await import("@/lib/auth");
-const { app } = await import("@/index");
-const { db } = await import("@/db");
 const { models } = await import("@/db/models");
 const { truncateAllTables } = await import("../../setup/db");
+const { createTestRuntime, disposeTestRuntime } = await import(
+	"../../setup/runtime"
+);
 
 const AUTHORIZATION_VALUE = "Bearer test-token";
 
 let authClient: TestHelpers | null = null;
+let runtime: Awaited<ReturnType<typeof createTestRuntime>> | null = null;
 
 export type IntegrationType = "webhook" | "cloudflare_email" | "resend";
 
@@ -27,12 +23,26 @@ export type AuthContext = {
 
 export const setupIntegrationTestLifecycle = () => {
 	beforeAll(async () => {
-		const ctx = await auth.$context;
+		runtime = await createTestRuntime({
+			settingsOverrides: {
+				REDIS_URL: undefined,
+			},
+		});
+		const ctx = await runtime.auth.$context;
 		authClient = ctx.test;
 	});
 
 	afterEach(async () => {
-		await truncateAllTables();
+		const currentRuntime = getRuntime();
+		await truncateAllTables(currentRuntime.db);
+	});
+
+	afterAll(async () => {
+		if (runtime) {
+			await disposeTestRuntime(runtime);
+			runtime = null;
+		}
+		authClient = null;
 	});
 };
 
@@ -43,10 +53,20 @@ const getAuthClient = (): TestHelpers => {
 	return authClient;
 };
 
+const getRuntime = () => {
+	if (runtime == null) {
+		throw new Error("Runtime is not initialized. Did you call setup?");
+	}
+	return runtime;
+};
+
+export const getIntegrationTestRuntime = () => getRuntime();
+
 export const createAuthContextWithActiveOrganization = async (
 	email: string,
 ): Promise<AuthContext> => {
 	const client = getAuthClient();
+	const currentRuntime = getRuntime();
 	const user = client.createUser({
 		id: Bun.randomUUIDv7(),
 		email,
@@ -54,7 +74,7 @@ export const createAuthContextWithActiveOrganization = async (
 	await client.saveUser(user);
 
 	const { headers, token } = await client.login({ userId: user.id });
-	const memberships = await db
+	const memberships = await currentRuntime.db
 		.select({ organizationId: models.members.organizationId })
 		.from(models.members)
 		.where(eq(models.members.userId, user.id))
@@ -65,7 +85,7 @@ export const createAuthContextWithActiveOrganization = async (
 		throw new Error("Expected user to have an organization membership");
 	}
 
-	await db
+	await currentRuntime.db
 		.update(models.sessions)
 		.set({ activeOrganizationId: organizationId })
 		.where(eq(models.sessions.token, token));
@@ -81,7 +101,8 @@ export const createAuthContextWithoutActiveOrganization = async (
 	email: string,
 ): Promise<AuthContext> => {
 	const ctx = await createAuthContextWithActiveOrganization(email);
-	await db
+	const currentRuntime = getRuntime();
+	await currentRuntime.db
 		.update(models.sessions)
 		.set({ activeOrganizationId: null })
 		.where(eq(models.sessions.userId, ctx.userId));
@@ -141,8 +162,9 @@ export const requestWithAuth = async (
 		body?: unknown;
 	},
 ) => {
+	const currentRuntime = getRuntime();
 	const { headers, body, ...rest } = init;
-	return await app.request(path, {
+	return await currentRuntime.app.request(path, {
 		...rest,
 		headers,
 		body: body === undefined ? undefined : JSON.stringify(body),
@@ -171,7 +193,8 @@ export const createIntegration = async ({
 };
 
 export const getOrganizationDefaults = async (organizationId: string) => {
-	return await db
+	const currentRuntime = getRuntime();
+	return await currentRuntime.db
 		.select({
 			id: models.integrations.id,
 		})
@@ -186,8 +209,9 @@ export const insertOrganizationDefaultIntegration = async ({
 	organizationId: string;
 	name?: string;
 }) => {
+	const currentRuntime = getRuntime();
 	const id = Bun.randomUUIDv7();
-	await db.insert(models.integrations).values({
+	await currentRuntime.db.insert(models.integrations).values({
 		id,
 		name,
 		type: "webhook",
@@ -210,13 +234,10 @@ export const createSecondOrganization = async () => {
 };
 
 export const countOrganizationDefaults = async (organizationId: string) => {
-	const defaults = await db
+	const currentRuntime = getRuntime();
+	const defaults = await currentRuntime.db
 		.select({ id: models.integrations.id })
 		.from(models.integrations)
-		.where(
-			and(
-				eq(models.integrations.organizationId, organizationId),
-			),
-		);
+		.where(and(eq(models.integrations.organizationId, organizationId)));
 	return defaults.length;
 };

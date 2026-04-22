@@ -1,14 +1,20 @@
 import { createMiddleware } from "hono/factory";
 import { HTTPException } from "hono/http-exception";
-import { settings } from "@/env";
+import { type Settings, settings } from "@/env";
 import type { AppContext, AuthAppContext } from "../types";
-import { type AuthSessionData, auth } from "./auth";
+import { type AuthSessionData, type AuthType, auth } from "./auth";
 import { httpErrors } from "./errors";
 
-// DEVO USAR SINGLETON NO AUTH OU CRIOU TODA VEZ????
-export const authenticateSession = createMiddleware<AuthAppContext>(
-	async (c, next) => {
-		const authBasePath = `${settings.SERVE_STATIC ? "/api" : ""}${settings.AUTH_BASE_PATH}`;
+export const createAuthenticateSession = ({
+	auth,
+	settings,
+}: {
+	auth: AuthType;
+	settings: Settings;
+}) => {
+	const authBasePath = `${settings.SERVE_STATIC ? "/api" : ""}${settings.AUTH_BASE_PATH}`;
+
+	return createMiddleware<AuthAppContext>(async (c, next) => {
 		if (
 			c.req.path === authBasePath ||
 			c.req.path.startsWith(`${authBasePath}/`)
@@ -25,8 +31,13 @@ export const authenticateSession = createMiddleware<AuthAppContext>(
 		c.set("session", session.session as AuthSessionData);
 
 		await next();
-	},
-);
+	});
+};
+
+export const authenticateSession = createAuthenticateSession({
+	auth,
+	settings,
+});
 
 export const requireContentType = (allowedContentTypes: string[]) =>
 	createMiddleware<AppContext>(async (c, next) => {

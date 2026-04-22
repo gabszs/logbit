@@ -1,8 +1,8 @@
 import { sql } from "drizzle-orm";
-import { db } from "@/db";
+import type { dbType } from "@/db";
 
-export async function truncateAllTables() {
-	await db.execute(sql`
+export async function truncateAllTables(database: dbType) {
+	await database.execute(sql`
         DO $$ 
         DECLARE 
             r RECORD;

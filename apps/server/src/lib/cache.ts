@@ -5,9 +5,15 @@ import type {
 	HonoConfigType,
 	Store,
 } from "hono-rate-limiter";
-import { settings } from "@/env";
+import { type Settings, settings } from "@/env";
 
-export const redis = new RedisClient(settings.REDIS_URL);
+export const createRedisClient = (
+	runtimeSettings: Pick<Settings, "REDIS_URL">,
+) => {
+	return new RedisClient(runtimeSettings.REDIS_URL);
+};
+
+export const redis = createRedisClient(settings);
 
 const INCREMENT_SCRIPT = `
   local hits = redis.call("INCR", KEYS[1])
@@ -36,10 +42,16 @@ export class BunRedisStore<
 	windowMs = 0;
 	prefix: string;
 	private resetExpiryOnChange: boolean;
+	private redisClient: RedisClient;
 
-	constructor(prefix = "hrl:", resetExpiryOnChange = false) {
+	constructor(
+		prefix = "hrl:",
+		resetExpiryOnChange = false,
+		redisClient: RedisClient = redis,
+	) {
 		this.prefix = prefix;
 		this.resetExpiryOnChange = resetExpiryOnChange;
+		this.redisClient = redisClient;
 	}
 
 	init(options: HonoConfigType<E, P, I>) {
@@ -51,7 +63,7 @@ export class BunRedisStore<
 	}
 
 	async get(key: string): Promise<ClientRateLimitInfo | undefined> {
-		const result = (await redis.send("EVAL", [
+		const result = (await this.redisClient.send("EVAL", [
 			GET_SCRIPT,
 			"1",
 			this.key(key),
@@ -66,7 +78,7 @@ export class BunRedisStore<
 	}
 
 	async increment(key: string): Promise<ClientRateLimitInfo> {
-		const result = (await redis.send("EVAL", [
+		const result = (await this.redisClient.send("EVAL", [
 			INCREMENT_SCRIPT,
 			"1",
 			this.key(key),
@@ -81,10 +93,10 @@ export class BunRedisStore<
 	}
 
 	async decrement(key: string): Promise<void> {
-		await redis.decr(this.key(key));
+		await this.redisClient.decr(this.key(key));
 	}
 
 	async resetKey(key: string): Promise<void> {
-		await redis.del(this.key(key));
+		await this.redisClient.del(this.key(key));
 	}
 }

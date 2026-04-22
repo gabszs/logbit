@@ -11,7 +11,6 @@ export const baseIntegrationsSchema = createSelectSchema(
 ).extend({
 	name: z.string().min(1).max(255),
 	isActive: z.boolean(),
-	isDefault: z.boolean(),
 });
 
 export type IntegrationsType = z.infer<typeof baseIntegrationsSchema>;

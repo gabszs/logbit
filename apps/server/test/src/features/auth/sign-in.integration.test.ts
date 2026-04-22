@@ -1,29 +1,19 @@
-import { afterEach, beforeAll, describe, expect, it } from "bun:test";
-import type { TestHelpers } from "better-auth/plugins";
+import { describe, expect, it } from "bun:test";
 import { models } from "@/db/models";
-import { truncateAllTables } from "../../setup/db";
-import { isolateTestSettings } from "../../setup/settings";
+import {
+	getAuthTestClient,
+	getAuthTestRuntime,
+	setupAuthTestLifecycle,
+} from "./helpers";
 
-isolateTestSettings();
-
-const { db } = await import("@/db");
-const { app } = await import("@/index");
-const { auth } = await import("@/lib/auth");
+setupAuthTestLifecycle({
+	disableRedis: true,
+});
 
 describe("POST /v1/auth/sign-in/email", () => {
-	let auth_client: TestHelpers;
-
-	beforeAll(async () => {
-		const ctx = await auth.$context;
-		auth_client = ctx.test;
-	});
-
-	afterEach(async () => {
-		await truncateAllTables();
-	});
 	it("retorna sessão para credenciais válidas", async () => {
-		// signUpEmail cria o primeiro usuário (sem bloqueio) e o after-hook seta emailVerified=true
-		await auth.api.signUpEmail({
+		const runtime = getAuthTestRuntime();
+		await runtime.auth.api.signUpEmail({
 			body: {
 				email: "admin@example.com",
 				password: "password123",
@@ -31,7 +21,7 @@ describe("POST /v1/auth/sign-in/email", () => {
 			},
 		});
 
-		const result = await auth.api.signInEmail({
+		const result = await runtime.auth.api.signInEmail({
 			body: { email: "admin@example.com", password: "password123" },
 		});
 
@@ -39,7 +29,8 @@ describe("POST /v1/auth/sign-in/email", () => {
 	});
 
 	it("rejeita senha incorreta com 401", async () => {
-		await auth.api.signUpEmail({
+		const runtime = getAuthTestRuntime();
+		await runtime.auth.api.signUpEmail({
 			body: {
 				email: "admin@example.com",
 				password: "correct-password",
@@ -48,38 +39,40 @@ describe("POST /v1/auth/sign-in/email", () => {
 		});
 
 		await expect(
-			auth.api.signInEmail({
+			runtime.auth.api.signInEmail({
 				body: { email: "admin@example.com", password: "wrong-password" },
 			}),
 		).rejects.toMatchObject({ statusCode: 401 });
 	});
 
 	it("rejeita usuário inexistente com 401", async () => {
+		const runtime = getAuthTestRuntime();
 		await expect(
-			auth.api.signInEmail({
+			runtime.auth.api.signInEmail({
 				body: { email: "nobody@example.com", password: "password123" },
 			}),
 		).rejects.toMatchObject({ statusCode: 401 });
 	});
 
 	it("rejeita usuário com email não verificado", async () => {
-		// Salva um primeiro usuário para que isOnlyUser não eleve o próximo para admin+verified
-		await auth_client.saveUser(
-			auth_client.createUser({
+		const authClient = getAuthTestClient();
+		const runtime = getAuthTestRuntime();
+		await authClient.saveUser(
+			authClient.createUser({
 				id: Bun.randomUUIDv7(),
 				email: "first@example.com",
 			}),
 		);
 
-		const user = auth_client.createUser({
+		const user = authClient.createUser({
 			id: Bun.randomUUIDv7(),
 			email: "unverified@example.com",
 			emailVerified: false,
 		});
-		await auth_client.saveUser(user);
+		await authClient.saveUser(user);
 
 		const passwordHash = await Bun.password.hash("password123");
-		await db.insert(models.accounts).values({
+		await runtime.db.insert(models.accounts).values({
 			accountId: user.id,
 			providerId: "credential",
 			userId: user.id,
@@ -88,7 +81,7 @@ describe("POST /v1/auth/sign-in/email", () => {
 			updatedAt: new Date(),
 		});
 
-		const res = await app.request("/v1/auth/sign-in/email", {
+		const res = await runtime.app.request("/v1/auth/sign-in/email", {
 			method: "POST",
 			headers: { "content-type": "application/json" },
 			body: JSON.stringify({

@@ -1,25 +1,21 @@
-import { afterEach, beforeAll, expect } from "bun:test";
+import { afterAll, afterEach, beforeAll, expect } from "bun:test";
 import { createORPCClient } from "@orpc/client";
 import { RPCLink } from "@orpc/client/fetch";
 import type { RouterClient } from "@orpc/server";
 import type { TestHelpers } from "better-auth/plugins";
 import { eq } from "drizzle-orm";
 import type { AppRouter } from "@/client/contracts";
-import { isolateTestSettings } from "../../setup/settings";
 
-isolateTestSettings({
-	REDIS_URL: undefined,
-});
-
-const { auth } = await import("@/lib/auth");
-const { app } = await import("@/index");
-const { db } = await import("@/db");
 const { models } = await import("@/db/models");
 const { truncateAllTables } = await import("../../setup/db");
+const { createTestRuntime, disposeTestRuntime } = await import(
+	"../../setup/runtime"
+);
 
 type AppRouterClient = RouterClient<AppRouter>;
 
 let authClient: TestHelpers | null = null;
+let runtime: Awaited<ReturnType<typeof createTestRuntime>> | null = null;
 
 export type OrpcAuthContext = {
 	userId: string;
@@ -29,12 +25,26 @@ export type OrpcAuthContext = {
 
 export const setupOrpcTestLifecycle = () => {
 	beforeAll(async () => {
-		const ctx = await auth.$context;
+		runtime = await createTestRuntime({
+			settingsOverrides: {
+				REDIS_URL: undefined,
+			},
+		});
+		const ctx = await runtime.auth.$context;
 		authClient = ctx.test;
 	});
 
 	afterEach(async () => {
-		await truncateAllTables();
+		const currentRuntime = getRuntime();
+		await truncateAllTables(currentRuntime.db);
+	});
+
+	afterAll(async () => {
+		if (runtime) {
+			await disposeTestRuntime(runtime);
+			runtime = null;
+		}
+		authClient = null;
 	});
 };
 
@@ -46,10 +56,23 @@ const getAuthClient = (): TestHelpers => {
 	return authClient;
 };
 
+const getRuntime = () => {
+	if (runtime == null) {
+		throw new Error("Runtime is not initialized. Did you call setup?");
+	}
+
+	return runtime;
+};
+
+export const getOrpcTestRuntime = () => getRuntime();
+
+export const getOrpcRouters = () => getRuntime().orpcRouter;
+
 export const createAuthContext = async (
 	email: string,
 ): Promise<OrpcAuthContext> => {
 	const client = getAuthClient();
+	const currentRuntime = getRuntime();
 	const user = client.createUser({
 		id: Bun.randomUUIDv7(),
 		email,
@@ -58,14 +81,14 @@ export const createAuthContext = async (
 	await client.saveUser(user);
 
 	const { headers, token } = await client.login({ userId: user.id });
-	const [settingsRow] = await db
+	const [settingsRow] = await currentRuntime.db
 		.select({ id: models.userSettings.id })
 		.from(models.userSettings)
 		.where(eq(models.userSettings.userId, user.id))
 		.limit(1);
 
 	if (!settingsRow) {
-		const memberships = await db
+		const memberships = await currentRuntime.db
 			.select({ organizationId: models.members.organizationId })
 			.from(models.members)
 			.where(eq(models.members.userId, user.id))
@@ -73,7 +96,7 @@ export const createAuthContext = async (
 
 		const organizationId = memberships[0]?.organizationId ?? null;
 		const now = new Date();
-		await db.insert(models.userSettings).values({
+		await currentRuntime.db.insert(models.userSettings).values({
 			userId: user.id,
 			theme: "system",
 			sourceId: null,
@@ -102,6 +125,7 @@ export const createAdditionalSession = async (
 export const createOrpcHttpClient = (
 	authHeaders?: Headers,
 ): AppRouterClient => {
+	const currentRuntime = getRuntime();
 	const link = new RPCLink({
 		url: "http://test.local/orpc",
 		fetch(request, init) {
@@ -120,7 +144,7 @@ export const createOrpcHttpClient = (
 			}
 
 			const finalRequest = new Request(baseRequest, { headers });
-			return app.fetch(finalRequest);
+			return currentRuntime.app.fetch(finalRequest);
 		},
 	});
 
@@ -128,21 +152,23 @@ export const createOrpcHttpClient = (
 };
 
 export const createCallContextFromHeaders = async (headers: Headers) => {
-	const session = await auth.api.getSession({ headers });
+	const currentRuntime = getRuntime();
+	const session = await currentRuntime.auth.api.getSession({ headers });
 
 	return {
 		session,
-		db,
-		auth,
+		db: currentRuntime.db,
+		auth: currentRuntime.auth,
 		headers,
 	};
 };
 
 export const createAnonymousCallContext = () => {
+	const currentRuntime = getRuntime();
 	return {
 		session: null,
-		db,
-		auth,
+		db: currentRuntime.db,
+		auth: currentRuntime.auth,
 		headers: new Headers(),
 	};
 };

@@ -1,44 +1,33 @@
-import { afterEach, beforeAll, describe, expect, it } from "bun:test";
-import type { TestHelpers } from "better-auth/plugins";
-import { isolateTestSettings } from "../../setup/settings";
+import { describe, expect, it } from "bun:test";
+import {
+	getAuthTestClient,
+	getAuthTestRuntime,
+	setupAuthTestLifecycle,
+} from "./helpers";
 
-isolateTestSettings({
-	REDIS_URL: undefined,
-});
-
-// Dynamic: todos os módulos que transitivamente importam @/env
-const { auth } = await import("@/lib/auth");
-const { app } = await import("@/index");
-const { truncateAllTables } = await import("../../setup/db");
-
-let auth_client: TestHelpers;
-
-beforeAll(async () => {
-	const ctx = await auth.$context;
-	auth_client = ctx.test;
-});
-
-afterEach(async () => {
-	await truncateAllTables();
+setupAuthTestLifecycle({
+	disableRedis: true,
 });
 
 describe("GET /v1/auth/get-session", () => {
-
 	it("returns 200 with null body without session cookie", async () => {
-		const res = await app.request("/v1/auth/get-session");
+		const runtime = getAuthTestRuntime();
+		const res = await runtime.app.request("/v1/auth/get-session");
 		expect(res.status).toBe(200);
 		expect(await res.json()).toBeNull();
 	});
 
 	it("returns 200 and session data for authenticated request", async () => {
-		const user = auth_client.createUser({
+		const authClient = getAuthTestClient();
+		const runtime = getAuthTestRuntime();
+		const user = authClient.createUser({
 			id: Bun.randomUUIDv7(),
 			email: "user@example.com",
 		});
-		await auth_client.saveUser(user);
+		await authClient.saveUser(user);
 
-		const authHeaders = await auth_client.getAuthHeaders({ userId: user.id });
-		const res = await app.request("/v1/auth/get-session", {
+		const authHeaders = await authClient.getAuthHeaders({ userId: user.id });
+		const res = await runtime.app.request("/v1/auth/get-session", {
 			headers: authHeaders,
 		});
 
@@ -51,28 +40,30 @@ describe("GET /v1/auth/get-session", () => {
 
 describe("POST /v1/auth/sign-out", () => {
 	it("invalidates the session on sign-out", async () => {
-		const user = auth_client.createUser({
+		const authClient = getAuthTestClient();
+		const runtime = getAuthTestRuntime();
+		const user = authClient.createUser({
 			id: Bun.randomUUIDv7(),
 			email: "user@example.com",
 		});
-		await auth_client.saveUser(user);
+		await authClient.saveUser(user);
 
-		const { headers: authHeaders, token } = await auth_client.login({
+		const { headers: authHeaders, token } = await authClient.login({
 			userId: user.id,
 		});
 
-		const beforeRes = await app.request("/v1/auth/get-session", {
+		const beforeRes = await runtime.app.request("/v1/auth/get-session", {
 			headers: authHeaders,
 		});
 		expect(beforeRes.status).toBe(200);
 
-		const signOutRes = await app.request("/v1/auth/sign-out", {
+		const signOutRes = await runtime.app.request("/v1/auth/sign-out", {
 			method: "POST",
 			headers: authHeaders,
 		});
 		expect(signOutRes.status).toBe(200);
 
-		const afterRes = await app.request("/v1/auth/get-session", {
+		const afterRes = await runtime.app.request("/v1/auth/get-session", {
 			headers: authHeaders,
 		});
 		expect(afterRes.status).toBe(200);

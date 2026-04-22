@@ -1,44 +1,32 @@
-import { afterEach, beforeAll, beforeEach, describe, expect, it } from "bun:test";
-import type { TestHelpers } from "better-auth/plugins";
-import { isolateTestSettings } from "../../setup/settings";
+import { describe, expect, it } from "bun:test";
+import {
+	getAuthTestClient,
+	getAuthTestRuntime,
+	setupAuthTestLifecycle,
+} from "./helpers";
 
-isolateTestSettings({
-	AUTH_ENABLE_DELETE_ACCOUNT: false,
+setupAuthTestLifecycle({
+	disableRedis: true,
+	settingsOverrides: {
+		AUTH_ENABLE_DELETE_ACCOUNT: false,
+	},
 });
 
-// Dynamic: todos os módulos que transitivamente importam @/env
-const { auth } = await import("@/lib/auth");
-const { app } = await import("@/index");
-const { truncateAllTables } = await import("../../setup/db");
-
 describe("DELETE /v1/auth/delete-user (flag desabilitada)", () => {
-	let auth_client: TestHelpers;
-
-	beforeAll(async () => {
-		const ctx = await auth.$context;
-		auth_client = ctx.test;
-	});
-
-	beforeEach(async () => {
-		await truncateAllTables();
-	});
-
-	afterEach(async () => {
-		await truncateAllTables();
-	});
-
 	it("retorna 404 quando AUTH_ENABLE_DELETE_ACCOUNT=false", async () => {
-		const user = auth_client.createUser({
+		const authClient = getAuthTestClient();
+		const runtime = getAuthTestRuntime();
+		const user = authClient.createUser({
 			id: Bun.randomUUIDv7(),
 			email: "user@example.com",
 		});
-		await auth_client.saveUser(user);
+		await authClient.saveUser(user);
 
-		const authHeaders = await auth_client.getAuthHeaders({ userId: user.id });
+		const authHeaders = await authClient.getAuthHeaders({ userId: user.id });
 		const headers = new Headers(authHeaders);
 		headers.set("content-type", "application/json");
 
-		const res = await app.request("/v1/auth/delete-user", {
+		const res = await runtime.app.request("/v1/auth/delete-user", {
 			method: "POST",
 			headers,
 			body: JSON.stringify({}),

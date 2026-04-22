@@ -1,33 +1,23 @@
-import { afterEach, beforeAll, describe, expect, it } from "bun:test";
-import type { TestHelpers } from "better-auth/plugins";
+import { describe, expect, it } from "bun:test";
 import { eq } from "drizzle-orm";
-import { models } from "@/db/models"; // não importa @/env, seguro como estático
-import { isolateTestSettings } from "../../setup/settings";
+import { models } from "@/db/models";
+import {
+	getAuthTestClient,
+	getAuthTestRuntime,
+	setupAuthTestLifecycle,
+} from "./helpers";
 
-isolateTestSettings({
-	AUTH_ALLOWED_EMAIL_DOMAINS: ["testdomain.com"],
+setupAuthTestLifecycle({
+	disableRedis: true,
+	settingsOverrides: {
+		AUTH_ALLOWED_EMAIL_DOMAINS: ["testdomain.com"],
+	},
 });
 
-// Dynamic: todos os módulos que transitivamente importam @/env
-const { db } = await import("@/db");
-const { auth } = await import("@/lib/auth");
-const { app } = await import("@/index");
-const { truncateAllTables } = await import("../../setup/db");
-
 describe("databaseHook: user.create.before — restrição de domínio", () => {
-	let auth_client: TestHelpers;
-
-	beforeAll(async () => {
-		const ctx = await auth.$context;
-		auth_client = ctx.test;
-	});
-
-	afterEach(async () => {
-		await truncateAllTables();
-	});
-
 	it("bloqueia signup com domínio não permitido", async () => {
-		const res = await app.request("/v1/auth/sign-up/email", {
+		const runtime = getAuthTestRuntime();
+		const res = await runtime.app.request("/v1/auth/sign-up/email", {
 			method: "POST",
 			headers: { "content-type": "application/json" },
 			body: JSON.stringify({
@@ -41,7 +31,8 @@ describe("databaseHook: user.create.before — restrição de domínio", () => {
 	});
 
 	it("permite signup com domínio permitido", async () => {
-		const res = await app.request("/v1/auth/sign-up/email", {
+		const runtime = getAuthTestRuntime();
+		const res = await runtime.app.request("/v1/auth/sign-up/email", {
 			method: "POST",
 			headers: { "content-type": "application/json" },
 			body: JSON.stringify({
@@ -56,19 +47,9 @@ describe("databaseHook: user.create.before — restrição de domínio", () => {
 });
 
 describe("databaseHook: user.create.after — provisionamento do primeiro usuário", () => {
-	let auth_client: TestHelpers;
-
-	beforeAll(async () => {
-		const ctx = await auth.$context;
-		auth_client = ctx.test;
-	});
-
-	afterEach(async () => {
-		await truncateAllTables();
-	});
-
 	it("primeiro usuário recebe role=admin e emailVerified=true", async () => {
-		await auth.api.signUpEmail({
+		const runtime = getAuthTestRuntime();
+		await runtime.auth.api.signUpEmail({
 			body: {
 				email: "admin@testdomain.com",
 				password: "password123",
@@ -76,7 +57,7 @@ describe("databaseHook: user.create.after — provisionamento do primeiro usuár
 			},
 		});
 
-		const user = await db
+		const user = await runtime.db
 			.select()
 			.from(models.users)
 			.where(eq(models.users.email, "admin@testdomain.com"))
@@ -87,7 +68,8 @@ describe("databaseHook: user.create.after — provisionamento do primeiro usuár
 	});
 
 	it("primeiro usuário recebe organização padrão com role=owner", async () => {
-		await auth.api.signUpEmail({
+		const runtime = getAuthTestRuntime();
+		await runtime.auth.api.signUpEmail({
 			body: {
 				email: "admin@testdomain.com",
 				password: "password123",
@@ -95,7 +77,7 @@ describe("databaseHook: user.create.after — provisionamento do primeiro usuár
 			},
 		});
 
-		const user = await db
+		const user = await runtime.db
 			.select()
 			.from(models.users)
 			.where(eq(models.users.email, "admin@testdomain.com"))
@@ -103,7 +85,7 @@ describe("databaseHook: user.create.after — provisionamento do primeiro usuár
 
 		if (!user) throw new Error("user not found");
 
-		const member = await db
+		const member = await runtime.db
 			.select({ role: models.members.role })
 			.from(models.members)
 			.where(eq(models.members.userId, user.id))
@@ -113,7 +95,8 @@ describe("databaseHook: user.create.after — provisionamento do primeiro usuár
 	});
 
 	it("primeiro usuário recebe userSettings com organizationId preenchido", async () => {
-		await auth.api.signUpEmail({
+		const runtime = getAuthTestRuntime();
+		await runtime.auth.api.signUpEmail({
 			body: {
 				email: "admin@testdomain.com",
 				password: "password123",
@@ -121,7 +104,7 @@ describe("databaseHook: user.create.after — provisionamento do primeiro usuár
 			},
 		});
 
-		const user = await db
+		const user = await runtime.db
 			.select()
 			.from(models.users)
 			.where(eq(models.users.email, "admin@testdomain.com"))
@@ -129,7 +112,7 @@ describe("databaseHook: user.create.after — provisionamento do primeiro usuár
 
 		if (!user) throw new Error("user not found");
 
-		const userSettings = await db
+		const userSettings = await runtime.db
 			.select()
 			.from(models.userSettings)
 			.where(eq(models.userSettings.userId, user.id))
@@ -140,7 +123,9 @@ describe("databaseHook: user.create.after — provisionamento do primeiro usuár
 	});
 
 	it("usuário criado via testUtils mantém role explícita quando não é o primeiro usuário", async () => {
-		await auth.api.signUpEmail({
+		const runtime = getAuthTestRuntime();
+		const authClient = getAuthTestClient();
+		await runtime.auth.api.signUpEmail({
 			body: {
 				email: "admin@testdomain.com",
 				password: "password123",
@@ -148,14 +133,14 @@ describe("databaseHook: user.create.after — provisionamento do primeiro usuár
 			},
 		});
 
-		const user = auth_client.createUser({
+		const user = authClient.createUser({
 			id: Bun.randomUUIDv7(),
 			email: "plain@testdomain.com",
 			role: "user",
 		});
-		await auth_client.saveUser(user);
+		await authClient.saveUser(user);
 
-		const savedUser = await db
+		const savedUser = await runtime.db
 			.select()
 			.from(models.users)
 			.where(eq(models.users.email, "plain@testdomain.com"))
@@ -166,25 +151,16 @@ describe("databaseHook: user.create.after — provisionamento do primeiro usuár
 });
 
 describe("hook.before — bloqueio de signup após primeiro usuário", () => {
-	let auth_client: TestHelpers;
-
-	beforeAll(async () => {
-		const ctx = await auth.$context;
-		auth_client = ctx.test;
-	});
-
-	afterEach(async () => {
-		await truncateAllTables();
-	});
-
 	it("bloqueia signup para segundo usuário", async () => {
-		const first = auth_client.createUser({
+		const authClient = getAuthTestClient();
+		const runtime = getAuthTestRuntime();
+		const first = authClient.createUser({
 			id: Bun.randomUUIDv7(),
 			email: "first@testdomain.com",
 		});
-		await auth_client.saveUser(first);
+		await authClient.saveUser(first);
 
-		const res = await app.request("/v1/auth/sign-up/email", {
+		const res = await runtime.app.request("/v1/auth/sign-up/email", {
 			method: "POST",
 			headers: { "content-type": "application/json" },
 			body: JSON.stringify({

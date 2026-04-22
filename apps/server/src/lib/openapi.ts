@@ -6,9 +6,9 @@ import type {
 	FieldSchema,
 	OpenAPIModelSchema,
 } from "better-auth/plugins";
-import { settings } from "@/env";
+import { type Settings, settings } from "@/env";
 import type { AppType } from "@/types";
-import { auth } from "./auth";
+import { type AuthType, auth } from "./auth";
 
 const HTTP_METHODS = [
 	"get",
@@ -487,7 +487,17 @@ function mapBetterAuthOperationToRouteConfig(
 	};
 }
 
-export function setupOpenApi(app: AppType, apiPrefix: string) {
+export function setupOpenApi(
+	app: AppType,
+	apiPrefix: string,
+	options?: {
+		settings?: Settings;
+		auth?: AuthType;
+	},
+) {
+	const runtimeSettings = options?.settings ?? settings;
+	const runtimeAuth = options?.auth ?? auth;
+
 	app.doc(`${apiPrefix}/open-api.json`, {
 		...openApiSchema,
 		tags: tagDescriptions,
@@ -505,7 +515,7 @@ export function setupOpenApi(app: AppType, apiPrefix: string) {
 				title: "LogLog docs",
 				description: "Complete API documentation for LogLog platform",
 			},
-			theme: settings.SCALAR_THEME,
+			theme: runtimeSettings.SCALAR_THEME,
 			authentication: {
 				preferredSecurityScheme: "bearerAuth",
 				securitySchemes: {
@@ -521,7 +531,7 @@ export function setupOpenApi(app: AppType, apiPrefix: string) {
 	);
 
 	(async () => {
-		const schema = await auth.api.generateOpenAPISchema();
+		const schema = await runtimeAuth.api.generateOpenAPISchema();
 
 		for (const [key, value] of Object.entries(
 			schema.components?.securitySchemes ?? {},
@@ -544,7 +554,7 @@ export function setupOpenApi(app: AppType, apiPrefix: string) {
 		}
 
 		for (const [path, pathItem] of Object.entries(schema.paths ?? {})) {
-			const fullPath = `${settings.AUTH_BASE_PATH}${path}`;
+			const fullPath = `${runtimeSettings.AUTH_BASE_PATH}${path}`;
 
 			for (const [method, operation] of Object.entries(
 				pathItem as BetterAuthPathItem,

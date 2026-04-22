@@ -1,11 +1,11 @@
-import { call } from "@orpc/server";
 import { describe, expect, it } from "bun:test";
-import { settingsRouter } from "@/features/settings/routes";
+import { call } from "@orpc/server";
 import {
 	createAnonymousCallContext,
 	createAuthContext,
 	createCallContextFromHeaders,
 	expectUnauthorizedError,
+	getOrpcRouters,
 	setupOrpcTestLifecycle,
 } from "./helpers";
 
@@ -15,6 +15,7 @@ describe("oRPC Settings via call()", () => {
 	it("settings.get returns user settings for authenticated context", async () => {
 		const ctx = await createAuthContext("settings-call-get@example.com");
 		const callContext = await createCallContextFromHeaders(ctx.headers);
+		const settingsRouter = getOrpcRouters().settings;
 
 		const settings = await call(settingsRouter.get, undefined, {
 			context: callContext,
@@ -28,6 +29,7 @@ describe("oRPC Settings via call()", () => {
 
 	it("settings.get returns UNAUTHORIZED without session", async () => {
 		const callContext = createAnonymousCallContext();
+		const settingsRouter = getOrpcRouters().settings;
 
 		await expectUnauthorizedError(
 			call(settingsRouter.get, undefined, { context: callContext }),
@@ -39,6 +41,7 @@ describe("oRPC Settings via call()", () => {
 		const callContext = await createCallContextFromHeaders(ctx.headers);
 		const sourceId = Bun.randomUUIDv7();
 		const integrationId = Bun.randomUUIDv7();
+		const settingsRouter = getOrpcRouters().settings;
 
 		await call(
 			settingsRouter.update,
@@ -50,7 +53,11 @@ describe("oRPC Settings via call()", () => {
 			{ context: callContext },
 		);
 
-		await call(settingsRouter.update, { theme: "light" }, { context: callContext });
+		await call(
+			settingsRouter.update,
+			{ theme: "light" },
+			{ context: callContext },
+		);
 		const afterSecondUpdate = await call(settingsRouter.get, undefined, {
 			context: callContext,
 		});
@@ -63,13 +70,12 @@ describe("oRPC Settings via call()", () => {
 	it("settings.update validates payload for invalid UUID", async () => {
 		const ctx = await createAuthContext("settings-call-invalid@example.com");
 		const callContext = await createCallContextFromHeaders(ctx.headers);
+		const settingsRouter = getOrpcRouters().settings;
 
 		await expect(
-			call(
-				settingsRouter.update,
-				{ sourceId: "not-a-uuid" } as never,
-				{ context: callContext },
-			),
+			call(settingsRouter.update, { sourceId: "not-a-uuid" } as never, {
+				context: callContext,
+			}),
 		).rejects.toBeDefined();
 	});
 });

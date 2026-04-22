@@ -3,11 +3,11 @@ import { eq } from "drizzle-orm";
 import {
 	createAuthContextWithActiveOrganization,
 	createIntegration,
+	getIntegrationTestRuntime,
 	requestWithAuth,
 	setupIntegrationTestLifecycle,
 } from "./helpers";
 
-const { db } = await import("@/db");
 const { models } = await import("@/db/models");
 
 describe("Integrations flows", () => {
@@ -49,7 +49,8 @@ describe("Integrations flows", () => {
 		);
 		expect(patchRes.status).toBe(200);
 
-		const row = await db
+		const runtime = getIntegrationTestRuntime();
+		const row = await runtime.db
 			.select({ name: models.integrations.name })
 			.from(models.integrations)
 			.where(eq(models.integrations.id, integrationId))
@@ -102,7 +103,8 @@ describe("Integrations flows", () => {
 		);
 		expect(patchRes.status).toBe(200);
 
-		const row = await db
+		const runtime = getIntegrationTestRuntime();
+		const row = await runtime.db
 			.select({
 				type: models.integrations.type,
 				config: models.integrations.config,

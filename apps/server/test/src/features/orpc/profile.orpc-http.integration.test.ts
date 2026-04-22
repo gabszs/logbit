@@ -6,10 +6,9 @@ import {
 	createAuthContext,
 	createOrpcHttpClient,
 	expectUnauthorizedError,
+	getOrpcTestRuntime,
 	setupOrpcTestLifecycle,
 } from "./helpers";
-
-const { db } = await import("@/db");
 
 describe("oRPC Profile over HTTP", () => {
 	setupOrpcTestLifecycle();
@@ -38,7 +37,8 @@ describe("oRPC Profile over HTTP", () => {
 		expect(updated?.name).toBe("Updated Name");
 		expect(updated?.image).toBe(image);
 
-		const [row] = await db
+		const runtime = getOrpcTestRuntime();
+		const [row] = await runtime.db
 			.select({ name: users.name, image: users.image })
 			.from(users)
 			.where(eq(users.id, ctx.userId))
@@ -64,9 +64,9 @@ describe("oRPC Profile over HTTP", () => {
 
 		const before = await client.profile.listSessions();
 		expect(Array.isArray(before)).toBe(true);
-		expect(before.some((session) => session.token === secondSession.token)).toBe(
-			true,
-		);
+		expect(
+			before.some((session) => session.token === secondSession.token),
+		).toBe(true);
 
 		const revoke = await client.profile.revokeSession({
 			token: secondSession.token,
@@ -80,7 +80,9 @@ describe("oRPC Profile over HTTP", () => {
 	});
 
 	it("profile.revokeSession is idempotent for invalid token and blocks unauthenticated users", async () => {
-		const ctx = await createAuthContext("profile-http-revoke-invalid@example.com");
+		const ctx = await createAuthContext(
+			"profile-http-revoke-invalid@example.com",
+		);
 		const client = createOrpcHttpClient(ctx.headers);
 		const anonymousClient = createOrpcHttpClient();
 

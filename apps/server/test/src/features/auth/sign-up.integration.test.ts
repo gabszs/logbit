@@ -1,30 +1,23 @@
-import { afterEach, beforeAll, describe, expect, it } from "bun:test";
-import type { TestHelpers } from "better-auth/plugins";
+import { describe, expect, it } from "bun:test";
 import { eq } from "drizzle-orm";
 import { models } from "@/db/models";
-import { truncateAllTables } from "../../setup/db";
-import { isolateTestSettings } from "../../setup/settings";
+import {
+	getAuthTestClient,
+	getAuthTestRuntime,
+	setupAuthTestLifecycle,
+} from "./helpers";
 
-isolateTestSettings({
-	AUTH_ALLOWED_EMAIL_DOMAINS: undefined,
+setupAuthTestLifecycle({
+	disableRedis: true,
+	settingsOverrides: {
+		AUTH_ALLOWED_EMAIL_DOMAINS: undefined,
+	},
 });
 
-const { db } = await import("@/db");
-const { auth } = await import("@/lib/auth");
-
 describe("POST /v1/auth/sign-up/email", () => {
-	let auth_client: TestHelpers;
-
-	beforeAll(async () => {
-		const ctx = await auth.$context;
-		auth_client = ctx.test;
-	});
-
-	afterEach(async () => {
-		await truncateAllTables();
-	});
 	it("first user becomes admin with emailVerified=true", async () => {
-		await auth.api.signUpEmail({
+		const runtime = getAuthTestRuntime();
+		await runtime.auth.api.signUpEmail({
 			body: {
 				email: "admin@example.com",
 				password: "password123",
@@ -32,7 +25,7 @@ describe("POST /v1/auth/sign-up/email", () => {
 			},
 		});
 
-		const user = await db
+		const user = await runtime.db
 			.select()
 			.from(models.users)
 			.where(eq(models.users.email, "admin@example.com"))
@@ -44,7 +37,8 @@ describe("POST /v1/auth/sign-up/email", () => {
 	});
 
 	it("first user gets a default organization as owner", async () => {
-		await auth.api.signUpEmail({
+		const runtime = getAuthTestRuntime();
+		await runtime.auth.api.signUpEmail({
 			body: {
 				email: "admin@example.com",
 				password: "password123",
@@ -52,14 +46,14 @@ describe("POST /v1/auth/sign-up/email", () => {
 			},
 		});
 
-		const user = await db
+		const user = await runtime.db
 			.select()
 			.from(models.users)
 			.where(eq(models.users.email, "admin@example.com"))
 			// biome-ignore lint/style/noNonNullAssertion: guaranteed by test setup
 			.then((r) => r[0]!);
 
-		const org = await db
+		const org = await runtime.db
 			.select()
 			.from(models.organizations)
 			.limit(1)
@@ -68,7 +62,7 @@ describe("POST /v1/auth/sign-up/email", () => {
 		expect(org).toBeDefined();
 		expect(org?.slug).toContain("organization");
 
-		const member = await db
+		const member = await runtime.db
 			.select()
 			.from(models.members)
 			.where(eq(models.members.userId, user.id))
@@ -79,7 +73,8 @@ describe("POST /v1/auth/sign-up/email", () => {
 	});
 
 	it("first user gets userSettings linked to the default organization", async () => {
-		await auth.api.signUpEmail({
+		const runtime = getAuthTestRuntime();
+		await runtime.auth.api.signUpEmail({
 			body: {
 				email: "admin@example.com",
 				password: "password123",
@@ -87,21 +82,21 @@ describe("POST /v1/auth/sign-up/email", () => {
 			},
 		});
 
-		const user = await db
+		const user = await runtime.db
 			.select()
 			.from(models.users)
 			.where(eq(models.users.email, "admin@example.com"))
 			// biome-ignore lint/style/noNonNullAssertion: guaranteed by test setup
 			.then((r) => r[0]!);
 
-		const org = await db
+		const org = await runtime.db
 			.select()
 			.from(models.organizations)
 			.limit(1)
 			// biome-ignore lint/style/noNonNullAssertion: guaranteed by test setup
 			.then((r) => r[0]!);
 
-		const userSettings = await db
+		const userSettings = await runtime.db
 			.select()
 			.from(models.userSettings)
 			.where(eq(models.userSettings.userId, user.id))
@@ -113,15 +108,16 @@ describe("POST /v1/auth/sign-up/email", () => {
 	});
 
 	it("second user signup is blocked with FORBIDDEN", async () => {
-		// Garante que já existe um usuário no banco
-		const existing = auth_client.createUser({
+		const authClient = getAuthTestClient();
+		const runtime = getAuthTestRuntime();
+		const existing = authClient.createUser({
 			id: Bun.randomUUIDv7(),
 			email: "first@example.com",
 		});
-		await auth_client.saveUser(existing);
+		await authClient.saveUser(existing);
 
 		await expect(
-			auth.api.signUpEmail({
+			runtime.auth.api.signUpEmail({
 				body: {
 					email: "second@example.com",
 					password: "password123",

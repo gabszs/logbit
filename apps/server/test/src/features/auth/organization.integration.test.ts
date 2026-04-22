@@ -1,38 +1,30 @@
-import { afterEach, beforeAll, describe, expect, it } from "bun:test";
-import type { TestHelpers } from "better-auth/plugins";
-import { truncateAllTables } from "../../setup/db";
-import { isolateTestSettings } from "../../setup/settings";
+import { describe, expect, it } from "bun:test";
+import {
+	getAuthTestClient,
+	getAuthTestRuntime,
+	setupAuthTestLifecycle,
+} from "./helpers";
 
-isolateTestSettings();
-
-const { app } = await import("@/index");
-const { auth } = await import("@/lib/auth");
+setupAuthTestLifecycle({
+	disableRedis: true,
+});
 
 type OrgResult = { id: string; name: string; slug: string };
 type InvitationResult = { id: string; email: string; status: string };
 
 describe("POST /v1/auth/organization/create", () => {
-	let auth_client: TestHelpers;
-
-	beforeAll(async () => {
-		const ctx = await auth.$context;
-		auth_client = ctx.test;
-	});
-
-	afterEach(async () => {
-		await truncateAllTables();
-	});
-
 	it("admin pode criar uma organização", async () => {
-		const admin = auth_client.createUser({
+		const authClient = getAuthTestClient();
+		const runtime = getAuthTestRuntime();
+		const admin = authClient.createUser({
 			id: Bun.randomUUIDv7(),
 			email: "admin@example.com",
 			role: "admin",
 		});
-		await auth_client.saveUser(admin);
-		const adminHeaders = await auth_client.getAuthHeaders({ userId: admin.id });
+		await authClient.saveUser(admin);
+		const adminHeaders = await authClient.getAuthHeaders({ userId: admin.id });
 
-		const org = (await auth.api.createOrganization({
+		const org = (await runtime.auth.api.createOrganization({
 			body: { name: "Test Corp", slug: "test-corp", metadata: undefined },
 			headers: adminHeaders,
 		})) as OrgResult;
@@ -41,17 +33,19 @@ describe("POST /v1/auth/organization/create", () => {
 	});
 
 	it("usuário sem role admin não pode criar organização", async () => {
-		const member = auth_client.createUser({
+		const authClient = getAuthTestClient();
+		const runtime = getAuthTestRuntime();
+		const member = authClient.createUser({
 			id: Bun.randomUUIDv7(),
 			email: "member@example.com",
 			role: "user",
 		});
-		await auth_client.saveUser(member);
-		const memberHeaders = await auth_client.getAuthHeaders({
+		await authClient.saveUser(member);
+		const memberHeaders = await authClient.getAuthHeaders({
 			userId: member.id,
 		});
 
-		const res = await app.request("/v1/auth/organization/create", {
+		const res = await runtime.app.request("/v1/auth/organization/create", {
 			method: "POST",
 			headers: { "content-type": "application/json", ...memberHeaders },
 			body: JSON.stringify({ name: "Forbidden Corp", slug: "forbidden-corp" }),
@@ -61,27 +55,18 @@ describe("POST /v1/auth/organization/create", () => {
 });
 
 describe("Convites de membros", () => {
-	let auth_client: TestHelpers;
-
-	beforeAll(async () => {
-		const ctx = await auth.$context;
-		auth_client = ctx.test;
-	});
-
-	afterEach(async () => {
-		await truncateAllTables();
-	});
-
 	it("admin pode convidar membro para uma organização", async () => {
-		const admin = auth_client.createUser({
+		const authClient = getAuthTestClient();
+		const runtime = getAuthTestRuntime();
+		const admin = authClient.createUser({
 			id: Bun.randomUUIDv7(),
 			email: "admin@example.com",
 			role: "admin",
 		});
-		await auth_client.saveUser(admin);
-		const adminHeaders = await auth_client.getAuthHeaders({ userId: admin.id });
+		await authClient.saveUser(admin);
+		const adminHeaders = await authClient.getAuthHeaders({ userId: admin.id });
 
-		const org = (await auth.api.createOrganization({
+		const org = (await runtime.auth.api.createOrganization({
 			body: {
 				name: "Test Corp",
 				slug: "test-corp-invites",
@@ -90,7 +75,7 @@ describe("Convites de membros", () => {
 			headers: adminHeaders,
 		})) as OrgResult;
 
-		const invResult = (await auth.api.createInvitation({
+		const invResult = (await runtime.auth.api.createInvitation({
 			body: {
 				organizationId: org.id,
 				email: "newmember@example.com",
@@ -106,15 +91,17 @@ describe("Convites de membros", () => {
 	});
 
 	it("membro pode aceitar um convite", async () => {
-		const admin = auth_client.createUser({
+		const authClient = getAuthTestClient();
+		const runtime = getAuthTestRuntime();
+		const admin = authClient.createUser({
 			id: Bun.randomUUIDv7(),
 			email: "admin@example.com",
 			role: "admin",
 		});
-		await auth_client.saveUser(admin);
-		const adminHeaders = await auth_client.getAuthHeaders({ userId: admin.id });
+		await authClient.saveUser(admin);
+		const adminHeaders = await authClient.getAuthHeaders({ userId: admin.id });
 
-		const org = (await auth.api.createOrganization({
+		const org = (await runtime.auth.api.createOrganization({
 			body: {
 				name: "Test Corp",
 				slug: "test-corp-accept",
@@ -123,7 +110,7 @@ describe("Convites de membros", () => {
 			headers: adminHeaders,
 		})) as OrgResult;
 
-		const invResult = (await auth.api.createInvitation({
+		const invResult = (await runtime.auth.api.createInvitation({
 			body: {
 				organizationId: org.id,
 				email: "joiner@example.com",
@@ -134,17 +121,17 @@ describe("Convites de membros", () => {
 		const invId =
 			"invitation" in invResult ? invResult.invitation.id : invResult.id;
 
-		const joiner = auth_client.createUser({
+		const joiner = authClient.createUser({
 			id: Bun.randomUUIDv7(),
 			email: "joiner@example.com",
 		});
-		await auth_client.saveUser(joiner);
-		const joinerHeaders = await auth_client.getAuthHeaders({
+		await authClient.saveUser(joiner);
+		const joinerHeaders = await authClient.getAuthHeaders({
 			userId: joiner.id,
 		});
 
 		await expect(
-			auth.api.acceptInvitation({
+			runtime.auth.api.acceptInvitation({
 				body: { invitationId: invId },
 				headers: joinerHeaders,
 			}),
@@ -153,32 +140,23 @@ describe("Convites de membros", () => {
 });
 
 describe("Gerenciamento de membros", () => {
-	let auth_client: TestHelpers;
-
-	beforeAll(async () => {
-		const ctx = await auth.$context;
-		auth_client = ctx.test;
-	});
-
-	afterEach(async () => {
-		await truncateAllTables();
-	});
-
 	it("admin pode remover membro de uma organização", async () => {
-		const admin = auth_client.createUser({
+		const authClient = getAuthTestClient();
+		const runtime = getAuthTestRuntime();
+		const admin = authClient.createUser({
 			id: Bun.randomUUIDv7(),
 			email: "admin@example.com",
 			role: "admin",
 		});
-		const member = auth_client.createUser({
+		const member = authClient.createUser({
 			id: Bun.randomUUIDv7(),
 			email: "member@example.com",
 		});
-		await auth_client.saveUser(admin);
-		await auth_client.saveUser(member);
-		const adminHeaders = await auth_client.getAuthHeaders({ userId: admin.id });
+		await authClient.saveUser(admin);
+		await authClient.saveUser(member);
+		const adminHeaders = await authClient.getAuthHeaders({ userId: admin.id });
 
-		const org = (await auth.api.createOrganization({
+		const org = (await runtime.auth.api.createOrganization({
 			body: {
 				name: "Test Corp",
 				slug: "test-corp-remove",
@@ -187,14 +165,14 @@ describe("Gerenciamento de membros", () => {
 			headers: adminHeaders,
 		})) as OrgResult;
 
-		await auth_client.addMember({
+		await authClient.addMember({
 			userId: member.id,
 			organizationId: org.id,
 			role: "member",
 		});
 
 		await expect(
-			auth.api.removeMember({
+			runtime.auth.api.removeMember({
 				body: { organizationId: org.id, memberIdOrEmail: member.email },
 				headers: adminHeaders,
 			}),
@@ -202,32 +180,34 @@ describe("Gerenciamento de membros", () => {
 	});
 
 	it("admin pode atualizar o role de um membro", async () => {
-		const admin = auth_client.createUser({
+		const authClient = getAuthTestClient();
+		const runtime = getAuthTestRuntime();
+		const admin = authClient.createUser({
 			id: Bun.randomUUIDv7(),
 			email: "admin@example.com",
 			role: "admin",
 		});
-		const member = auth_client.createUser({
+		const member = authClient.createUser({
 			id: Bun.randomUUIDv7(),
 			email: "member@example.com",
 		});
-		await auth_client.saveUser(admin);
-		await auth_client.saveUser(member);
-		const adminHeaders = await auth_client.getAuthHeaders({ userId: admin.id });
+		await authClient.saveUser(admin);
+		await authClient.saveUser(member);
+		const adminHeaders = await authClient.getAuthHeaders({ userId: admin.id });
 
-		const org = (await auth.api.createOrganization({
+		const org = (await runtime.auth.api.createOrganization({
 			body: { name: "Test Corp", slug: "test-corp-role", metadata: undefined },
 			headers: adminHeaders,
 		})) as OrgResult;
 
-		const memberEntry = await auth_client.addMember({
+		const memberEntry = await authClient.addMember({
 			userId: member.id,
 			organizationId: org.id,
 			role: "member",
 		});
 
 		expect(
-			auth.api.updateMemberRole({
+			runtime.auth.api.updateMemberRole({
 				body: {
 					organizationId: org.id,
 					memberId: memberEntry.id,
