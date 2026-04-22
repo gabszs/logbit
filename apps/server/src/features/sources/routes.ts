@@ -1,7 +1,7 @@
 import { createRoute, OpenAPIHono } from "@hono/zod-openapi";
 import { z } from "zod";
 import {
-	authorizationHeaderSchema,
+	cookieAuthorizationSchema,
 	searchOptionsSchema,
 	uuidV7IdParamSchema,
 } from "@/common/schemas/baseSchemas";
@@ -51,7 +51,7 @@ sourcesRouter.openapi(
 		path: "/sources/{id}",
 		request: {
 			params: uuidV7IdParamSchema,
-			headers: authorizationHeaderSchema,
+			headers: cookieAuthorizationSchema,
 		},
 		responses: {
 			[status.OK.code]: status.OK.response(sourcesSchema),
@@ -91,7 +91,7 @@ sourcesRouter.openapi(
 		path: "/sources",
 		request: {
 			query: searchOptionsSchema,
-			headers: authorizationHeaderSchema,
+			headers: cookieAuthorizationSchema,
 		},
 		responses: {
 			[status.OK.code]: status.OK.response(sourcesListSuccessSchema),
@@ -128,7 +128,7 @@ sourcesRouter.openapi(
 		method: "post",
 		path: "/sources",
 		request: {
-			headers: authorizationHeaderSchema,
+			headers: cookieAuthorizationSchema,
 			body: {
 				content: {
 					[ContentTypes.JSON]: {
@@ -177,7 +177,7 @@ sourcesRouter.openapi(
 		path: "/sources/{id}",
 		request: {
 			params: uuidV7IdParamSchema,
-			headers: authorizationHeaderSchema,
+			headers: cookieAuthorizationSchema,
 			body: {
 				content: {
 					[ContentTypes.JSON]: {
@@ -222,7 +222,7 @@ sourcesRouter.openapi(
 		path: "/sources/{id}",
 		request: {
 			params: uuidV7IdParamSchema,
-			headers: authorizationHeaderSchema,
+			headers: cookieAuthorizationSchema,
 		},
 		responses: {
 			[status.NO_CONTENT.code]: status.NO_CONTENT.response(),

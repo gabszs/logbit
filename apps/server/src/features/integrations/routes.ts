@@ -1,6 +1,6 @@
 import { createRoute, OpenAPIHono } from "@hono/zod-openapi";
 import {
-	authorizationHeaderSchema,
+	cookieAuthorizationSchema,
 	searchOptionsSchema,
 	uuidIdParamSchema,
 } from "@/common/schemas/baseSchemas";
@@ -50,7 +50,7 @@ integrationsRouter.openapi(
 		path: "/integrations/{id}",
 		request: {
 			params: uuidIdParamSchema,
-			headers: authorizationHeaderSchema,
+			headers: cookieAuthorizationSchema,
 		},
 		responses: {
 			[status.OK.code]: status.OK.response(integrationsSchema),
@@ -90,7 +90,7 @@ integrationsRouter.openapi(
 		path: "/integrations",
 		request: {
 			query: searchOptionsSchema,
-			headers: authorizationHeaderSchema,
+			headers: cookieAuthorizationSchema,
 		},
 		responses: {
 			[status.OK.code]: status.OK.response(integrationsListSuccessSchema),
@@ -127,7 +127,7 @@ integrationsRouter.openapi(
 		method: "post",
 		path: "/integrations",
 		request: {
-			headers: authorizationHeaderSchema,
+			headers: cookieAuthorizationSchema,
 			body: {
 				content: {
 					[ContentTypes.JSON]: {
@@ -176,7 +176,7 @@ integrationsRouter.openapi(
 		path: "/integrations/{id}",
 		request: {
 			params: uuidIdParamSchema,
-			headers: authorizationHeaderSchema,
+			headers: cookieAuthorizationSchema,
 			body: {
 				content: {
 					[ContentTypes.JSON]: {
@@ -225,7 +225,7 @@ integrationsRouter.openapi(
 		path: "/integrations/{id}",
 		request: {
 			params: uuidIdParamSchema,
-			headers: authorizationHeaderSchema,
+			headers: cookieAuthorizationSchema,
 		},
 		responses: {
 			[status.NO_CONTENT.code]: status.NO_CONTENT.response(),

@@ -105,6 +105,16 @@ export const optionalAuthorizationHeaderSchema = z.object({
 		.nullable(),
 });
 
+export const cookieAuthorizationSchema =
+	optionalAuthorizationHeaderSchema.extend({
+		cookie: z.string().optional().nullable().openapi({
+			description:
+				"Optional cookie for authentication. Can be used as an alternative to the Authorization header.",
+			format: "cookie",
+			example: "session=your_session_cookie",
+		}),
+	});
+
 export const shortUuidParamSchema = z.object({
 	id: z.string().regex(/^[a-zA-Z0-9]{6,32}$/, "Invalid ID"),
 });
