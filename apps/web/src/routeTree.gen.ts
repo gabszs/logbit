@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as PrivacyRouteImport } from './routes/privacy'
+import { Route as IntegrationsRouteImport } from './routes/integrations'
 import { Route as DocsRouteImport } from './routes/docs'
 import { Route as SettingsRouteRouteImport } from './routes/settings/route'
 import { Route as IndexRouteImport } from './routes/index'
@@ -26,6 +27,11 @@ import { Route as SettingsInvitationsInvitationIdRouteImport } from './routes/se
 const PrivacyRoute = PrivacyRouteImport.update({
   id: '/privacy',
   path: '/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const IntegrationsRoute = IntegrationsRouteImport.update({
+  id: '/integrations',
+  path: '/integrations',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DocsRoute = DocsRouteImport.update({
@@ -95,6 +101,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/settings': typeof SettingsRouteRouteWithChildren
   '/docs': typeof DocsRoute
+  '/integrations': typeof IntegrationsRoute
   '/privacy': typeof PrivacyRoute
   '/settings/invitations': typeof SettingsInvitationsRouteRouteWithChildren
   '/auth/sign-in': typeof AuthSignInRoute
@@ -110,6 +117,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/settings': typeof SettingsRouteRouteWithChildren
   '/docs': typeof DocsRoute
+  '/integrations': typeof IntegrationsRoute
   '/privacy': typeof PrivacyRoute
   '/settings/invitations': typeof SettingsInvitationsRouteRouteWithChildren
   '/auth/sign-in': typeof AuthSignInRoute
@@ -126,6 +134,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/settings': typeof SettingsRouteRouteWithChildren
   '/docs': typeof DocsRoute
+  '/integrations': typeof IntegrationsRoute
   '/privacy': typeof PrivacyRoute
   '/settings/invitations': typeof SettingsInvitationsRouteRouteWithChildren
   '/auth/sign-in': typeof AuthSignInRoute
@@ -143,6 +152,7 @@ export interface FileRouteTypes {
     | '/'
     | '/settings'
     | '/docs'
+    | '/integrations'
     | '/privacy'
     | '/settings/invitations'
     | '/auth/sign-in'
@@ -158,6 +168,7 @@ export interface FileRouteTypes {
     | '/'
     | '/settings'
     | '/docs'
+    | '/integrations'
     | '/privacy'
     | '/settings/invitations'
     | '/auth/sign-in'
@@ -173,6 +184,7 @@ export interface FileRouteTypes {
     | '/'
     | '/settings'
     | '/docs'
+    | '/integrations'
     | '/privacy'
     | '/settings/invitations'
     | '/auth/sign-in'
@@ -189,6 +201,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   SettingsRouteRoute: typeof SettingsRouteRouteWithChildren
   DocsRoute: typeof DocsRoute
+  IntegrationsRoute: typeof IntegrationsRoute
   PrivacyRoute: typeof PrivacyRoute
   AuthSignInRoute: typeof AuthSignInRoute
   AuthSignUpRoute: typeof AuthSignUpRoute
@@ -202,6 +215,13 @@ declare module '@tanstack/react-router' {
       path: '/privacy'
       fullPath: '/privacy'
       preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/integrations': {
+      id: '/integrations'
+      path: '/integrations'
+      fullPath: '/integrations'
+      preLoaderRoute: typeof IntegrationsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/docs': {
@@ -329,6 +349,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   SettingsRouteRoute: SettingsRouteRouteWithChildren,
   DocsRoute: DocsRoute,
+  IntegrationsRoute: IntegrationsRoute,
   PrivacyRoute: PrivacyRoute,
   AuthSignInRoute: AuthSignInRoute,
   AuthSignUpRoute: AuthSignUpRoute,

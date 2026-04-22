@@ -1,6 +1,6 @@
 import { afterAll, afterEach, beforeAll } from "bun:test";
 import type { TestHelpers } from "better-auth/plugins";
-import type { Settings } from "@/env";
+import { overrideSettings, resetSettings, type Settings } from "@/env";
 import { truncateAllTables } from "../../setup/db";
 import {
 	createTestRuntime,
@@ -21,12 +21,13 @@ export const setupAuthTestLifecycle = (
 ) => {
 	beforeAll(async () => {
 		const disableRedis = options.disableRedis ?? true;
-		runtime = await createTestRuntime({
-			settingsOverrides: {
-				...(disableRedis ? { REDIS_URL: undefined } : {}),
-				...options.settingsOverrides,
-			},
+		resetSettings();
+		overrideSettings({
+			NODE_ENV: "test",
+			...(disableRedis ? { REDIS_URL: undefined } : {}),
+			...options.settingsOverrides,
 		});
+		runtime = await createTestRuntime();
 
 		const ctx = await runtime.auth.$context;
 		authClient = ctx.test;
@@ -43,6 +44,7 @@ export const setupAuthTestLifecycle = (
 			runtime = null;
 		}
 		authClient = null;
+		resetSettings();
 	});
 };
 

@@ -102,3 +102,14 @@ export const parseSettings = (
 };
 
 export const settings = parseSettings(process.env);
+
+export const resetSettings = (): Settings => {
+	const parsed = parseSettings(process.env);
+	Object.assign(settings, parsed);
+	return settings;
+};
+
+export const overrideSettings = (overrides: Partial<Settings> = {}): Settings => {
+	Object.assign(settings, overrides);
+	return settings;
+};

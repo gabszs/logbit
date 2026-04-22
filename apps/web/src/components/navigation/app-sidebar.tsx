@@ -9,6 +9,7 @@ import {
 	Moon,
 	PanelLeftClose,
 	PanelLeftOpen,
+	PlugZap,
 	Settings,
 	Sun,
 } from "lucide-react";
@@ -60,7 +61,7 @@ export function AppSidebar() {
 	const isAuthenticated = Boolean(auth.session?.user);
 
 	const navigationItems: Array<{
-		to: "/";
+		to: "/" | "/integrations";
 		label: string;
 		icon: LucideIcon;
 		isActive: boolean;
@@ -70,6 +71,14 @@ export function AppSidebar() {
 			label: "Home",
 			icon: House,
 			isActive: pathname === "/",
+		},
+		{
+			to: "/integrations",
+			label: "Integrations",
+			icon: PlugZap,
+			isActive:
+				pathname === "/integrations" ||
+				pathname.startsWith("/integrations/"),
 		},
 	];
 

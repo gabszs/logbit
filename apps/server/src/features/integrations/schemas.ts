@@ -176,6 +176,9 @@ export const integrationsListSuccessSchema = integrationsSuccessSchema
 	})
 	.openapi("IntegrationsListSuccess");
 
+export type IntegrationsListSuccessType = z.infer<
+	typeof integrationsListSuccessSchema
+>;
 export type IntegrationsUpsertInput = z.infer<typeof integrationsUpsertSchema>;
 export type IntegrationUpdateInput = z.infer<typeof integrationUpdateSchema>;
 export type SendIntegrationEmailInput = z.infer<

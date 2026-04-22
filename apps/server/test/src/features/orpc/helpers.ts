@@ -5,6 +5,7 @@ import type { RouterClient } from "@orpc/server";
 import type { TestHelpers } from "better-auth/plugins";
 import { eq } from "drizzle-orm";
 import type { AppRouter } from "@/client/contracts";
+import { overrideSettings, resetSettings } from "@/env";
 
 const { models } = await import("@/db/models");
 const { truncateAllTables } = await import("../../setup/db");
@@ -25,11 +26,12 @@ export type OrpcAuthContext = {
 
 export const setupOrpcTestLifecycle = () => {
 	beforeAll(async () => {
-		runtime = await createTestRuntime({
-			settingsOverrides: {
-				REDIS_URL: undefined,
-			},
+		resetSettings();
+		overrideSettings({
+			NODE_ENV: "test",
+			REDIS_URL: undefined,
 		});
+		runtime = await createTestRuntime();
 		const ctx = await runtime.auth.$context;
 		authClient = ctx.test;
 	});
@@ -45,6 +47,7 @@ export const setupOrpcTestLifecycle = () => {
 			runtime = null;
 		}
 		authClient = null;
+		resetSettings();
 	});
 };
 

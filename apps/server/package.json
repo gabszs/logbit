@@ -52,9 +52,9 @@
 	"scripts": {
 		"build": "bun run typecheck",
 		"typecheck": "tsc -b",
-		"test": "bun test ./test/src",
-		"test:auth": "bun test ./test/src/features/auth",
-		"test:auth:delete-off": "bun test ./test/src/features/auth/delete-account-flag-off.integration.test.ts",
+		"test": "bun test --max-concurrency 1 ./test/src",
+		"test:auth": "bun test --max-concurrency 1 ./test/src/features/auth",
+		"test:auth:delete-off": "bun test --max-concurrency 1 ./test/src/features/auth/delete-account-flag-off.integration.test.ts",
 		"compile": "bun build --compile --minify --sourcemap --bytecode ./src/index.ts --outfile server",
 		"dev": "bun --hot src/index.ts",
 		"otel-dev": "bun --hot --preload src/otel.ts src/index.ts",

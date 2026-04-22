@@ -1,7 +1,6 @@
 import { SQL } from "bun";
 import { sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/bun-sql";
-import type { Settings } from "@/env";
 import {
 	createServerRuntime,
 	type ServerRuntime,
@@ -9,7 +8,6 @@ import {
 } from "@/lib/runtime";
 
 type TestRuntimeOptions = {
-	settingsOverrides?: Partial<Settings>;
 	runMigrations?: boolean;
 };
 
@@ -71,9 +69,7 @@ export const createTestRuntime = async (
 			runMigrations: options.runMigrations ?? true,
 			showRoutes: false,
 			settingsOverrides: {
-				NODE_ENV: "test",
 				DATABASE_URL: createDatabaseUrl(databaseName),
-				...options.settingsOverrides,
 			},
 		};
 

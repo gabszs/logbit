@@ -1,6 +1,7 @@
 import { afterAll, afterEach, beforeAll, expect } from "bun:test";
 import type { TestHelpers } from "better-auth/plugins";
 import { and, eq } from "drizzle-orm";
+import { overrideSettings, resetSettings } from "@/env";
 
 const { models } = await import("@/db/models");
 const { truncateAllTables } = await import("../../setup/db");
@@ -23,11 +24,12 @@ export type AuthContext = {
 
 export const setupIntegrationTestLifecycle = () => {
 	beforeAll(async () => {
-		runtime = await createTestRuntime({
-			settingsOverrides: {
-				REDIS_URL: undefined,
-			},
+		resetSettings();
+		overrideSettings({
+			NODE_ENV: "test",
+			REDIS_URL: undefined,
 		});
+		runtime = await createTestRuntime();
 		const ctx = await runtime.auth.$context;
 		authClient = ctx.test;
 	});
@@ -43,6 +45,7 @@ export const setupIntegrationTestLifecycle = () => {
 			runtime = null;
 		}
 		authClient = null;
+		resetSettings();
 	});
 };
 
