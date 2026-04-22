@@ -2,7 +2,7 @@ import { createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 import { searchOptionsSchema } from "@/common/schemas/baseSchemas";
 import { models } from "@/db/models";
-import { chLogsConfigSchema } from "@/integrations/chSources/logs/schemas";
+import { chLogsConfigSchema } from "@/integrations/sources/logs/schemas";
 
 export const baseSourcesSchema = createSelectSchema(models.sources).extend({
 	id: z.uuidv7(),

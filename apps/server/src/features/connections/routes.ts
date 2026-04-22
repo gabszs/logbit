@@ -125,7 +125,7 @@ connectionsRouter.openapi(
 		tags: ["Connections"],
 		summary: "Create a new integration",
 		method: "post",
-		path: "/integrations",
+		path: "/connections",
 		request: {
 			headers: cookieAuthorizationSchema,
 			body: {
@@ -152,7 +152,10 @@ connectionsRouter.openapi(
 		const body = c.req.valid("json");
 		const service = c.get("service");
 		const activeOrganizationId = c.get("activeOrganizationId");
-		const connection = await service.createConnection(body, activeOrganizationId);
+		const connection = await service.createConnection(
+			body,
+			activeOrganizationId,
+		);
 
 		return c.json(
 			{
@@ -173,7 +176,7 @@ connectionsRouter.openapi(
 		tags: ["Connections"],
 		summary: "Update an integration",
 		method: "patch",
-		path: "/integrations/{id}",
+		path: "/connections/{id}",
 		request: {
 			params: uuidIdParamSchema,
 			headers: cookieAuthorizationSchema,
@@ -222,7 +225,7 @@ connectionsRouter.openapi(
 		tags: ["Connections"],
 		summary: "Delete an integration",
 		method: "delete",
-		path: "/integrations/{id}",
+		path: "/connections/{id}",
 		request: {
 			params: uuidIdParamSchema,
 			headers: cookieAuthorizationSchema,

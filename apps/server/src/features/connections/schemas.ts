@@ -1,9 +1,9 @@
 import { createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 import { models } from "@/db/models";
-import { CloudflareEmailConfigSchema } from "@/integrations/cloudflare/email/schemas";
-import { ResendConfigSchema } from "@/integrations/resend/api/schemas";
-import { WebhookConfigSchema } from "@/integrations/webhook/http/schemas";
+import { ClickhouseConfigSchema } from "@/integrations/clickhouse/schemas";
+import { CloudflareConfigSchema } from "@/integrations/cloudflare/schemas";
+import { ResendConfigSchema } from "@/integrations/resend/schemas";
 import { searchOptionsSchema } from "../../common/schemas/baseSchemas";
 
 export const baseConnectionSchema = createSelectSchema(
@@ -20,40 +20,31 @@ const connectionCommonSchema = baseConnectionSchema.omit({
 	config: true,
 });
 
-const webhookConnectionSchema = connectionCommonSchema.extend({
-	type: z.literal("webhook"),
-	config: WebhookConfigSchema,
-});
-
-const cloudflareEmailConnectionSchema = connectionCommonSchema.extend({
-	type: z.literal("cloudflare_email"),
-	config: CloudflareEmailConfigSchema,
-});
-
 const resendConnectionSchema = connectionCommonSchema.extend({
 	type: z.literal("resend"),
 	config: ResendConfigSchema,
 });
 
+const cloudflareConnectionSchema = connectionCommonSchema.extend({
+	type: z.literal("cloudflare"),
+	config: CloudflareConfigSchema,
+});
+
+const clickhouseConnectionSchema = connectionCommonSchema.extend({
+	type: z.literal("clickhouse"),
+	config: ClickhouseConfigSchema,
+});
+
 const connectionTypeConfigPairSchema = z.discriminatedUnion("type", [
-	z.object({
-		type: z.literal("webhook"),
-		config: WebhookConfigSchema,
-	}),
-	z.object({
-		type: z.literal("cloudflare_email"),
-		config: CloudflareEmailConfigSchema,
-	}),
-	z.object({
-		type: z.literal("resend"),
-		config: ResendConfigSchema,
-	}),
+	z.object({ type: z.literal("resend"), config: ResendConfigSchema }),
+	z.object({ type: z.literal("cloudflare"), config: CloudflareConfigSchema }),
+	z.object({ type: z.literal("clickhouse"), config: ClickhouseConfigSchema }),
 ]);
 
 export const connectionSchema = z.discriminatedUnion("type", [
-	webhookConnectionSchema,
-	cloudflareEmailConnectionSchema,
 	resendConnectionSchema,
+	cloudflareConnectionSchema,
+	clickhouseConnectionSchema,
 ]);
 
 const connectionCommonUpsertSchema = connectionCommonSchema.omit({
@@ -63,36 +54,35 @@ const connectionCommonUpsertSchema = connectionCommonSchema.omit({
 	updatedAt: true,
 });
 
-const webhookConnectionUpsertSchema = connectionCommonUpsertSchema.extend({
-	type: z.literal("webhook"),
-	config: WebhookConfigSchema,
-});
-
-const cloudflareEmailConnectionUpsertSchema =
-	connectionCommonUpsertSchema.extend({
-		type: z.literal("cloudflare_email"),
-		config: CloudflareEmailConfigSchema,
-	});
-
 const resendConnectionUpsertSchema = connectionCommonUpsertSchema.extend({
 	type: z.literal("resend"),
 	config: ResendConfigSchema,
 });
 
+const cloudflareConnectionUpsertSchema = connectionCommonUpsertSchema.extend({
+	type: z.literal("cloudflare"),
+	config: CloudflareConfigSchema,
+});
+
+const clickhouseConnectionUpsertSchema = connectionCommonUpsertSchema.extend({
+	type: z.literal("clickhouse"),
+	config: ClickhouseConfigSchema,
+});
+
 export const connectionUpsertSchema = z
 	.discriminatedUnion("type", [
-		webhookConnectionUpsertSchema,
-		cloudflareEmailConnectionUpsertSchema,
 		resendConnectionUpsertSchema,
+		cloudflareConnectionUpsertSchema,
+		clickhouseConnectionUpsertSchema,
 	])
 	.openapi("ConnectionUpsert");
 
-const connectionTypeSchema = z.enum(["webhook", "cloudflare_email", "resend"]);
+const connectionTypeSchema = z.enum(["resend", "cloudflare", "clickhouse"]);
 
 const connectionConfigSchema = z.union([
-	WebhookConfigSchema,
-	CloudflareEmailConfigSchema,
 	ResendConfigSchema,
+	CloudflareConfigSchema,
+	ClickhouseConfigSchema,
 ]);
 
 const partialConnectionFieldsSchema = connectionCommonUpsertSchema.partial();
@@ -144,18 +134,6 @@ export const connectionUpdateSchema = partialConnectionFieldsSchema
 		}
 	});
 
-export const sendConnectionEmailSchema = z.object({
-	connectionId: z.uuid(),
-	organizationId: z.uuid(),
-	// email: sendEmailInputSchema,
-});
-
-export const connectionTestEmailSchema = z.object({
-	connectionId: z.uuid(),
-	organizationId: z.uuid(),
-	to: z.email(),
-});
-
 export const connectionSuccessSchema = z
 	.object({
 		message: z.string().openapi({
@@ -174,14 +152,9 @@ export const connectionListSuccessSchema = connectionSuccessSchema
 	})
 	.openapi("ConnectionListSuccess");
 
+export type ConnectionEntityType = z.infer<typeof connectionSchema>;
 export type ConnectionListSuccessType = z.infer<
 	typeof connectionListSuccessSchema
 >;
 export type ConnectionUpsertInput = z.infer<typeof connectionUpsertSchema>;
 export type ConnectionUpdateInput = z.infer<typeof connectionUpdateSchema>;
-export type SendConnectionEmailInput = z.infer<
-	typeof sendConnectionEmailSchema
->;
-export type ConnectionTestEmailInput = z.infer<
-	typeof connectionTestEmailSchema
->;

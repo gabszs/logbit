@@ -8,7 +8,7 @@ import {
 	uuid,
 	varchar,
 } from "drizzle-orm/pg-core";
-import { supportedIntegrationTypes } from "@/integrations/senderFactory";
+import { supportedIntegrationTypes } from "@/integrations/factory";
 import { organizations } from "./authModels";
 
 export const connectionsTypeEnum = pgEnum("type", supportedIntegrationTypes);
