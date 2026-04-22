@@ -10,6 +10,7 @@ function usePageTitle() {
 		select: (s) => s.location.pathname,
 	});
 	if (pathname.startsWith("/settings")) return "Settings";
+	if (pathname.startsWith("/integrations")) return "Integrations";
 	if (pathname.startsWith("/docs")) return "Documentation";
 	if (pathname === "/" || pathname === "") return "Home";
 	return null;
