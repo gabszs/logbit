@@ -92,6 +92,13 @@
       "when": 1776820539774,
       "tag": "0012_ranaming integratios to connections",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1776827840449,
+      "tag": "0013_adding new type at connections",
+      "breakpoints": true
     }
   ]
 }
