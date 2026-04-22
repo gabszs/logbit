@@ -102,6 +102,8 @@ node_modules/
 logs
 *.log
 npm-debug.log*
+!apps/server/src/integrations/**/logs/
+!apps/server/src/integrations/**/logs/**
 
 # Environment variables
 .env
@@ -145,3 +147,7 @@ apps/server/src/features/opamp/payloads/9005424412783783.json
 apps/server/src/features/opamp/payloads/9005424414183302.json
 apps/server/src/features/opamp/payloads/9005424414213311.json
 .agents/skills/frontend-design/LICENSE.txt
+
+# Allow source code directories named "logs" under server integrations
+!apps/server/src/integrations/**/logs/
+!apps/server/src/integrations/**/logs/**
