@@ -4,7 +4,7 @@ import {
 	createOrpcHttpClient,
 	expectUnauthorizedError,
 	setupOrpcTestLifecycle,
-} from "./helpers";
+} from "../../setup/orpc";
 
 describe("oRPC Settings over HTTP", () => {
 	setupOrpcTestLifecycle();

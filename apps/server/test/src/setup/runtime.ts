@@ -1,94 +1,67 @@
-import { SQL } from "bun";
-import { sql } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/bun-sql";
-import {
-	createServerRuntime,
-	type ServerRuntime,
-	type ServerRuntimeConfig,
-} from "@/lib/runtime";
+import type { RedisClient } from "bun";
+import type { OpenAPIHono } from "@hono/zod-openapi";
+import type { dbType } from "@/db";
+import type { Settings } from "@/env";
+import type { AuthType } from "@/lib/auth";
+import type { AppContext } from "@/types";
 
 type TestRuntimeOptions = {
 	runMigrations?: boolean;
 };
 
-export type TestRuntime = ServerRuntime & {
+export type TestRuntime = {
+	settings: Settings;
+	app: OpenAPIHono<AppContext>;
+	auth: AuthType;
+	db: dbType;
+	pgClient: {
+		close: () => Promise<void>;
+	};
+	redis: RedisClient;
+	orpcRouter: Record<string, unknown>;
+	shutdown: (options?: { exitProcess?: boolean }) => Promise<void>;
+	apiPrefix: string;
 	databaseName: string;
 };
 
-const baseDatabaseUrl = process.env.DATABASE_URL;
-
-if (!baseDatabaseUrl) {
-	throw new Error("DATABASE_URL is required in test runtime setup");
-}
-
-const adminSql = new SQL({ url: baseDatabaseUrl });
-const adminDb = drizzle(adminSql);
-
-const generateDatabaseName = () => {
-	return `test_${Bun.randomUUIDv7().replaceAll("-", "_")}`;
-};
-
-const createDatabaseUrl = (databaseName: string) => {
-	const url = new URL(baseDatabaseUrl);
-	url.pathname = `/${databaseName}`;
-	return url.toString();
-};
-
-const assertSafeDatabaseName = (databaseName: string) => {
-	if (!/^[a-zA-Z0-9_]+$/.test(databaseName)) {
-		throw new Error(`Unsafe database name: ${databaseName}`);
-	}
-};
-
-const createIsolatedDatabase = async (databaseName: string) => {
-	assertSafeDatabaseName(databaseName);
-	await adminDb.execute(sql.raw(`CREATE DATABASE "${databaseName}"`));
-};
-
-const dropIsolatedDatabase = async (databaseName: string) => {
-	assertSafeDatabaseName(databaseName);
-	await adminDb.execute(
-		sql.raw(`
-			SELECT pg_terminate_backend(pid)
-			FROM pg_stat_activity
-			WHERE datname = '${databaseName}'
-			AND pid <> pg_backend_pid()
-		`),
-	);
-	await adminDb.execute(sql.raw(`DROP DATABASE IF EXISTS "${databaseName}"`));
+const getDatabaseNameFromUrl = (databaseUrl: string): string => {
+	const url = new URL(databaseUrl);
+	return url.pathname.replace(/^\//, "") || "";
 };
 
 export const createTestRuntime = async (
-	options: TestRuntimeOptions = {},
+	_options: TestRuntimeOptions = {},
 ): Promise<TestRuntime> => {
-	const databaseName = generateDatabaseName();
-	await createIsolatedDatabase(databaseName);
+	const [envModule, indexModule, authModule, dbModule, cacheModule] =
+		await Promise.all([
+			import("@/env"),
+			import("@/index"),
+			import("@/lib/auth"),
+			import("@/db"),
+			import("@/lib/cache"),
+		]);
 
-	try {
-		const runtimeConfig: ServerRuntimeConfig = {
-			runMigrations: options.runMigrations ?? true,
-			showRoutes: false,
-			settingsOverrides: {
-				DATABASE_URL: createDatabaseUrl(databaseName),
-			},
-		};
+	const runtimeSettings = envModule.settings;
+	const databaseName = getDatabaseNameFromUrl(runtimeSettings.DATABASE_URL);
 
-		const runtime = await createServerRuntime(runtimeConfig);
-
-		return {
-			...runtime,
-			databaseName,
-		};
-	} catch (error) {
-		await dropIsolatedDatabase(databaseName);
-		throw error;
-	}
+	return {
+		settings: runtimeSettings,
+		app: indexModule.app,
+		auth: authModule.auth,
+		db: dbModule.db,
+		pgClient: dbModule.pgClient,
+		redis: cacheModule.redis,
+		orpcRouter: indexModule.OrpcRouter as Record<string, unknown>,
+		apiPrefix: runtimeSettings.SERVE_STATIC ? "/api" : "",
+		databaseName,
+		shutdown: async ({ exitProcess = false } = {}) => {
+			if (exitProcess) {
+				process.exit(0);
+			}
+		},
+	};
 };
 
 export const disposeTestRuntime = async (runtime: TestRuntime) => {
-	try {
-		await runtime.shutdown({ exitProcess: false });
-	} finally {
-		await dropIsolatedDatabase(runtime.databaseName);
-	}
+	await runtime.shutdown({ exitProcess: false });
 };

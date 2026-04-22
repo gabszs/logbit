@@ -7,7 +7,7 @@ import {
 	expectUnauthorizedError,
 	getOrpcRouters,
 	setupOrpcTestLifecycle,
-} from "./helpers";
+} from "../../setup/orpc";
 
 describe("oRPC Settings via call()", () => {
 	setupOrpcTestLifecycle();

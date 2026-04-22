@@ -8,10 +8,8 @@ import type { AppRouter } from "@/client/contracts";
 import { overrideSettings, resetSettings } from "@/env";
 
 const { models } = await import("@/db/models");
-const { truncateAllTables } = await import("../../setup/db");
-const { createTestRuntime, disposeTestRuntime } = await import(
-	"../../setup/runtime"
-);
+const { truncateAllTables } = await import("./db");
+const { createTestRuntime, disposeTestRuntime } = await import("./runtime");
 
 type AppRouterClient = RouterClient<AppRouter>;
 

@@ -8,7 +8,7 @@ import {
 	expectUnauthorizedError,
 	getOrpcTestRuntime,
 	setupOrpcTestLifecycle,
-} from "./helpers";
+} from "../../setup/orpc";
 
 describe("oRPC Profile over HTTP", () => {
 	setupOrpcTestLifecycle();

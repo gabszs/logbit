@@ -11,7 +11,7 @@ import {
 	getOrpcRouters,
 	getOrpcTestRuntime,
 	setupOrpcTestLifecycle,
-} from "./helpers";
+} from "../../setup/orpc";
 
 describe("oRPC Profile via call()", () => {
 	setupOrpcTestLifecycle();

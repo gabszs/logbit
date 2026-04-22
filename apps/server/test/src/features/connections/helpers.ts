@@ -14,7 +14,7 @@ const AUTHORIZATION_VALUE = "Bearer test-token";
 let authClient: TestHelpers | null = null;
 let runtime: Awaited<ReturnType<typeof createTestRuntime>> | null = null;
 
-export type IntegrationType = "webhook" | "cloudflare_email" | "resend";
+export type IntegrationType = "resend" | "cloudflare" | "clickhouse";
 
 export type AuthContext = {
 	userId: string;
@@ -127,22 +127,22 @@ export const buildIntegrationPayload = (
 	};
 
 	switch (type) {
-		case "webhook":
+		case "cloudflare":
 			return {
 				...base,
 				config: {
-					url: "https://example.com/webhook",
-					secret: "top-secret",
+					apiKey: "cf_test_key",
+					zoneId: "cf_zone_id",
 				},
 			};
-		case "cloudflare_email":
+		case "clickhouse":
 			return {
 				...base,
 				config: {
-					apiToken: "cf-token",
-					accountId: "cf-account-id",
-					from: "sender@example.com",
-					to: ["ops@example.com"],
+					host: "http://localhost:8123",
+					database: "loglog_test",
+					username: "default",
+					password: "",
 				},
 			};
 		case "resend":
@@ -150,8 +150,6 @@ export const buildIntegrationPayload = (
 				...base,
 				config: {
 					apiKey: "re_test_key",
-					from: "sender@example.com",
-					to: ["ops@example.com"],
 				},
 			};
 	}
@@ -176,7 +174,7 @@ export const requestWithAuth = async (
 
 export const createIntegration = async ({
 	headers,
-	type = "webhook",
+	type = "resend",
 	name,
 }: {
 	headers: Headers;
@@ -184,7 +182,7 @@ export const createIntegration = async ({
 	name?: string;
 }) => {
 	const payload = buildIntegrationPayload(type, { name });
-	const res = await requestWithAuth("/v1/integrations", {
+	const res = await requestWithAuth("/v1/connections", {
 		method: "POST",
 		headers,
 		body: payload,
@@ -199,10 +197,10 @@ export const getOrganizationDefaults = async (organizationId: string) => {
 	const currentRuntime = getRuntime();
 	return await currentRuntime.db
 		.select({
-			id: models.integrations.id,
+			id: models.connections.id,
 		})
-		.from(models.integrations)
-		.where(eq(models.integrations.organizationId, organizationId));
+		.from(models.connections)
+		.where(eq(models.connections.organizationId, organizationId));
 };
 
 export const insertOrganizationDefaultIntegration = async ({
@@ -214,12 +212,12 @@ export const insertOrganizationDefaultIntegration = async ({
 }) => {
 	const currentRuntime = getRuntime();
 	const id = Bun.randomUUIDv7();
-	await currentRuntime.db.insert(models.integrations).values({
+	await currentRuntime.db.insert(models.connections).values({
 		id,
 		name,
-		type: "webhook",
+		type: "resend",
 		organizationId,
-		config: { url: "https://example.com/org" },
+		config: { apiKey: "re_org_default_test_key" },
 		isActive: true,
 	});
 	return id;
@@ -239,8 +237,8 @@ export const createSecondOrganization = async () => {
 export const countOrganizationDefaults = async (organizationId: string) => {
 	const currentRuntime = getRuntime();
 	const defaults = await currentRuntime.db
-		.select({ id: models.integrations.id })
-		.from(models.integrations)
-		.where(and(eq(models.integrations.organizationId, organizationId)));
+		.select({ id: models.connections.id })
+		.from(models.connections)
+		.where(and(eq(models.connections.organizationId, organizationId)));
 	return defaults.length;
 };
