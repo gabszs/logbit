@@ -8,7 +8,7 @@ import {
 	varchar,
 } from "drizzle-orm/pg-core";
 import { organizations } from "./authModels";
-import { integrations } from "./integrations";
+import { connections } from "./connections";
 
 export const sourceTypeEnum = pgEnum("source_type", ["trace", "log", "metric"]);
 
@@ -25,7 +25,7 @@ export const sources = pgTable(
 			.references(() => organizations.id, { onDelete: "cascade" }),
 		integrationId: uuid("integration_id")
 			.notNull()
-			.references(() => integrations.id, { onDelete: "cascade" }),
+			.references(() => connections.id, { onDelete: "cascade" }),
 		config: jsonb("config").$type<Record<string, unknown>>().notNull(),
 		createdAt: timestamp("created_at").defaultNow().notNull(),
 		updatedAt: timestamp("updated_at")

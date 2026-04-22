@@ -56,6 +56,19 @@ export const SETTINGS_NAV_ITEMS = [
 	},
 ] as const;
 
+export const INTEGRATIONS_NAV_ITEMS = [
+	{
+		to: "/integrations/connections",
+		label: "Connections",
+		description: "Manage organization connections",
+	},
+	{
+		to: "/integrations/sources",
+		label: "Sources",
+		description: "Manage organization sources",
+	},
+] as const;
+
 export type TechStackItem = {
 	name: string;
 	href: string;

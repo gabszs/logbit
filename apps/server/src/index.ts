@@ -3,17 +3,17 @@ import { OpenAPIHono } from "@hono/zod-openapi";
 import type { InferRouterInputs, InferRouterOutputs } from "@orpc/server";
 import { RPCHandler } from "@orpc/server/fetch";
 import { migrate } from "drizzle-orm/bun-sql/migrator";
+import { problemDetailsHandler } from "hono-problem-details";
+import { MemoryStore, rateLimiter } from "hono-rate-limiter";
 import { serveStatic } from "hono/bun";
 import { compress } from "hono/compress";
 import { cors } from "hono/cors";
 import { showRoutes } from "hono/dev";
 import { HTTPException } from "hono/http-exception";
-import { problemDetailsHandler } from "hono-problem-details";
-import { MemoryStore, rateLimiter } from "hono-rate-limiter";
 import { db, pgClient } from "./db";
 import { settings } from "./env";
 import authRouter from "./features/auth/routes";
-import integrationsRouter from "./features/integrations/routes";
+import connectionsRouter from "./features/connections/routes";
 import opampRouter from "./features/opamp/routes";
 import { profileRouter } from "./features/profile/routes";
 import { settingsRouter } from "./features/settings/routes";
@@ -144,7 +144,7 @@ app.use(`${apiPrefix}/v1/*`, authenticateSession);
 
 // V1 Routes
 app.route(`${apiPrefix}/v1`, authRouter);
-app.route(`${apiPrefix}/v1`, integrationsRouter);
+app.route(`${apiPrefix}/v1`, connectionsRouter);
 app.route(`${apiPrefix}/v1`, opampRouter);
 app.route(`${apiPrefix}/v1`, sourcesRouter);
 

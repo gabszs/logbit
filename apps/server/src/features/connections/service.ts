@@ -1,23 +1,23 @@
 import { BaseService } from "@/common/services/baseService";
 import { checkForChanges } from "@/common/utils";
 import { httpErrors } from "@/lib/errors";
-import type { IntegrationRepository } from "./repository";
+import type { ConnectionRepository } from "./repository";
 import type {
-	IntegrationsType,
-	IntegrationsUpsertInput,
-	IntegrationUpdateInput,
+	ConnectionType,
+	ConnectionUpsertInput,
+	ConnectionUpdateInput,
 } from "./schemas";
 
-export class IntegrationService extends BaseService<IntegrationsType> {
-	protected repository: IntegrationRepository;
+export class ConnectionService extends BaseService<ConnectionType> {
+	protected repository: ConnectionRepository;
 
-	constructor(repository: IntegrationRepository) {
+	constructor(repository: ConnectionRepository) {
 		super(repository);
 		this.repository = repository;
 	}
 
-	async createIntegration(
-		input: IntegrationsUpsertInput,
+	async createConnection(
+		input: ConnectionUpsertInput,
 		activeOrganizationId: string,
 	) {
 		const integrationData = {
@@ -28,44 +28,44 @@ export class IntegrationService extends BaseService<IntegrationsType> {
 		return await this.create(integrationData);
 	}
 
-	async updateIntegration(
+	async updateConnection(
 		id: string,
-		input: IntegrationUpdateInput,
+		input: ConnectionUpdateInput,
 		activeOrganizationId: string,
 	) {
-		const existingIntegration = await this.getById(id, {
+		const existingConnection = await this.getById(id, {
 			organizationId: activeOrganizationId,
 		});
 
-		if (!existingIntegration) {
+		if (!existingConnection) {
 			throw httpErrors.notFound({
 				detail: "The requested integration was not found",
 			});
 		}
 
-		if (!checkForChanges(input, existingIntegration)) {
+		if (!checkForChanges(input, existingConnection)) {
 			throw httpErrors.noChangesDetected();
 		}
 
-		const updatedIntegration = await this.update(id, input, {
+		const updatedConnection = await this.update(id, input, {
 			organizationId: activeOrganizationId,
 		});
 
-		if (!updatedIntegration) {
+		if (!updatedConnection) {
 			throw httpErrors.notFound({
 				detail: "The requested integration was not found",
 			});
 		}
 
-		return updatedIntegration;
+		return updatedConnection;
 	}
 
-	async deleteIntegration(id: string, activeOrganizationId: string) {
-		const existingIntegration = await this.getById(id, {
+	async deleteConnection(id: string, activeOrganizationId: string) {
+		const existingConnection = await this.getById(id, {
 			organizationId: activeOrganizationId,
 		});
 
-		if (!existingIntegration) {
+		if (!existingConnection) {
 			throw httpErrors.notFound({
 				detail: "The requested integration was not found",
 			});

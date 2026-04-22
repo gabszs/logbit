@@ -61,7 +61,7 @@ export function AppSidebar() {
 	const isAuthenticated = Boolean(auth.session?.user);
 
 	const navigationItems: Array<{
-		to: "/" | "/integrations";
+		to: "/" | "/integrations/connections";
 		label: string;
 		icon: LucideIcon;
 		isActive: boolean;
@@ -73,12 +73,10 @@ export function AppSidebar() {
 			isActive: pathname === "/",
 		},
 		{
-			to: "/integrations",
+			to: "/integrations/connections",
 			label: "Integrations",
 			icon: PlugZap,
-			isActive:
-				pathname === "/integrations" ||
-				pathname.startsWith("/integrations/"),
+			isActive: pathname.startsWith("/integrations/"),
 		},
 	];
 

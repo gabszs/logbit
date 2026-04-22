@@ -1,5 +1,17 @@
-import { index, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
-import { users } from "./authModels";
+import {
+	boolean,
+	index,
+	jsonb,
+	pgEnum,
+	pgTable,
+	timestamp,
+	uuid,
+	varchar,
+} from "drizzle-orm/pg-core";
+import { supportedIntegrationTypes } from "@/integrations/senderFactory";
+import { organizations } from "./authModels";
+
+export const connectionsTypeEnum = pgEnum("type", supportedIntegrationTypes);
 
 export const connections = pgTable(
 	"connections",
@@ -7,23 +19,21 @@ export const connections = pgTable(
 		id: uuid("id")
 			.primaryKey()
 			.$defaultFn(() => Bun.randomUUIDv7()),
-		name: text("name").notNull(),
-		host: text("host").notNull(),
-		username: text("username").notNull(),
-		password: text("password").notNull(),
-		database: text("database"),
-
-		userId: uuid("user_id")
+		name: varchar("name", { length: 255 }).notNull(),
+		type: connectionsTypeEnum("type").notNull(),
+		organizationId: uuid("organization_id")
 			.notNull()
-			.unique()
-			.references(() => users.id, { onDelete: "cascade" }),
+			.references(() => organizations.id, { onDelete: "cascade" }),
+		config: jsonb("config").$type<Record<string, unknown>>().notNull(),
+		isActive: boolean("is_active").default(true).notNull(),
 		createdAt: timestamp("created_at").defaultNow().notNull(),
 		updatedAt: timestamp("updated_at")
+			.defaultNow()
 			.$onUpdate(() => new Date())
 			.notNull(),
 	},
 	(table) => [
-		index("connections_userId_idx").on(table.userId),
+		index("connections_organization_id_idx").on(table.organizationId),
 		index("connections_id_idx").on(table.id),
 	],
 );

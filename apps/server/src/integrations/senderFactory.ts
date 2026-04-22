@@ -1,5 +1,5 @@
+import type { IntegrationsType } from "@/features/connections/schemas";
 import z from "zod";
-import type { IntegrationsType } from "@/features/integrations/schemas";
 import { CloudflareEmailSender } from "./cloudflare/email";
 import { CloudflareEmailConfigSchema } from "./cloudflare/email/schemas";
 import type { ISender } from "./interfaces/ISender";
@@ -19,6 +19,9 @@ export const supportedIntegrationSchemas = z.union([
 	CloudflareEmailConfigSchema,
 	ResendConfigSchema,
 ]);
+
+export type SupportedIntegrationKind = (typeof supportedIntegrationTypes)[number];
+export type SupportedIntegrationSchemasTypes = z.infer<typeof supportedIntegrationSchemas>;
 
 export function createSender(
 	integration: IntegrationsType,

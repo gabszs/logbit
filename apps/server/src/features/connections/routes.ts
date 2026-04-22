@@ -8,28 +8,28 @@ import { db } from "@/db";
 import { ContentTypes, status } from "@/lib/constants";
 import { httpErrors } from "@/lib/errors";
 import type { AuthAppContext } from "@/types";
-import { IntegrationRepository } from "./repository";
+import { ConnectionRepository } from "./repository";
 import {
-	integrationsListSuccessSchema,
-	integrationsSchema,
-	integrationsSuccessSchema,
-	integrationsUpsertSchema,
-	integrationUpdateSchema,
+	connectionListSuccessSchema,
+	connectionSchema,
+	connectionSuccessSchema,
+	connectionUpsertSchema,
+	connectionUpdateSchema,
 } from "./schemas";
-import { IntegrationService } from "./service";
+import { ConnectionService } from "./service";
 
-const integrationsRouter = new OpenAPIHono<
+const connectionsRouter = new OpenAPIHono<
 	AuthAppContext & {
 		Variables: AuthAppContext["Variables"] & {
-			service: IntegrationService;
+			service: ConnectionService;
 			activeOrganizationId: string;
 		};
 	}
 >();
 
-integrationsRouter.use(async (c, next) => {
-	const integrationRepository = new IntegrationRepository(db);
-	const integrationService = new IntegrationService(integrationRepository);
+connectionsRouter.use(async (c, next) => {
+	const connectionRepository = new ConnectionRepository(db);
+	const connectionService = new ConnectionService(connectionRepository);
 	const session = c.get("session");
 	const activeOrganizationId = session.activeOrganizationId;
 	if (activeOrganizationId == null) {
@@ -37,23 +37,23 @@ integrationsRouter.use(async (c, next) => {
 			detail: "No active organization",
 		});
 	}
-	c.set("service", integrationService);
+	c.set("service", connectionService);
 	c.set("activeOrganizationId", activeOrganizationId);
 	await next();
 });
 
-integrationsRouter.openapi(
+connectionsRouter.openapi(
 	createRoute({
-		tags: ["Integrations"],
-		summary: "Get the integration by ID",
+		tags: ["Connections"],
+		summary: "Get the connection by ID",
 		method: "get",
-		path: "/integrations/{id}",
+		path: "/connections/{id}",
 		request: {
 			params: uuidIdParamSchema,
 			headers: cookieAuthorizationSchema,
 		},
 		responses: {
-			[status.OK.code]: status.OK.response(integrationsSchema),
+			[status.OK.code]: status.OK.response(connectionSchema),
 			[status.NOT_FOUND.code]: status.NOT_FOUND.response(),
 			[status.UNAUTHORIZED.code]: status.UNAUTHORIZED.response(),
 			[status.FORBIDDEN.code]: status.FORBIDDEN.response({
@@ -69,31 +69,31 @@ integrationsRouter.openapi(
 		const { id } = c.req.param();
 		const service = c.get("service");
 		const activeOrganizationId = c.get("activeOrganizationId");
-		const integration = await service.getById(id, {
+		const connection = await service.getById(id, {
 			organizationId: activeOrganizationId,
 		});
 
-		if (!integration)
+		if (!connection)
 			throw httpErrors.notFound({
-				detail: "The requested integration was not found",
+				detail: "The requested connection was not found",
 			});
 
-		return c.json(integration);
+		return c.json(connection);
 	},
 );
 
-integrationsRouter.openapi(
+connectionsRouter.openapi(
 	createRoute({
-		tags: ["Integrations"],
-		summary: "Get all integrations for the active organization",
+		tags: ["Connections"],
+		summary: "Get all connection for the active organization",
 		method: "get",
-		path: "/integrations",
+		path: "/connections",
 		request: {
 			query: searchOptionsSchema,
 			headers: cookieAuthorizationSchema,
 		},
 		responses: {
-			[status.OK.code]: status.OK.response(integrationsListSuccessSchema),
+			[status.OK.code]: status.OK.response(connectionListSuccessSchema),
 			[status.UNAUTHORIZED.code]: status.UNAUTHORIZED.response(),
 			[status.FORBIDDEN.code]: status.FORBIDDEN.response({
 				detail: "No active organization",
@@ -108,21 +108,21 @@ integrationsRouter.openapi(
 		const query = c.req.valid("query");
 		const service = c.get("service");
 		const activeOrganizationId = c.get("activeOrganizationId");
-		const integrations = await service.getAll(query, {
+		const connections = await service.getAll(query, {
 			organizationId: activeOrganizationId,
 		});
 
 		return c.json({
-			message: "Integrations successfully retrieved",
-			data: integrations,
+			message: "Connection successfully retrieved",
+			data: connections,
 			metadata: query,
 		});
 	},
 );
 
-integrationsRouter.openapi(
+connectionsRouter.openapi(
 	createRoute({
-		tags: ["Integrations"],
+		tags: ["Connections"],
 		summary: "Create a new integration",
 		method: "post",
 		path: "/integrations",
@@ -131,13 +131,13 @@ integrationsRouter.openapi(
 			body: {
 				content: {
 					[ContentTypes.JSON]: {
-						schema: integrationsUpsertSchema,
+						schema: connectionUpsertSchema,
 					},
 				},
 			},
 		},
 		responses: {
-			[status.CREATED.code]: status.CREATED.response(integrationsSuccessSchema),
+			[status.CREATED.code]: status.CREATED.response(connectionSuccessSchema),
 			[status.BAD_REQUEST.code]: status.BAD_REQUEST.response(),
 			[status.UNAUTHORIZED.code]: status.UNAUTHORIZED.response(),
 			[status.FORBIDDEN.code]: status.FORBIDDEN.response({
@@ -152,25 +152,25 @@ integrationsRouter.openapi(
 		const body = c.req.valid("json");
 		const service = c.get("service");
 		const activeOrganizationId = c.get("activeOrganizationId");
-		const integration = await service.createIntegration(body, activeOrganizationId);
+		const connection = await service.createConnection(body, activeOrganizationId);
 
 		return c.json(
 			{
-				message: "Integration successfully created",
-				data: integration,
+				message: "Connection successfully created",
+				data: connection,
 				metadata: null,
 			},
 			status.CREATED.code,
 			{
-				location: `${c.req.url}/${integration.id}`,
+				location: `${c.req.url}/${connection.id}`,
 			},
 		);
 	},
 );
 
-integrationsRouter.openapi(
+connectionsRouter.openapi(
 	createRoute({
-		tags: ["Integrations"],
+		tags: ["Connections"],
 		summary: "Update an integration",
 		method: "patch",
 		path: "/integrations/{id}",
@@ -180,13 +180,13 @@ integrationsRouter.openapi(
 			body: {
 				content: {
 					[ContentTypes.JSON]: {
-						schema: integrationUpdateSchema,
+						schema: connectionUpdateSchema,
 					},
 				},
 			},
 		},
 		responses: {
-			[status.OK.code]: status.OK.response(integrationsSuccessSchema),
+			[status.OK.code]: status.OK.response(connectionSuccessSchema),
 			[status.NOT_FOUND.code]: status.NOT_FOUND.response(),
 			[status.BAD_REQUEST.code]: status.BAD_REQUEST.response(),
 			[status.UNAUTHORIZED.code]: status.UNAUTHORIZED.response(),
@@ -203,23 +203,23 @@ integrationsRouter.openapi(
 		const body = c.req.valid("json");
 		const service = c.get("service");
 		const activeOrganizationId = c.get("activeOrganizationId");
-		const integration = await service.updateIntegration(
+		const connection = await service.updateConnection(
 			id,
 			body,
 			activeOrganizationId,
 		);
 
 		return c.json({
-			message: "Integration successfully updated",
-			data: integration,
+			message: "Connection successfully updated",
+			data: connection,
 			metadata: null,
 		});
 	},
 );
 
-integrationsRouter.openapi(
+connectionsRouter.openapi(
 	createRoute({
-		tags: ["Integrations"],
+		tags: ["Connections"],
 		summary: "Delete an integration",
 		method: "delete",
 		path: "/integrations/{id}",
@@ -242,11 +242,11 @@ integrationsRouter.openapi(
 	async (c) => {
 		const { id } = c.req.param();
 		const service = c.get("service");
-		const activeOrganizationId = c.get("activeOrganizationId");
-		await service.deleteIntegration(id, activeOrganizationId);
+		const activeOrganizationId = c.get("activeOrganizationId")
+		await service.deleteConnection(id, activeOrganizationId);
 
 		return c.body(null, 204);
 	},
 );
 
-export default integrationsRouter;
+export default connectionsRouter;

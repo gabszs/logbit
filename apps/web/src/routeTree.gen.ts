@@ -10,14 +10,16 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as PrivacyRouteImport } from './routes/privacy'
-import { Route as IntegrationsRouteImport } from './routes/integrations'
 import { Route as DocsRouteImport } from './routes/docs'
 import { Route as SettingsRouteRouteImport } from './routes/settings/route'
+import { Route as IntegrationsRouteRouteImport } from './routes/integrations/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SettingsProfileRouteImport } from './routes/settings/profile'
 import { Route as SettingsOrganizationsRouteImport } from './routes/settings/organizations'
 import { Route as SettingsAppearanceRouteImport } from './routes/settings/appearance'
 import { Route as SettingsAdminRouteImport } from './routes/settings/admin'
+import { Route as IntegrationsSourcesRouteImport } from './routes/integrations/sources'
+import { Route as IntegrationsConnectionsRouteImport } from './routes/integrations/connections'
 import { Route as AuthTwoFactorRouteImport } from './routes/auth/two-factor'
 import { Route as AuthSignUpRouteImport } from './routes/auth/sign-up'
 import { Route as AuthSignInRouteImport } from './routes/auth/sign-in'
@@ -29,11 +31,6 @@ const PrivacyRoute = PrivacyRouteImport.update({
   path: '/privacy',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IntegrationsRoute = IntegrationsRouteImport.update({
-  id: '/integrations',
-  path: '/integrations',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const DocsRoute = DocsRouteImport.update({
   id: '/docs',
   path: '/docs',
@@ -42,6 +39,11 @@ const DocsRoute = DocsRouteImport.update({
 const SettingsRouteRoute = SettingsRouteRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const IntegrationsRouteRoute = IntegrationsRouteRouteImport.update({
+  id: '/integrations',
+  path: '/integrations',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -68,6 +70,16 @@ const SettingsAdminRoute = SettingsAdminRouteImport.update({
   id: '/admin',
   path: '/admin',
   getParentRoute: () => SettingsRouteRoute,
+} as any)
+const IntegrationsSourcesRoute = IntegrationsSourcesRouteImport.update({
+  id: '/sources',
+  path: '/sources',
+  getParentRoute: () => IntegrationsRouteRoute,
+} as any)
+const IntegrationsConnectionsRoute = IntegrationsConnectionsRouteImport.update({
+  id: '/connections',
+  path: '/connections',
+  getParentRoute: () => IntegrationsRouteRoute,
 } as any)
 const AuthTwoFactorRoute = AuthTwoFactorRouteImport.update({
   id: '/auth/two-factor',
@@ -99,14 +111,16 @@ const SettingsInvitationsInvitationIdRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/integrations': typeof IntegrationsRouteRouteWithChildren
   '/settings': typeof SettingsRouteRouteWithChildren
   '/docs': typeof DocsRoute
-  '/integrations': typeof IntegrationsRoute
   '/privacy': typeof PrivacyRoute
   '/settings/invitations': typeof SettingsInvitationsRouteRouteWithChildren
   '/auth/sign-in': typeof AuthSignInRoute
   '/auth/sign-up': typeof AuthSignUpRoute
   '/auth/two-factor': typeof AuthTwoFactorRoute
+  '/integrations/connections': typeof IntegrationsConnectionsRoute
+  '/integrations/sources': typeof IntegrationsSourcesRoute
   '/settings/admin': typeof SettingsAdminRoute
   '/settings/appearance': typeof SettingsAppearanceRoute
   '/settings/organizations': typeof SettingsOrganizationsRoute
@@ -115,14 +129,16 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/integrations': typeof IntegrationsRouteRouteWithChildren
   '/settings': typeof SettingsRouteRouteWithChildren
   '/docs': typeof DocsRoute
-  '/integrations': typeof IntegrationsRoute
   '/privacy': typeof PrivacyRoute
   '/settings/invitations': typeof SettingsInvitationsRouteRouteWithChildren
   '/auth/sign-in': typeof AuthSignInRoute
   '/auth/sign-up': typeof AuthSignUpRoute
   '/auth/two-factor': typeof AuthTwoFactorRoute
+  '/integrations/connections': typeof IntegrationsConnectionsRoute
+  '/integrations/sources': typeof IntegrationsSourcesRoute
   '/settings/admin': typeof SettingsAdminRoute
   '/settings/appearance': typeof SettingsAppearanceRoute
   '/settings/organizations': typeof SettingsOrganizationsRoute
@@ -132,14 +148,16 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/integrations': typeof IntegrationsRouteRouteWithChildren
   '/settings': typeof SettingsRouteRouteWithChildren
   '/docs': typeof DocsRoute
-  '/integrations': typeof IntegrationsRoute
   '/privacy': typeof PrivacyRoute
   '/settings/invitations': typeof SettingsInvitationsRouteRouteWithChildren
   '/auth/sign-in': typeof AuthSignInRoute
   '/auth/sign-up': typeof AuthSignUpRoute
   '/auth/two-factor': typeof AuthTwoFactorRoute
+  '/integrations/connections': typeof IntegrationsConnectionsRoute
+  '/integrations/sources': typeof IntegrationsSourcesRoute
   '/settings/admin': typeof SettingsAdminRoute
   '/settings/appearance': typeof SettingsAppearanceRoute
   '/settings/organizations': typeof SettingsOrganizationsRoute
@@ -150,14 +168,16 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/integrations'
     | '/settings'
     | '/docs'
-    | '/integrations'
     | '/privacy'
     | '/settings/invitations'
     | '/auth/sign-in'
     | '/auth/sign-up'
     | '/auth/two-factor'
+    | '/integrations/connections'
+    | '/integrations/sources'
     | '/settings/admin'
     | '/settings/appearance'
     | '/settings/organizations'
@@ -166,14 +186,16 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/integrations'
     | '/settings'
     | '/docs'
-    | '/integrations'
     | '/privacy'
     | '/settings/invitations'
     | '/auth/sign-in'
     | '/auth/sign-up'
     | '/auth/two-factor'
+    | '/integrations/connections'
+    | '/integrations/sources'
     | '/settings/admin'
     | '/settings/appearance'
     | '/settings/organizations'
@@ -182,14 +204,16 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/integrations'
     | '/settings'
     | '/docs'
-    | '/integrations'
     | '/privacy'
     | '/settings/invitations'
     | '/auth/sign-in'
     | '/auth/sign-up'
     | '/auth/two-factor'
+    | '/integrations/connections'
+    | '/integrations/sources'
     | '/settings/admin'
     | '/settings/appearance'
     | '/settings/organizations'
@@ -199,9 +223,9 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  IntegrationsRouteRoute: typeof IntegrationsRouteRouteWithChildren
   SettingsRouteRoute: typeof SettingsRouteRouteWithChildren
   DocsRoute: typeof DocsRoute
-  IntegrationsRoute: typeof IntegrationsRoute
   PrivacyRoute: typeof PrivacyRoute
   AuthSignInRoute: typeof AuthSignInRoute
   AuthSignUpRoute: typeof AuthSignUpRoute
@@ -217,13 +241,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PrivacyRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/integrations': {
-      id: '/integrations'
-      path: '/integrations'
-      fullPath: '/integrations'
-      preLoaderRoute: typeof IntegrationsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/docs': {
       id: '/docs'
       path: '/docs'
@@ -236,6 +253,13 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof SettingsRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/integrations': {
+      id: '/integrations'
+      path: '/integrations'
+      fullPath: '/integrations'
+      preLoaderRoute: typeof IntegrationsRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -272,6 +296,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/settings/admin'
       preLoaderRoute: typeof SettingsAdminRouteImport
       parentRoute: typeof SettingsRouteRoute
+    }
+    '/integrations/sources': {
+      id: '/integrations/sources'
+      path: '/sources'
+      fullPath: '/integrations/sources'
+      preLoaderRoute: typeof IntegrationsSourcesRouteImport
+      parentRoute: typeof IntegrationsRouteRoute
+    }
+    '/integrations/connections': {
+      id: '/integrations/connections'
+      path: '/connections'
+      fullPath: '/integrations/connections'
+      preLoaderRoute: typeof IntegrationsConnectionsRouteImport
+      parentRoute: typeof IntegrationsRouteRoute
     }
     '/auth/two-factor': {
       id: '/auth/two-factor'
@@ -311,6 +349,19 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface IntegrationsRouteRouteChildren {
+  IntegrationsConnectionsRoute: typeof IntegrationsConnectionsRoute
+  IntegrationsSourcesRoute: typeof IntegrationsSourcesRoute
+}
+
+const IntegrationsRouteRouteChildren: IntegrationsRouteRouteChildren = {
+  IntegrationsConnectionsRoute: IntegrationsConnectionsRoute,
+  IntegrationsSourcesRoute: IntegrationsSourcesRoute,
+}
+
+const IntegrationsRouteRouteWithChildren =
+  IntegrationsRouteRoute._addFileChildren(IntegrationsRouteRouteChildren)
+
 interface SettingsInvitationsRouteRouteChildren {
   SettingsInvitationsInvitationIdRoute: typeof SettingsInvitationsInvitationIdRoute
 }
@@ -347,9 +398,9 @@ const SettingsRouteRouteWithChildren = SettingsRouteRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  IntegrationsRouteRoute: IntegrationsRouteRouteWithChildren,
   SettingsRouteRoute: SettingsRouteRouteWithChildren,
   DocsRoute: DocsRoute,
-  IntegrationsRoute: IntegrationsRoute,
   PrivacyRoute: PrivacyRoute,
   AuthSignInRoute: AuthSignInRoute,
   AuthSignUpRoute: AuthSignUpRoute,
