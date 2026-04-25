@@ -668,95 +668,94 @@ function AdminUsersSection({
 }) {
 	return (
 		<>
-		<div className="overflow-hidden rounded-xl border border-border/70 bg-card/70">
-			<div className="px-4 py-4">
-				<div className="flex items-center gap-3 rounded-xl border border-border/70 bg-background/30 px-4 py-3">
-					<Search className="size-4 text-muted-foreground" />
-					<Input
-						value={usersState.searchValue}
-						onChange={(event) => onSearchChange(event.target.value)}
-						placeholder="Search user"
-						className="border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
-					/>
-					<Badge variant="outline">{totalUsers} users</Badge>
-				</div>
-			</div>
-
-			<Separator className="bg-border/70" />
-
-			{isUsersPending ? (
-				<div className="px-4 py-8">
-					<div className="flex items-center gap-2 text-muted-foreground text-sm">
-						<Loader2 className="size-4 animate-spin" />
-						Loading users...
+			<div className="overflow-hidden rounded-xl border border-border/70 bg-card/70">
+				<div className="px-4 py-4">
+					<div className="flex items-center gap-3 rounded-xl border border-border/70 bg-background/30 px-4 py-3">
+						<Search className="size-4 text-muted-foreground" />
+						<Input
+							value={usersState.searchValue}
+							onChange={(event) => onSearchChange(event.target.value)}
+							placeholder="Search user"
+							className="border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
+						/>
+						<Badge variant="outline">{totalUsers} users</Badge>
 					</div>
 				</div>
-			) : usersQueryError ? (
-				<div className="px-4 py-4">
-					<Alert variant="destructive">
-						<AlertTitle>Failed to load users</AlertTitle>
-						<AlertDescription>{usersQueryError}</AlertDescription>
-					</Alert>
-				</div>
-			) : users.length === 0 ? (
-				<div className="px-4 py-8 text-center">
-					<p className="font-medium text-sm">No users found.</p>
-					<p className="mt-2 text-muted-foreground text-sm">
-						Try another search or create a new user.
-					</p>
-				</div>
-			) : (
-				<div>
-					{users.map((user, index) => (
-						<div key={user.id}>
-							<AdminUserRow
-								user={user}
-								currentUserId={currentUserId}
-								isExpanded={expandedUserId === user.id}
-								isUpdatingRole={
-									isUpdatingRole && updatingRoleUserId === user.id
-								}
-								isDeleting={isDeleting && deletingUserId === user.id}
-								onToggleExpanded={() => onToggleExpanded(user.id)}
-								onRoleChange={(role) => onRoleChange(user.id, role)}
-								onDelete={() => onDelete(user)}
-								onBan={() => onBan(user)}
-							/>
-							{index < users.length - 1 ? (
-								<Separator className="bg-border/70" />
-							) : null}
+
+				<Separator className="bg-border/70" />
+
+				{isUsersPending ? (
+					<div className="px-4 py-8">
+						<div className="flex items-center gap-2 text-muted-foreground text-sm">
+							<Loader2 className="size-4 animate-spin" />
+							Loading users...
 						</div>
-					))}
-				</div>
-			)}
-
-		</div>
-
-		<div className="flex items-center justify-between">
-			<span className="text-muted-foreground text-sm">
-				Page {usersState.page + 1} of {totalPages}
-			</span>
-			<div className="flex gap-2">
-				<Button
-					type="button"
-					size="sm"
-					variant="outline"
-					onClick={onPreviousPage}
-					disabled={usersState.page === 0}
-				>
-					<ChevronLeft className="size-4" />
-				</Button>
-				<Button
-					type="button"
-					size="sm"
-					variant="outline"
-					onClick={onNextPage}
-					disabled={(usersState.page + 1) * PAGE_SIZE >= totalUsers}
-				>
-					<ChevronRight className="size-4" />
-				</Button>
+					</div>
+				) : usersQueryError ? (
+					<div className="px-4 py-4">
+						<Alert variant="destructive">
+							<AlertTitle>Failed to load users</AlertTitle>
+							<AlertDescription>{usersQueryError}</AlertDescription>
+						</Alert>
+					</div>
+				) : users.length === 0 ? (
+					<div className="px-4 py-8 text-center">
+						<p className="font-medium text-sm">No users found.</p>
+						<p className="mt-2 text-muted-foreground text-sm">
+							Try another search or create a new user.
+						</p>
+					</div>
+				) : (
+					<div>
+						{users.map((user, index) => (
+							<div key={user.id}>
+								<AdminUserRow
+									user={user}
+									currentUserId={currentUserId}
+									isExpanded={expandedUserId === user.id}
+									isUpdatingRole={
+										isUpdatingRole && updatingRoleUserId === user.id
+									}
+									isDeleting={isDeleting && deletingUserId === user.id}
+									onToggleExpanded={() => onToggleExpanded(user.id)}
+									onRoleChange={(role) => onRoleChange(user.id, role)}
+									onDelete={() => onDelete(user)}
+									onBan={() => onBan(user)}
+								/>
+								{index < users.length - 1 ? (
+									<Separator className="bg-border/70" />
+								) : null}
+							</div>
+						))}
+					</div>
+				)}
 			</div>
-		</div>
+
+			<div className="flex items-center justify-between">
+				<span className="text-muted-foreground text-sm">
+					Page {usersState.page + 1} of {totalPages}
+				</span>
+				<div className="flex gap-2">
+					<Button
+						type="button"
+						size="sm"
+						variant="outline"
+						onClick={onPreviousPage}
+						disabled={usersState.page === 0}
+					>
+						<ChevronLeft className="size-4" />
+					</Button>
+					<Button
+						type="button"
+						size="sm"
+						variant="outline"
+						onClick={onNextPage}
+						disabled={(usersState.page + 1) * PAGE_SIZE >= totalUsers}
+					>
+						<ChevronRight className="size-4" />
+					</Button>
+				</div>
+			</div>
 		</>
 	);
 }

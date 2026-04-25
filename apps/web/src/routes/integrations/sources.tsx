@@ -41,7 +41,9 @@ export const Route = createFileRoute("/integrations/sources")({
 });
 
 const SOURCE_TYPE_LABELS: Record<SourcesType["type"], string> = {
+	trace: "Trace",
 	log: "Log",
+	metric: "Metric",
 };
 
 function SourcesPage() {
