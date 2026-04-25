@@ -228,7 +228,8 @@ export function AppSidebar() {
 						<DropdownMenuContent side="right" align="end" className="w-64">
 							<DropdownMenuItem
 								onClick={() => navigate({ to: "/settings/profile" })}
-								className="flex items-center gap-3 px-2 py-2"
+								onAuxClick={(e) => { if (e.button === 1) window.open("/settings/profile", "_blank"); }}
+								className="group flex items-center gap-3 px-2 py-2"
 							>
 								<Avatar className="size-9">
 									{user?.image && (
@@ -238,7 +239,7 @@ export function AppSidebar() {
 										{getInitial(user)}
 									</AvatarFallback>
 								</Avatar>
-								<div className="flex flex-col overflow-hidden">
+								<div className="flex min-w-0 flex-1 flex-col overflow-hidden">
 									<span className="truncate font-medium text-sm">
 										{user?.name ?? "User"}
 									</span>
@@ -246,10 +247,14 @@ export function AppSidebar() {
 										{user?.email}
 									</span>
 								</div>
+								<span className="hidden shrink-0 text-muted-foreground text-xs group-hover:block">
+									Edit
+								</span>
 							</DropdownMenuItem>
 							<DropdownMenuSeparator />
 							<DropdownMenuItem
 								onClick={() => navigate({ to: "/settings/profile" })}
+								onAuxClick={(e) => { if (e.button === 1) window.open("/settings/profile", "_blank"); }}
 							>
 								<Settings className="size-4" />
 								<span>Settings</span>

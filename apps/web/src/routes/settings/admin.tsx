@@ -7,6 +7,8 @@ import {
 import { createFileRoute, notFound, useRouter } from "@tanstack/react-router";
 import {
 	Ban,
+	ChevronLeft,
+	ChevronRight,
 	KeyRound,
 	Loader2,
 	LogIn,
@@ -665,6 +667,7 @@ function AdminUsersSection({
 	onBan: (user: AdminUserListItem) => void;
 }) {
 	return (
+		<>
 		<div className="overflow-hidden rounded-xl border border-border/70 bg-card/70">
 			<div className="px-4 py-4">
 				<div className="flex items-center gap-3 rounded-xl border border-border/70 bg-background/30 px-4 py-3">
@@ -727,34 +730,34 @@ function AdminUsersSection({
 				</div>
 			)}
 
-			<Separator className="bg-border/70" />
+		</div>
 
-			<div className="flex items-center justify-between gap-3 px-4 py-4">
-				<p className="text-muted-foreground text-sm">
-					Page {usersState.page + 1} of {totalPages}
-				</p>
-				<div className="flex items-center gap-2">
-					<Button
-						type="button"
-						size="sm"
-						variant="outline"
-						onClick={onPreviousPage}
-						disabled={usersState.page === 0}
-					>
-						Previous
-					</Button>
-					<Button
-						type="button"
-						size="sm"
-						variant="outline"
-						onClick={onNextPage}
-						disabled={(usersState.page + 1) * PAGE_SIZE >= totalUsers}
-					>
-						Next
-					</Button>
-				</div>
+		<div className="flex items-center justify-between">
+			<span className="text-muted-foreground text-sm">
+				Page {usersState.page + 1} of {totalPages}
+			</span>
+			<div className="flex gap-2">
+				<Button
+					type="button"
+					size="sm"
+					variant="outline"
+					onClick={onPreviousPage}
+					disabled={usersState.page === 0}
+				>
+					<ChevronLeft className="size-4" />
+				</Button>
+				<Button
+					type="button"
+					size="sm"
+					variant="outline"
+					onClick={onNextPage}
+					disabled={(usersState.page + 1) * PAGE_SIZE >= totalUsers}
+				>
+					<ChevronRight className="size-4" />
+				</Button>
 			</div>
 		</div>
+		</>
 	);
 }
 

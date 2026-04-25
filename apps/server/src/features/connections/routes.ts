@@ -1,20 +1,20 @@
-import { createRoute, OpenAPIHono } from "@hono/zod-openapi";
 import {
 	cookieAuthorizationSchema,
 	searchOptionsSchema,
-	uuidIdParamSchema,
+	uuidV7IdParamSchema,
 } from "@/common/schemas/baseSchemas";
 import { db } from "@/db";
 import { ContentTypes, status } from "@/lib/constants";
 import { httpErrors } from "@/lib/errors";
 import type { AuthAppContext } from "@/types";
+import { createRoute, OpenAPIHono } from "@hono/zod-openapi";
 import { ConnectionRepository } from "./repository";
 import {
 	connectionListSuccessSchema,
 	connectionSchema,
 	connectionSuccessSchema,
-	connectionUpsertSchema,
 	connectionUpdateSchema,
+	connectionUpsertSchema,
 } from "./schemas";
 import { ConnectionService } from "./service";
 
@@ -49,7 +49,7 @@ connectionsRouter.openapi(
 		method: "get",
 		path: "/connections/{id}",
 		request: {
-			params: uuidIdParamSchema,
+			params: uuidV7IdParamSchema,
 			headers: cookieAuthorizationSchema,
 		},
 		responses: {
@@ -178,7 +178,7 @@ connectionsRouter.openapi(
 		method: "patch",
 		path: "/connections/{id}",
 		request: {
-			params: uuidIdParamSchema,
+			params: uuidV7IdParamSchema,
 			headers: cookieAuthorizationSchema,
 			body: {
 				content: {
@@ -227,7 +227,7 @@ connectionsRouter.openapi(
 		method: "delete",
 		path: "/connections/{id}",
 		request: {
-			params: uuidIdParamSchema,
+			params: uuidV7IdParamSchema,
 			headers: cookieAuthorizationSchema,
 		},
 		responses: {
@@ -245,7 +245,7 @@ connectionsRouter.openapi(
 	async (c) => {
 		const { id } = c.req.param();
 		const service = c.get("service");
-		const activeOrganizationId = c.get("activeOrganizationId")
+		const activeOrganizationId = c.get("activeOrganizationId");
 		await service.deleteConnection(id, activeOrganizationId);
 
 		return c.body(null, 204);

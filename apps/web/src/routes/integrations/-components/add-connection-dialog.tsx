@@ -5,7 +5,6 @@ import type {
 	ConnectionEntityType,
 	ConnectionUpsertInput,
 } from "@/server/features/connections/schemas";
-import type { SupportedIntegrationKind } from "@/server/integrations/factory";
 import { Button } from "@/web/components/ui/button";
 import {
 	Dialog,
@@ -26,13 +25,14 @@ import {
 } from "@/web/components/ui/select";
 import { Switch } from "@/web/components/ui/switch";
 import { parseHonoResponse } from "@/web/lib/hono-rpc";
+import type { SupportedIntegrationKind } from "@/web/lib/integrations";
+import { INTEGRATIONS, supportedIntegrationTypes } from "@/web/lib/integrations";
 
-const CONNECTION_TYPES: Array<{ value: SupportedIntegrationKind; label: string }> =
-	[
-		{ value: "resend", label: "Resend" },
-		{ value: "cloudflare", label: "Cloudflare" },
-		{ value: "clickhouse", label: "ClickHouse" },
-	];
+const CONNECTION_TYPES = supportedIntegrationTypes.map((value) => ({
+	value,
+	label: INTEGRATIONS[value].name,
+	Logo: INTEGRATIONS[value].logo,
+}));
 
 type FormState = {
 	name: string;
@@ -77,7 +77,7 @@ function formFromConnection(c: ConnectionEntityType): FormState {
 			chHost: c.config.host,
 			chDatabase: c.config.database ?? "",
 			chUsername: c.config.username,
-			chPassword: c.config.password,
+			chPassword: c.config.password ?? "",
 		};
 	}
 	return base;
@@ -236,7 +236,10 @@ export function AddConnectionDialog({
 							<SelectContent>
 								{CONNECTION_TYPES.map((t) => (
 									<SelectItem key={t.value} value={t.value}>
-										{t.label}
+										<div className="flex items-center gap-2">
+											<t.Logo className="size-4 shrink-0 text-foreground" />
+											{t.label}
+										</div>
 									</SelectItem>
 								))}
 							</SelectContent>

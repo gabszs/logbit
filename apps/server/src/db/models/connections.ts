@@ -11,7 +11,10 @@ import {
 import { supportedIntegrationTypes } from "@/integrations/factory";
 import { organizations } from "./authModels";
 
-export const connectionsTypeEnum = pgEnum("type", supportedIntegrationTypes);
+export const connectionsTypeEnum = pgEnum(
+	"connection_type",
+	supportedIntegrationTypes,
+);
 
 export const connections = pgTable(
 	"connections",

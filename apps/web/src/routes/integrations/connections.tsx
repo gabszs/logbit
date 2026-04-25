@@ -1,6 +1,6 @@
 import { queryOptions, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { Loader2, PlugZap, Plus, RefreshCw } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2, PlugZap, Plus, RefreshCw } from "lucide-react";
 import { useState } from "react";
 import type {
 	ConnectionEntityType,
@@ -22,23 +22,27 @@ import { ConnectionRow } from "./-components/connection-row";
 import { IntegrationsError } from "./-components/integrations-error";
 import { IntegrationsSectionSkeleton } from "./-components/integrations-section-skeleton";
 
-async function fetchConnections(): Promise<ConnectionEntityType[]> {
-	const response = await fetch(
-		`${import.meta.env.VITE_SERVER_URL}/v1/connections`,
-		{ credentials: "include" },
-	);
+const PAGE_SIZE = 20;
+
+async function fetchConnections(page: number): Promise<ConnectionEntityType[]> {
+	const url = new URL(`${import.meta.env.VITE_SERVER_URL}/v1/connections`);
+	url.searchParams.set("page", String(page));
+	url.searchParams.set("page_size", String(PAGE_SIZE));
+	const response = await fetch(url.toString(), { credentials: "include" });
 	const result = await parseHonoResponse<ConnectionListSuccessType>(response);
 	return result.data;
 }
 
-const connectionsQueryOptions = queryOptions({
-	queryKey: ["connections", "list"],
-	queryFn: fetchConnections,
-});
+function connectionsQueryOptions(page: number) {
+	return queryOptions({
+		queryKey: ["connections", "list", page],
+		queryFn: () => fetchConnections(page),
+	});
+}
 
 export const Route = createFileRoute("/integrations/connections")({
 	loader: async ({ context }) => {
-		await context.queryClient.ensureQueryData(connectionsQueryOptions);
+		await context.queryClient.ensureQueryData(connectionsQueryOptions(1));
 	},
 	component: ConnectionsPage,
 	pendingComponent: IntegrationsSectionSkeleton,
@@ -47,8 +51,13 @@ export const Route = createFileRoute("/integrations/connections")({
 
 function ConnectionsPage() {
 	const queryClient = useQueryClient();
-	const { data: connections = [], isFetching } = useQuery(connectionsQueryOptions);
+	const [page, setPage] = useState(1);
 	const [dialogOpen, setDialogOpen] = useState(false);
+
+	const { data: connections = [], isFetching } = useQuery(connectionsQueryOptions(page));
+
+	const hasNextPage = connections.length === PAGE_SIZE;
+	const hasPrevPage = page > 1;
 
 	const handleRefresh = () => {
 		queryClient.invalidateQueries({ queryKey: ["connections", "list"] });
@@ -107,7 +116,7 @@ function ConnectionsPage() {
 						</Badge>
 					</div>
 
-					{connections.length === 0 ? (
+					{connections.length === 0 && !hasPrevPage ? (
 						<div className="rounded-xl border border-border/70 border-dashed bg-background/40 px-4 py-8 text-center">
 							<p className="font-medium text-sm">No connections configured yet.</p>
 							<p className="mt-2 text-muted-foreground text-sm">
@@ -130,6 +139,30 @@ function ConnectionsPage() {
 							))}
 						</div>
 					)}
+
+					<div className="flex items-center justify-between">
+						<span className="text-muted-foreground text-sm">Page {page}</span>
+						<div className="flex gap-2">
+							<Button
+								type="button"
+								size="sm"
+								variant="outline"
+								onClick={() => setPage((p) => p - 1)}
+								disabled={!hasPrevPage || isFetching}
+							>
+								<ChevronLeft className="size-4" />
+							</Button>
+							<Button
+								type="button"
+								size="sm"
+								variant="outline"
+								onClick={() => setPage((p) => p + 1)}
+								disabled={!hasNextPage || isFetching}
+							>
+								<ChevronRight className="size-4" />
+							</Button>
+						</div>
+					</div>
 				</CardContent>
 			</Card>
 

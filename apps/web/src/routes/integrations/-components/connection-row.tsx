@@ -2,9 +2,9 @@ import { Loader2, Pencil, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import type { ConnectionEntityType } from "@/server/features/connections/schemas";
-import type { SupportedIntegrationKind } from "@/server/integrations/factory";
 import { Badge } from "@/web/components/ui/badge";
 import { Button } from "@/web/components/ui/button";
+import { DetailCard } from "@/web/components/ui/detail-card";
 import {
 	Dialog,
 	DialogContent,
@@ -19,13 +19,8 @@ import {
 	TooltipTrigger,
 } from "@/web/components/ui/tooltip";
 import { parseHonoResponse } from "@/web/lib/hono-rpc";
+import { INTEGRATIONS } from "@/web/lib/integrations";
 import { AddConnectionDialog } from "./add-connection-dialog";
-
-const CONNECTION_TYPE_LABELS: Record<SupportedIntegrationKind, string> = {
-	resend: "Resend",
-	cloudflare: "Cloudflare",
-	clickhouse: "ClickHouse",
-};
 
 type ConnectionRowProps = {
 	connection: ConnectionEntityType;
@@ -33,9 +28,12 @@ type ConnectionRowProps = {
 };
 
 export function ConnectionRow({ connection, onRefresh }: ConnectionRowProps) {
+	const [isExpanded, setIsExpanded] = useState(false);
 	const [isEditOpen, setIsEditOpen] = useState(false);
 	const [isDeleteOpen, setIsDeleteOpen] = useState(false);
 	const [isDeletePending, setIsDeletePending] = useState(false);
+
+	const integration = INTEGRATIONS[connection.type];
 
 	const handleDelete = async () => {
 		setIsDeletePending(true);
@@ -59,48 +57,122 @@ export function ConnectionRow({ connection, onRefresh }: ConnectionRowProps) {
 
 	return (
 		<>
-			<div className="flex w-full items-center justify-between gap-4 p-4">
-				<div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-					<span className="font-semibold text-base">{connection.name}</span>
-					<Badge variant="secondary" className="shrink-0">
-						{(CONNECTION_TYPE_LABELS as Record<string, string | undefined>)[connection.type] ?? connection.type}
-					</Badge>
-					<Badge variant="outline" className="shrink-0">
-						{connection.isActive ? "Active" : "Inactive"}
-					</Badge>
-				</div>
+			<div className="w-full">
+				<button
+					type="button"
+					onClick={() => setIsExpanded((v) => !v)}
+					className="flex w-full items-center justify-between gap-4 p-4 text-left"
+				>
+					<div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+						{integration && (
+							<integration.logo className="size-5 shrink-0 text-foreground" />
+						)}
+						<span className="font-semibold text-base">{connection.name}</span>
+						<Badge variant="outline" className="shrink-0">
+							{connection.isActive ? "Active" : "Inactive"}
+						</Badge>
+					</div>
 
-				<div className="flex shrink-0 items-center gap-2">
-					<Tooltip>
-						<TooltipTrigger asChild>
-							<Button
-								type="button"
-								size="sm"
-								variant="outline"
-								onClick={() => setIsEditOpen(true)}
-								aria-label="Edit connection"
-							>
-								<Pencil className="size-4" />
-							</Button>
-						</TooltipTrigger>
-						<TooltipContent>Edit</TooltipContent>
-					</Tooltip>
+					<div className="flex shrink-0 items-center gap-2">
+						<Tooltip>
+							<TooltipTrigger asChild>
+								<Button
+									type="button"
+									size="sm"
+									variant="outline"
+									onClick={(e) => {
+										e.stopPropagation();
+										setIsEditOpen(true);
+									}}
+									aria-label="Edit connection"
+								>
+									<Pencil className="size-4" />
+								</Button>
+							</TooltipTrigger>
+							<TooltipContent>Edit</TooltipContent>
+						</Tooltip>
 
-					<Tooltip>
-						<TooltipTrigger asChild>
-							<Button
-								type="button"
-								size="sm"
-								variant="outline"
-								onClick={() => setIsDeleteOpen(true)}
-								aria-label="Delete connection"
-							>
-								<Trash2 className="size-4" />
-							</Button>
-						</TooltipTrigger>
-						<TooltipContent>Delete</TooltipContent>
-					</Tooltip>
-				</div>
+						<Tooltip>
+							<TooltipTrigger asChild>
+								<Button
+									type="button"
+									size="sm"
+									variant="outline"
+									onClick={(e) => {
+										e.stopPropagation();
+										setIsDeleteOpen(true);
+									}}
+									aria-label="Delete connection"
+								>
+									<Trash2 className="size-4" />
+								</Button>
+							</TooltipTrigger>
+							<TooltipContent>Delete</TooltipContent>
+						</Tooltip>
+
+					</div>
+				</button>
+
+				{isExpanded && (
+					<div className="border-border/60 border-t px-4 py-4">
+						<div className="grid gap-3 sm:grid-cols-2">
+							<DetailCard
+								label="Connection ID"
+								value={connection.id}
+								className="font-mono sm:col-span-2"
+							/>
+
+							{connection.type === "resend" && (
+								<DetailCard
+									label="API Key"
+									value="••••••••"
+									copyValue={connection.config.apiKey}
+									className="sm:col-span-2"
+								/>
+							)}
+
+							{connection.type === "cloudflare" && (
+								<>
+									<DetailCard
+										label="API Key"
+										value="••••••••"
+										copyValue={connection.config.apiKey}
+									/>
+									<DetailCard
+										label="Zone ID"
+										value={connection.config.zoneId}
+										className="font-mono"
+									/>
+								</>
+							)}
+
+							{connection.type === "clickhouse" && (
+								<>
+									<DetailCard
+										label="Host"
+										value={connection.config.host}
+										className="font-mono sm:col-span-2"
+									/>
+									<DetailCard
+										label="Username"
+										value={connection.config.username}
+									/>
+									<DetailCard
+										label="Database"
+										value={connection.config.database ?? "—"}
+									/>
+									{connection.config.password && (
+										<DetailCard
+											label="Password"
+											value="••••••••"
+											copyValue={connection.config.password}
+										/>
+									)}
+								</>
+							)}
+						</div>
+					</div>
+				)}
 			</div>
 
 			<AddConnectionDialog
