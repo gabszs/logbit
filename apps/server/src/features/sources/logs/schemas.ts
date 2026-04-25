@@ -1,45 +1,24 @@
 import { z } from "zod";
 
-const requiredString = (message: string) => z.string().min(1, { message });
-
-const logsConfigFields = {
-	defaultSelectQuery: requiredString("Default select query is required"),
-	defaultOrderByQuery: requiredString("Default order by query is required"),
-	severityField: requiredString("Severity field is required"),
-	resourceAttributesField: requiredString("Resource attributes field is required"),
-	logAttributesField: requiredString("Log attributes field is required"),
-	timestampField: requiredString("Timestamp field is required"),
-	serviceNameField: requiredString("Service name field is required"),
-	bodyField: requiredString("Body field is required"),
-	traceIdField: requiredString("Trace ID field is required"),
-	spanIdField: requiredString("Span ID field is required"),
-	luceneImplicitColumnField: requiredString(
-		"Lucene implicit column field is required",
-	),
-	traceSourceId: z.uuidv7().nullable(),
-	metricSourceId: z.uuidv7().nullable(),
-};
-
 export const logsConfigSchema = z.object({
-	defaultSelectQuery: logsConfigFields.defaultSelectQuery.default(
-		"Timestamp, ServiceName as service, SeverityText as level, Body",
-	),
-	defaultOrderByQuery:
-		logsConfigFields.defaultOrderByQuery.default("Timestamp DESC"),
-	severityField: logsConfigFields.severityField.default("SeverityText"),
-	resourceAttributesField:
-		logsConfigFields.resourceAttributesField.default("ResourceAttributes"),
-	logAttributesField:
-		logsConfigFields.logAttributesField.default("LogAttributes"),
-	timestampField: logsConfigFields.timestampField.default("Timestamp"),
-	serviceNameField: logsConfigFields.serviceNameField.default("ServiceName"),
-	bodyField: logsConfigFields.bodyField.default("Body"),
-	traceIdField: logsConfigFields.traceIdField.default("TraceId"),
-	spanIdField: logsConfigFields.spanIdField.default("SpanId"),
-	luceneImplicitColumnField:
-		logsConfigFields.luceneImplicitColumnField.default("Body"),
-	traceSourceId: logsConfigFields.traceSourceId.default(null),
-	metricSourceId: logsConfigFields.metricSourceId.default(null),
+	database: z.string().nullable().default(null),
+	table: z.string().nullable().default(null),
+	defaultSelectQuery: z
+		.string()
+		.nullable()
+		.default("Timestamp, ServiceName as service, SeverityText as level, Body"),
+	defaultOrderByQuery: z.string().nullable().default("Timestamp DESC"),
+	severityField: z.string().nullable().default("SeverityText"),
+	resourceAttributesField: z.string().nullable().default("ResourceAttributes"),
+	logAttributesField: z.string().nullable().default("LogAttributes"),
+	timestampField: z.string().nullable().default("Timestamp"),
+	serviceNameField: z.string().nullable().default("ServiceName"),
+	bodyField: z.string().nullable().default("Body"),
+	traceIdField: z.string().nullable().default("TraceId"),
+	spanIdField: z.string().nullable().default("SpanId"),
+	luceneImplicitColumnField: z.string().nullable().default("Body"),
+	traceSourceId: z.uuidv7().nullable().default(null),
+	metricSourceId: z.uuidv7().nullable().default(null),
 	// profilesSourceId: z.uuidv7().nullable(),
 });
 export type LogsConfigType = z.infer<typeof logsConfigSchema>;
@@ -48,6 +27,43 @@ export const upsertLogsConfigSchema =
 	logsConfigSchema.openapi("UpsertLogsConfig");
 
 export const patchLogsConfigSchema = z
-	.object(logsConfigFields)
-	.partial()
+	.object({
+		database: logsConfigSchema.shape.database.unwrap().optional(),
+		table: logsConfigSchema.shape.table.unwrap().optional(),
+		defaultSelectQuery: logsConfigSchema.shape.defaultSelectQuery
+			.unwrap()
+			.optional(),
+		defaultOrderByQuery: logsConfigSchema.shape.defaultOrderByQuery
+			.unwrap()
+			.optional(),
+		severityField: logsConfigSchema.shape.severityField
+			.unwrap()
+			.optional(),
+		resourceAttributesField: logsConfigSchema.shape.resourceAttributesField
+			.unwrap()
+			.optional(),
+		logAttributesField: logsConfigSchema.shape.logAttributesField
+			.unwrap()
+			.optional(),
+		timestampField: logsConfigSchema.shape.timestampField
+			.unwrap()
+			.optional(),
+		serviceNameField: logsConfigSchema.shape.serviceNameField
+			.unwrap()
+			.optional(),
+		bodyField: logsConfigSchema.shape.bodyField.unwrap().optional(),
+		traceIdField: logsConfigSchema.shape.traceIdField
+			.unwrap()
+			.optional(),
+		spanIdField: logsConfigSchema.shape.spanIdField.unwrap().optional(),
+		luceneImplicitColumnField: logsConfigSchema.shape.luceneImplicitColumnField
+			.unwrap()
+			.optional(),
+		traceSourceId: logsConfigSchema.shape.traceSourceId
+			.unwrap()
+			.optional(),
+		metricSourceId: logsConfigSchema.shape.metricSourceId
+			.unwrap()
+			.optional(),
+	})
 	.openapi("PatchLogsConfig");
