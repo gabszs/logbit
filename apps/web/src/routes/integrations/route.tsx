@@ -34,8 +34,7 @@ function IntegrationsLayout() {
 
 	const navigationItems = INTEGRATIONS_NAV_ITEMS.map((item) => ({
 		...item,
-		isActive:
-			activePath === item.to || activePath.startsWith(`${item.to}/`),
+		isActive: activePath === item.to || activePath.startsWith(`${item.to}/`),
 	}));
 
 	return (

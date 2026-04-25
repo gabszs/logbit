@@ -1,6 +1,13 @@
 import { queryOptions, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { ChevronLeft, ChevronRight, Loader2, PlugZap, Plus, RefreshCw } from "lucide-react";
+import {
+	ChevronLeft,
+	ChevronRight,
+	Loader2,
+	PlugZap,
+	Plus,
+	RefreshCw,
+} from "lucide-react";
 import { useState } from "react";
 import type {
 	ConnectionEntityType,
@@ -54,7 +61,9 @@ function ConnectionsPage() {
 	const [page, setPage] = useState(1);
 	const [dialogOpen, setDialogOpen] = useState(false);
 
-	const { data: connections = [], isFetching } = useQuery(connectionsQueryOptions(page));
+	const { data: connections = [], isFetching } = useQuery(
+		connectionsQueryOptions(page),
+	);
 
 	const hasNextPage = connections.length === PAGE_SIZE;
 	const hasPrevPage = page > 1;
@@ -118,7 +127,9 @@ function ConnectionsPage() {
 
 					{connections.length === 0 && !hasPrevPage ? (
 						<div className="rounded-xl border border-border/70 border-dashed bg-background/40 px-4 py-8 text-center">
-							<p className="font-medium text-sm">No connections configured yet.</p>
+							<p className="font-medium text-sm">
+								No connections configured yet.
+							</p>
 							<p className="mt-2 text-muted-foreground text-sm">
 								Add your first connection to start routing events from your
 								organization.

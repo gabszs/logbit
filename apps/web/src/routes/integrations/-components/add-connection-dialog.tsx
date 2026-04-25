@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import type {
 	ConnectionEntityType,
+	ConnectionUpdateInput,
 	ConnectionUpsertInput,
 } from "@/server/features/connections/schemas";
 import { Button } from "@/web/components/ui/button";
@@ -26,7 +27,10 @@ import {
 import { Switch } from "@/web/components/ui/switch";
 import { parseHonoResponse } from "@/web/lib/hono-rpc";
 import type { SupportedIntegrationKind } from "@/web/lib/integrations";
-import { INTEGRATIONS, supportedIntegrationTypes } from "@/web/lib/integrations";
+import {
+	INTEGRATIONS,
+	supportedIntegrationTypes,
+} from "@/web/lib/integrations";
 
 const CONNECTION_TYPES = supportedIntegrationTypes.map((value) => ({
 	value,
@@ -64,7 +68,12 @@ const EMPTY_FORM: FormState = {
 };
 
 function formFromConnection(c: ConnectionEntityType): FormState {
-	const base: FormState = { ...EMPTY_FORM, name: c.name, isActive: c.isActive, type: c.type };
+	const base: FormState = {
+		...EMPTY_FORM,
+		name: c.name,
+		isActive: c.isActive,
+		type: c.type,
+	};
 	if (c.type === "resend") {
 		return { ...base, resendApiKey: c.config.apiKey };
 	}
@@ -104,7 +113,11 @@ export function AddConnectionDialog({
 
 	useEffect(() => {
 		if (!open) return;
-		setForm(mode === "edit" && connection ? formFromConnection(connection) : EMPTY_FORM);
+		setForm(
+			mode === "edit" && connection
+				? formFromConnection(connection)
+				: EMPTY_FORM,
+		);
 		setFormError(null);
 		setIsPending(false);
 	}, [open, mode, connection]);
@@ -116,11 +129,20 @@ export function AddConnectionDialog({
 
 	const buildPayload = (): ConnectionUpsertInput | null => {
 		const name = form.name.trim();
-		if (!name) { setFormError("Name is required"); return null; }
-		if (!form.type) { setFormError("Type is required"); return null; }
+		if (!name) {
+			setFormError("Name is required");
+			return null;
+		}
+		if (!form.type) {
+			setFormError("Type is required");
+			return null;
+		}
 
 		if (form.type === "resend") {
-			if (!form.resendApiKey.trim()) { setFormError("API Key is required"); return null; }
+			if (!form.resendApiKey.trim()) {
+				setFormError("API Key is required");
+				return null;
+			}
 			return {
 				name,
 				isActive: form.isActive,
@@ -130,8 +152,14 @@ export function AddConnectionDialog({
 		}
 
 		if (form.type === "cloudflare") {
-			if (!form.cfApiKey.trim()) { setFormError("API Key is required"); return null; }
-			if (!form.cfZoneId.trim()) { setFormError("Zone ID is required"); return null; }
+			if (!form.cfApiKey.trim()) {
+				setFormError("API Key is required");
+				return null;
+			}
+			if (!form.cfZoneId.trim()) {
+				setFormError("Zone ID is required");
+				return null;
+			}
 			return {
 				name,
 				isActive: form.isActive,
@@ -141,8 +169,14 @@ export function AddConnectionDialog({
 		}
 
 		if (form.type === "clickhouse") {
-			if (!form.chHost.trim()) { setFormError("Host is required"); return null; }
-			if (!form.chUsername.trim()) { setFormError("Username is required"); return null; }
+			if (!form.chHost.trim()) {
+				setFormError("Host is required");
+				return null;
+			}
+			if (!form.chUsername.trim()) {
+				setFormError("Username is required");
+				return null;
+			}
 			return {
 				name,
 				isActive: form.isActive,
@@ -169,11 +203,19 @@ export function AddConnectionDialog({
 				mode === "edit" && connection
 					? `${import.meta.env.VITE_SERVER_URL}/v1/connections/${connection.id}`
 					: `${import.meta.env.VITE_SERVER_URL}/v1/connections`;
+			const requestPayload: ConnectionUpsertInput | ConnectionUpdateInput =
+				mode === "edit"
+					? {
+							name: payload.name,
+							isActive: payload.isActive,
+							config: payload.config,
+						}
+					: payload;
 			const response = await fetch(url, {
 				method: mode === "edit" ? "PATCH" : "POST",
 				credentials: "include",
 				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify(payload),
+				body: JSON.stringify(requestPayload),
 			});
 			await parseHonoResponse(response);
 			toast.success(
@@ -203,7 +245,9 @@ export function AddConnectionDialog({
 		<Dialog open={open} onOpenChange={onOpenChange}>
 			<DialogContent className="sm:max-w-lg">
 				<DialogHeader>
-					<DialogTitle>{isEdit ? "Edit connection" : "Add connection"}</DialogTitle>
+					<DialogTitle>
+						{isEdit ? "Edit connection" : "Add connection"}
+					</DialogTitle>
 					<DialogDescription>
 						{isEdit
 							? "Update the connection credentials for your organization."
@@ -312,7 +356,12 @@ export function AddConnectionDialog({
 								/>
 							</div>
 							<div className="space-y-2">
-								<Label htmlFor="conn-ch-database">Database <span className="text-muted-foreground text-xs">(optional)</span></Label>
+								<Label htmlFor="conn-ch-database">
+									Database{" "}
+									<span className="text-muted-foreground text-xs">
+										(optional)
+									</span>
+								</Label>
 								<Input
 									id="conn-ch-database"
 									value={form.chDatabase}

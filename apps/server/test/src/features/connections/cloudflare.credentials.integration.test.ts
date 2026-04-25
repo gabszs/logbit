@@ -61,7 +61,7 @@ describe("Connections (cloudflare) integration", () => {
 		expect(res.status).toBe(400);
 	});
 
-	it("updates cloudflare credentials when type and config are provided together", async () => {
+	it("updates cloudflare credentials when config matches the existing connection type", async () => {
 		const ctx = await createAuthContextWithActiveOrganization(
 			"cloudflare-patch-valid@example.com",
 		);
@@ -75,7 +75,6 @@ describe("Connections (cloudflare) integration", () => {
 			method: "PATCH",
 			headers: ctx.headers,
 			body: {
-				type: "cloudflare",
 				config: {
 					apiKey: "cf_new_key",
 					zoneId: "zone-42",
@@ -102,7 +101,7 @@ describe("Connections (cloudflare) integration", () => {
 		});
 	});
 
-	it("returns 400 when cloudflare type is sent with resend config", async () => {
+	it("returns 400 when config does not match existing cloudflare connection type", async () => {
 		const ctx = await createAuthContextWithActiveOrganization(
 			"cloudflare-patch-mismatch@example.com",
 		);
@@ -116,7 +115,6 @@ describe("Connections (cloudflare) integration", () => {
 			method: "PATCH",
 			headers: ctx.headers,
 			body: {
-				type: "cloudflare",
 				config: { apiKey: "re_wrong_prefix" },
 			},
 		});

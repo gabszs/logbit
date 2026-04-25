@@ -1,11 +1,15 @@
-import { createClient } from "@clickhouse/client";
+import { type ClickHouseClient, createClient } from "@clickhouse/client";
 import type { ClickhouseConfig } from "./schemas";
 
-export function createClickhouseClient(config: ClickhouseConfig) {
+export type ClickhouseClient = ClickHouseClient;
+
+export function createClickhouseClient(
+	config: ClickhouseConfig,
+): ClickhouseClient {
 	return createClient({
 		host: config.host,
-		database: config.database,
+		database: config.database ?? undefined,
 		username: config.username,
-		password: config.password,
+		password: config.password ?? undefined,
 	});
 }

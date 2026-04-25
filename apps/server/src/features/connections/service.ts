@@ -1,11 +1,12 @@
 import { BaseService } from "@/common/services/baseService";
 import { checkForChanges } from "@/common/utils";
+import { parseIntegrationConfig } from "@/integrations/registry";
 import { httpErrors } from "@/lib/errors";
 import type { ConnectionRepository } from "./repository";
 import type {
 	ConnectionType,
-	ConnectionUpsertInput,
 	ConnectionUpdateInput,
+	ConnectionUpsertInput,
 } from "./schemas";
 
 export class ConnectionService extends BaseService<ConnectionType> {
@@ -47,7 +48,21 @@ export class ConnectionService extends BaseService<ConnectionType> {
 			throw httpErrors.noChangesDetected();
 		}
 
-		const updatedConnection = await this.update(id, input, {
+		const updateData = { ...input };
+		if (input.config !== undefined) {
+			try {
+				updateData.config = parseIntegrationConfig(
+					existingConnection.type,
+					input.config,
+				);
+			} catch {
+				throw httpErrors.badRequest({
+					detail: `Invalid config for connection type "${existingConnection.type}"`,
+				});
+			}
+		}
+
+		const updatedConnection = await this.update(id, updateData, {
 			organizationId: activeOrganizationId,
 		});
 

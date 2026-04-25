@@ -1,7 +1,7 @@
-import type { IntegrationsType } from "@/server/features/integrations/schemas";
+import type { ConnectionEntityType } from "@/server/features/connections/schemas";
 import { parseHonoResponse } from "@/web/lib/hono-rpc";
 
-export type { IntegrationsType };
+export type IntegrationsType = ConnectionEntityType;
 
 interface IntegrationsListResponse {
 	message: string;
@@ -15,8 +15,7 @@ export async function getIntegrations(): Promise<IntegrationsType[]> {
 	const response = await fetch(`${serverUrl}/v1/integrations`, {
 		credentials: "include",
 	});
-	const result =
-		await parseHonoResponse<IntegrationsListResponse>(response);
+	const result = await parseHonoResponse<IntegrationsListResponse>(response);
 	return result.data;
 }
 

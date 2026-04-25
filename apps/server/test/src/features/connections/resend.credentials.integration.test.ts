@@ -56,7 +56,7 @@ describe("Connections (resend) integration", () => {
 		expect(res.status).toBe(400);
 	});
 
-	it("updates resend credentials when type and config are provided together", async () => {
+	it("updates resend credentials when config matches the existing connection type", async () => {
 		const ctx = await createAuthContextWithActiveOrganization(
 			"resend-patch-valid@example.com",
 		);
@@ -70,7 +70,6 @@ describe("Connections (resend) integration", () => {
 			method: "PATCH",
 			headers: ctx.headers,
 			body: {
-				type: "resend",
 				config: { apiKey: "re_new_key" },
 			},
 		});
@@ -91,7 +90,28 @@ describe("Connections (resend) integration", () => {
 		expect(row[0]?.config).toEqual({ apiKey: "re_new_key" });
 	});
 
-	it("returns 400 when resend type is sent with cloudflare config", async () => {
+	it("returns 400 when type is sent in update payload", async () => {
+		const ctx = await createAuthContextWithActiveOrganization(
+			"resend-patch-type-rejected@example.com",
+		);
+		const connectionId = await createIntegration({
+			headers: ctx.headers,
+			type: "resend",
+			name: "resend-type-rejected",
+		});
+
+		const patchRes = await requestWithAuth(`/v1/connections/${connectionId}`, {
+			method: "PATCH",
+			headers: ctx.headers,
+			body: {
+				type: "resend",
+			},
+		});
+
+		expect(patchRes.status).toBe(400);
+	});
+
+	it("returns 400 when config does not match existing resend connection type", async () => {
 		const ctx = await createAuthContextWithActiveOrganization(
 			"resend-patch-mismatch@example.com",
 		);
@@ -105,7 +125,6 @@ describe("Connections (resend) integration", () => {
 			method: "PATCH",
 			headers: ctx.headers,
 			body: {
-				type: "resend",
 				config: {
 					apiKey: "cf_key",
 					zoneId: "zone-1",

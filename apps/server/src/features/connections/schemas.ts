@@ -1,10 +1,12 @@
 import { createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 import { models } from "@/db/models";
-import { ClickhouseConfigSchema } from "@/integrations/clickhouse/schemas";
-import { CloudflareConfigSchema } from "@/integrations/cloudflare/schemas";
-import { ResendConfigSchema } from "@/integrations/resend/schemas";
+import { integrationRegistry } from "@/integrations/registry";
 import { searchOptionsSchema } from "../../common/schemas/baseSchemas";
+
+const ResendConfigSchema = integrationRegistry.resend.configSchema;
+const CloudflareConfigSchema = integrationRegistry.cloudflare.configSchema;
+const ClickhouseConfigSchema = integrationRegistry.clickhouse.configSchema;
 
 export const baseConnectionSchema = createSelectSchema(
 	models.connections,
@@ -34,12 +36,6 @@ const clickhouseConnectionSchema = connectionCommonSchema.extend({
 	type: z.literal("clickhouse"),
 	config: ClickhouseConfigSchema,
 });
-
-const connectionTypeConfigPairSchema = z.discriminatedUnion("type", [
-	z.object({ type: z.literal("resend"), config: ResendConfigSchema }),
-	z.object({ type: z.literal("cloudflare"), config: CloudflareConfigSchema }),
-	z.object({ type: z.literal("clickhouse"), config: ClickhouseConfigSchema }),
-]);
 
 export const connectionSchema = z.discriminatedUnion("type", [
 	resendConnectionSchema,
@@ -77,60 +73,25 @@ export const connectionUpsertSchema = z
 	])
 	.openapi("ConnectionUpsert");
 
-const connectionTypeSchema = z.enum(["resend", "cloudflare", "clickhouse"]);
-
-const connectionConfigSchema = z.union([
-	ResendConfigSchema,
-	CloudflareConfigSchema,
-	ClickhouseConfigSchema,
-]);
+const connectionConfigUpdateSchema = z.record(z.string(), z.unknown());
 
 const partialConnectionFieldsSchema = connectionCommonUpsertSchema.partial();
 
 type PartialConnectionUpdate = z.infer<typeof partialConnectionFieldsSchema> & {
-	type?: z.infer<typeof connectionTypeSchema>;
-	config?: z.infer<typeof connectionConfigSchema>;
+	config?: z.infer<typeof connectionConfigUpdateSchema>;
 };
 
 export const connectionUpdateSchema = partialConnectionFieldsSchema
 	.extend({
-		type: connectionTypeSchema.optional(),
-		config: connectionConfigSchema.optional(),
+		config: connectionConfigUpdateSchema.optional(),
 	})
+	.strict()
 	.superRefine((value: PartialConnectionUpdate, ctx: z.RefinementCtx) => {
 		if (Object.keys(value).length === 0) {
 			ctx.addIssue({
 				code: "custom",
 				message: "At least one field is required",
 			});
-		}
-
-		const hasType = value.type !== undefined;
-		const hasConfig = value.config !== undefined;
-
-		if (hasType !== hasConfig) {
-			ctx.addIssue({
-				code: "custom",
-				message: "type and config must be provided together",
-				path: hasType ? ["config"] : ["type"],
-			});
-			return;
-		}
-
-		if (hasType && hasConfig) {
-			const result = connectionTypeConfigPairSchema.safeParse({
-				type: value.type,
-				config: value.config,
-			});
-			if (!result.success) {
-				for (const issue of result.error.issues) {
-					ctx.addIssue({
-						code: "custom",
-						message: issue.message,
-						path: issue.path,
-					});
-				}
-			}
 		}
 	});
 

@@ -73,7 +73,7 @@ describe("Connections (clickhouse) integration", () => {
 		expect(res.status).toBe(400);
 	});
 
-	it("updates clickhouse credentials when type and config are provided together", async () => {
+	it("updates clickhouse credentials when config matches the existing connection type", async () => {
 		const ctx = await createAuthContextWithActiveOrganization(
 			"clickhouse-patch-valid@example.com",
 		);
@@ -87,7 +87,6 @@ describe("Connections (clickhouse) integration", () => {
 			method: "PATCH",
 			headers: ctx.headers,
 			body: {
-				type: "clickhouse",
 				config: {
 					host: "http://clickhouse.local:8123",
 					database: "observability",
@@ -118,7 +117,7 @@ describe("Connections (clickhouse) integration", () => {
 		});
 	});
 
-	it("returns 400 when clickhouse type is sent with resend config", async () => {
+	it("returns 400 when config does not match existing clickhouse connection type", async () => {
 		const ctx = await createAuthContextWithActiveOrganization(
 			"clickhouse-patch-mismatch@example.com",
 		);
@@ -132,7 +131,6 @@ describe("Connections (clickhouse) integration", () => {
 			method: "PATCH",
 			headers: ctx.headers,
 			body: {
-				type: "clickhouse",
 				config: { apiKey: "re_test_key" },
 			},
 		});

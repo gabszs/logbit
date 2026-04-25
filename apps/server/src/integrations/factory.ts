@@ -1,46 +1,24 @@
-import z from "zod";
-import { createClickhouseClient } from "./clickhouse";
-import { ClickhouseConfigSchema } from "./clickhouse/schemas";
-import { createCloudflareClient } from "./cloudflare";
-import { CloudflareConfigSchema } from "./cloudflare/schemas";
-import { createResendClient } from "./resend";
-import { ResendConfigSchema } from "./resend/schemas";
+import { type ClickhouseClient, createClickhouseClient } from "./clickhouse";
+import { type CloudflareClient, createCloudflareClient } from "./cloudflare";
+import type { IntegrationConnectionInput } from "./registry";
+import { createResendClient, type ResendClient } from "./resend";
 
-export const supportedIntegrationTypes = [
-	"resend",
-	"cloudflare",
-	"clickhouse",
-] as const;
+export type ConnectionClient =
+	| ResendClient
+	| CloudflareClient
+	| ClickhouseClient;
 
-export const supportedIntegrationSchemas = z.union([
-	ResendConfigSchema,
-	CloudflareConfigSchema,
-	ClickhouseConfigSchema,
-]);
-
-export type SupportedIntegrationKind = (typeof supportedIntegrationTypes)[number];
-export type SupportedIntegrationSchemasTypes = z.infer<
-	typeof supportedIntegrationSchemas
->;
-
-export function createConnectionClient(connection: {
-	type: SupportedIntegrationKind;
-	config: unknown;
-}) {
+export function createConnectionClient(
+	connection: IntegrationConnectionInput,
+): ConnectionClient {
 	switch (connection.type) {
 		case "resend":
-			return createResendClient(ResendConfigSchema.parse(connection.config));
+			return createResendClient(connection.config);
 		case "cloudflare":
-			return createCloudflareClient(
-				CloudflareConfigSchema.parse(connection.config),
-			);
+			return createCloudflareClient(connection.config);
 		case "clickhouse":
-			return createClickhouseClient(
-				ClickhouseConfigSchema.parse(connection.config),
-			);
+			return createClickhouseClient(connection.config);
 		default:
-			throw new Error(
-				`Unsupported connection type: "${connection.type}"`,
-			);
+			throw new Error("Unsupported connection type");
 	}
 }
