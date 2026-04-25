@@ -19,15 +19,7 @@ export type OrpcContext = {
 	headers: Headers;
 };
 
-type OrpcProcedureBuilder = ReturnType<typeof os.$context<OrpcContext>>;
-
-export type OrpcTools = {
-	createContext: (options: CreateContextOptions) => Promise<OrpcContext>;
-	publicProcedure: OrpcProcedureBuilder;
-	protectedProcedure: OrpcProcedureBuilder;
-};
-
-export const createOrpc = ({ db, auth }: CreateOrpcOptions): OrpcTools => {
+export const createOrpc = ({ db, auth }: CreateOrpcOptions) => {
 	async function createContext({ context }: CreateContextOptions) {
 		try {
 			const session = await auth.api.getSession({
@@ -60,7 +52,7 @@ export const createOrpc = ({ db, auth }: CreateOrpcOptions): OrpcTools => {
 				session: context.session,
 			},
 		});
-	}) as unknown as OrpcProcedureBuilder;
+	});
 
 	return {
 		createContext,
@@ -68,6 +60,8 @@ export const createOrpc = ({ db, auth }: CreateOrpcOptions): OrpcTools => {
 		protectedProcedure,
 	};
 };
+
+export type OrpcTools = ReturnType<typeof createOrpc>;
 
 const defaultOrpc = createOrpc({ db, auth });
 
