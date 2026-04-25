@@ -228,7 +228,10 @@ export function AppSidebar() {
 						<DropdownMenuContent side="right" align="end" className="w-64">
 							<DropdownMenuItem
 								onClick={() => navigate({ to: "/settings/profile" })}
-								onAuxClick={(e) => { if (e.button === 1) window.open("/settings/profile", "_blank"); }}
+								onAuxClick={(e) => {
+									if (e.button === 1)
+										window.open("/settings/profile", "_blank");
+								}}
 								className="group flex items-center gap-3 px-2 py-2"
 							>
 								<Avatar className="size-9">
@@ -254,7 +257,10 @@ export function AppSidebar() {
 							<DropdownMenuSeparator />
 							<DropdownMenuItem
 								onClick={() => navigate({ to: "/settings/profile" })}
-								onAuxClick={(e) => { if (e.button === 1) window.open("/settings/profile", "_blank"); }}
+								onAuxClick={(e) => {
+									if (e.button === 1)
+										window.open("/settings/profile", "_blank");
+								}}
 							>
 								<Settings className="size-4" />
 								<span>Settings</span>
