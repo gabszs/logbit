@@ -1,5 +1,6 @@
 import { BaseService } from "@/common/services/baseService";
 import { checkForChanges } from "@/common/utils";
+import { logsConfigSchema } from "@/features/sources/logs/schemas";
 import { httpErrors } from "@/lib/errors";
 import type { ConnectionRepository } from "../connections/repository";
 import type { SourceRepository } from "./repository";
@@ -51,10 +52,6 @@ export class SourceService extends BaseService<SourcesType> {
 			});
 		}
 
-		if (!checkForChanges(input, existingSource)) {
-			throw httpErrors.noChangesDetected();
-		}
-
 		if (input.connectionId !== undefined) {
 			await this.ensureConnectionBelongsToOrganization(
 				input.connectionId,
@@ -62,7 +59,25 @@ export class SourceService extends BaseService<SourcesType> {
 			);
 		}
 
-		const updatedSource = await this.update(id, input, {
+		const updateData = { ...input };
+		if (input.config !== undefined) {
+			try {
+				updateData.config = logsConfigSchema.parse({
+					...existingSource.config,
+					...input.config,
+				});
+			} catch {
+				throw httpErrors.badRequest({
+					detail: `Invalid config for source type "${existingSource.type}"`,
+				});
+			}
+		}
+
+		if (!checkForChanges(updateData, existingSource)) {
+			throw httpErrors.noChangesDetected();
+		}
+
+		const updatedSource = await this.update(id, updateData, {
 			organizationId: activeOrganizationId,
 		});
 

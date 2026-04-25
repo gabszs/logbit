@@ -48,7 +48,7 @@ node_modules/
 !.env.example
 
 # logs
-logs/
+/logs/
 *.log
 npm-debug.log*
 
@@ -99,7 +99,7 @@ node_modules/
 /coverage
 
 # Logs
-logs
+/logs
 *.log
 npm-debug.log*
 !apps/server/src/integrations/**/logs/
@@ -125,7 +125,7 @@ node_modules/
 /coverage
 
 # Logs
-logs
+/logs
 *.log
 npm-debug.log*
 

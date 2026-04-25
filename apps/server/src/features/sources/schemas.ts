@@ -2,7 +2,11 @@ import { createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 import { searchOptionsSchema } from "@/common/schemas/baseSchemas";
 import { models } from "@/db/models";
-import { chLogsConfigSchema } from "@/features/sources/logs/schemas";
+import {
+	logsConfigSchema,
+	patchLogsConfigSchema,
+	upsertLogsConfigSchema,
+} from "@/features/sources/logs/schemas";
 
 export const baseSourcesSchema = createSelectSchema(models.sources).extend({
 	id: z.uuidv7(),
@@ -20,15 +24,8 @@ const sourceCommonSchema = baseSourcesSchema.omit({
 
 const logSourceSchema = sourceCommonSchema.extend({
 	type: z.literal("log"),
-	config: chLogsConfigSchema,
+	config: logsConfigSchema,
 });
-
-const sourceTypeConfigPairSchema = z.discriminatedUnion("type", [
-	z.object({
-		type: z.literal("log"),
-		config: chLogsConfigSchema,
-	}),
-]);
 
 export const sourcesSchema = z.discriminatedUnion("type", [logSourceSchema]);
 
@@ -41,61 +38,30 @@ const sourceCommonUpsertSchema = sourceCommonSchema.omit({
 
 const logSourceUpsertSchema = sourceCommonUpsertSchema.extend({
 	type: z.literal("log"),
-	config: chLogsConfigSchema,
+	config: upsertLogsConfigSchema,
 });
 
 export const sourcesUpsertSchema = z
 	.discriminatedUnion("type", [logSourceUpsertSchema])
 	.openapi("SourcesUpsert");
 
-const sourceTypeSchema = z.enum(["log"]);
-
 const partialSourceFieldsSchema = sourceCommonUpsertSchema.partial();
 
 type PartialSourceUpdate = z.infer<typeof partialSourceFieldsSchema> & {
-	type?: z.infer<typeof sourceTypeSchema>;
-	config?: z.infer<typeof chLogsConfigSchema>;
+	config?: z.infer<typeof patchLogsConfigSchema>;
 };
 
 export const sourceUpdateSchema = partialSourceFieldsSchema
 	.extend({
-		type: sourceTypeSchema.optional(),
-		config: chLogsConfigSchema.optional(),
+		config: patchLogsConfigSchema.optional(),
 	})
+	.strict()
 	.superRefine((value: PartialSourceUpdate, ctx: z.RefinementCtx) => {
 		if (Object.keys(value).length === 0) {
 			ctx.addIssue({
 				code: "custom",
 				message: "At least one field is required",
 			});
-		}
-
-		const hasType = value.type !== undefined;
-		const hasConfig = value.config !== undefined;
-
-		if (hasType !== hasConfig) {
-			ctx.addIssue({
-				code: "custom",
-				message: "type and config must be provided together",
-				path: hasType ? ["config"] : ["type"],
-			});
-			return;
-		}
-
-		if (hasType && hasConfig) {
-			const result = sourceTypeConfigPairSchema.safeParse({
-				type: value.type,
-				config: value.config,
-			});
-			if (!result.success) {
-				for (const issue of result.error.issues) {
-					ctx.addIssue({
-						code: "custom",
-						message: issue.message,
-						path: issue.path,
-					});
-				}
-			}
 		}
 	});
 
