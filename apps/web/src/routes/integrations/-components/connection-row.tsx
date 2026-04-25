@@ -109,7 +109,6 @@ export function ConnectionRow({ connection, onRefresh }: ConnectionRowProps) {
 							</TooltipTrigger>
 							<TooltipContent>Delete</TooltipContent>
 						</Tooltip>
-
 					</div>
 				</button>
 
@@ -189,8 +188,8 @@ export function ConnectionRow({ connection, onRefresh }: ConnectionRowProps) {
 						<DialogTitle>Delete connection</DialogTitle>
 						<DialogDescription>
 							This will permanently delete{" "}
-							<span className="font-medium">{connection.name}</span>. This action
-							cannot be undone.
+							<span className="font-medium">{connection.name}</span>. This
+							action cannot be undone.
 						</DialogDescription>
 					</DialogHeader>
 					<DialogFooter className="gap-2">

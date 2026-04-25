@@ -1,5 +1,4 @@
 import { createRoute, OpenAPIHono } from "@hono/zod-openapi";
-import { z } from "zod";
 import {
 	cookieAuthorizationSchema,
 	searchOptionsSchema,

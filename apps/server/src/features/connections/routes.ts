@@ -1,3 +1,4 @@
+import { createRoute, OpenAPIHono } from "@hono/zod-openapi";
 import {
 	cookieAuthorizationSchema,
 	searchOptionsSchema,
@@ -7,7 +8,6 @@ import { db } from "@/db";
 import { ContentTypes, status } from "@/lib/constants";
 import { httpErrors } from "@/lib/errors";
 import type { AuthAppContext } from "@/types";
-import { createRoute, OpenAPIHono } from "@hono/zod-openapi";
 import { ConnectionRepository } from "./repository";
 import {
 	connectionListSuccessSchema,

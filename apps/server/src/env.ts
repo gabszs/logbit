@@ -109,7 +109,9 @@ export const resetSettings = (): Settings => {
 	return settings;
 };
 
-export const overrideSettings = (overrides: Partial<Settings> = {}): Settings => {
+export const overrideSettings = (
+	overrides: Partial<Settings> = {},
+): Settings => {
 	Object.assign(settings, overrides);
 	return settings;
 };

@@ -1,5 +1,5 @@
-import type { RedisClient } from "bun";
 import type { OpenAPIHono } from "@hono/zod-openapi";
+import type { RedisClient } from "bun";
 import type { dbType } from "@/db";
 import type { Settings } from "@/env";
 import type { AuthType } from "@/lib/auth";
