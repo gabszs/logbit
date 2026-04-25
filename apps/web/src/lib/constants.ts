@@ -67,6 +67,11 @@ export const INTEGRATIONS_NAV_ITEMS = [
 		label: "Sources",
 		description: "Manage organization sources",
 	},
+	{
+		to: "/integrations/proxy",
+		label: "Proxy Test",
+		description: "Test ClickHouse proxy queries",
+	},
 ] as const;
 
 export type TechStackItem = {

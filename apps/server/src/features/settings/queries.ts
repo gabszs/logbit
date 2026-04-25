@@ -1,6 +1,6 @@
-import type { Context } from "@/lib/orpc";
 import { ORPCError } from "@orpc/server";
 import { eq } from "drizzle-orm";
+import type { Context } from "@/lib/orpc";
 import { userSettings } from "../../db/models/userSettings";
 import { DEFAULT_SETTINGS } from "./types";
 

@@ -31,7 +31,10 @@ const sourcesRouter = new OpenAPIHono<
 sourcesRouter.use(async (c, next) => {
 	const sourceRepository = new SourceRepository(db);
 	const connectionRepository = new ConnectionRepository(db);
-	const sourceService = new SourceService(sourceRepository, connectionRepository);
+	const sourceService = new SourceService(
+		sourceRepository,
+		connectionRepository,
+	);
 	const session = c.get("session");
 	const activeOrganizationId = session.activeOrganizationId;
 	if (activeOrganizationId == null) {

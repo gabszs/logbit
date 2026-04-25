@@ -19,6 +19,7 @@ import { Route as SettingsOrganizationsRouteImport } from './routes/settings/org
 import { Route as SettingsAppearanceRouteImport } from './routes/settings/appearance'
 import { Route as SettingsAdminRouteImport } from './routes/settings/admin'
 import { Route as IntegrationsSourcesRouteImport } from './routes/integrations/sources'
+import { Route as IntegrationsProxyRouteImport } from './routes/integrations/proxy'
 import { Route as IntegrationsConnectionsRouteImport } from './routes/integrations/connections'
 import { Route as AuthTwoFactorRouteImport } from './routes/auth/two-factor'
 import { Route as AuthSignUpRouteImport } from './routes/auth/sign-up'
@@ -76,6 +77,11 @@ const IntegrationsSourcesRoute = IntegrationsSourcesRouteImport.update({
   path: '/sources',
   getParentRoute: () => IntegrationsRouteRoute,
 } as any)
+const IntegrationsProxyRoute = IntegrationsProxyRouteImport.update({
+  id: '/proxy',
+  path: '/proxy',
+  getParentRoute: () => IntegrationsRouteRoute,
+} as any)
 const IntegrationsConnectionsRoute = IntegrationsConnectionsRouteImport.update({
   id: '/connections',
   path: '/connections',
@@ -120,6 +126,7 @@ export interface FileRoutesByFullPath {
   '/auth/sign-up': typeof AuthSignUpRoute
   '/auth/two-factor': typeof AuthTwoFactorRoute
   '/integrations/connections': typeof IntegrationsConnectionsRoute
+  '/integrations/proxy': typeof IntegrationsProxyRoute
   '/integrations/sources': typeof IntegrationsSourcesRoute
   '/settings/admin': typeof SettingsAdminRoute
   '/settings/appearance': typeof SettingsAppearanceRoute
@@ -138,6 +145,7 @@ export interface FileRoutesByTo {
   '/auth/sign-up': typeof AuthSignUpRoute
   '/auth/two-factor': typeof AuthTwoFactorRoute
   '/integrations/connections': typeof IntegrationsConnectionsRoute
+  '/integrations/proxy': typeof IntegrationsProxyRoute
   '/integrations/sources': typeof IntegrationsSourcesRoute
   '/settings/admin': typeof SettingsAdminRoute
   '/settings/appearance': typeof SettingsAppearanceRoute
@@ -157,6 +165,7 @@ export interface FileRoutesById {
   '/auth/sign-up': typeof AuthSignUpRoute
   '/auth/two-factor': typeof AuthTwoFactorRoute
   '/integrations/connections': typeof IntegrationsConnectionsRoute
+  '/integrations/proxy': typeof IntegrationsProxyRoute
   '/integrations/sources': typeof IntegrationsSourcesRoute
   '/settings/admin': typeof SettingsAdminRoute
   '/settings/appearance': typeof SettingsAppearanceRoute
@@ -177,6 +186,7 @@ export interface FileRouteTypes {
     | '/auth/sign-up'
     | '/auth/two-factor'
     | '/integrations/connections'
+    | '/integrations/proxy'
     | '/integrations/sources'
     | '/settings/admin'
     | '/settings/appearance'
@@ -195,6 +205,7 @@ export interface FileRouteTypes {
     | '/auth/sign-up'
     | '/auth/two-factor'
     | '/integrations/connections'
+    | '/integrations/proxy'
     | '/integrations/sources'
     | '/settings/admin'
     | '/settings/appearance'
@@ -213,6 +224,7 @@ export interface FileRouteTypes {
     | '/auth/sign-up'
     | '/auth/two-factor'
     | '/integrations/connections'
+    | '/integrations/proxy'
     | '/integrations/sources'
     | '/settings/admin'
     | '/settings/appearance'
@@ -304,6 +316,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IntegrationsSourcesRouteImport
       parentRoute: typeof IntegrationsRouteRoute
     }
+    '/integrations/proxy': {
+      id: '/integrations/proxy'
+      path: '/proxy'
+      fullPath: '/integrations/proxy'
+      preLoaderRoute: typeof IntegrationsProxyRouteImport
+      parentRoute: typeof IntegrationsRouteRoute
+    }
     '/integrations/connections': {
       id: '/integrations/connections'
       path: '/connections'
@@ -351,11 +370,13 @@ declare module '@tanstack/react-router' {
 
 interface IntegrationsRouteRouteChildren {
   IntegrationsConnectionsRoute: typeof IntegrationsConnectionsRoute
+  IntegrationsProxyRoute: typeof IntegrationsProxyRoute
   IntegrationsSourcesRoute: typeof IntegrationsSourcesRoute
 }
 
 const IntegrationsRouteRouteChildren: IntegrationsRouteRouteChildren = {
   IntegrationsConnectionsRoute: IntegrationsConnectionsRoute,
+  IntegrationsProxyRoute: IntegrationsProxyRoute,
   IntegrationsSourcesRoute: IntegrationsSourcesRoute,
 }
 

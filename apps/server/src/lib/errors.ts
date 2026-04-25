@@ -182,6 +182,13 @@ export const httpErrors = {
 			options,
 		),
 
+	badGateway: (options: ErrorOptions = {}) =>
+		createStatusError(
+			status.BAD_GATEWAY,
+			status.BAD_GATEWAY.detail,
+			options,
+		),
+
 	custom: (
 		statusCode: number,
 		defaultDetail: string = status.BAD_REQUEST.detail,

@@ -23,4 +23,18 @@ export default defineConfig({
 			"@/server": path.resolve(__dirname, "../server/src"),
 		},
 	},
+	server: {
+		watch: {
+			usePolling: true,
+			interval: 200,
+			ignored: [
+				"**/.git/**",
+				"**/.turbo/**",
+				"**/.vite/**",
+				"**/coverage/**",
+				"**/dist/**",
+				"**/node_modules/**",
+			],
+		},
+	},
 });

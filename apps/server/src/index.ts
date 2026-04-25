@@ -14,6 +14,7 @@ import { db, pgClient } from "./db";
 import { settings } from "./env";
 import authRouter from "./features/auth/routes";
 import connectionsRouter from "./features/connections/routes";
+import proxyRouter from "./features/proxy/routes";
 import opampRouter from "./features/opamp/routes";
 import { profileRouter } from "./features/profile/routes";
 import { settingsRouter } from "./features/settings/routes";
@@ -43,6 +44,14 @@ app.use(
 			"x-client-ip",
 			"cf-connecting-ip",
 			"x-forwarded-for",
+			// ClickHouse HTTP protocol headers (used by @clickhouse/client-web)
+			"X-ClickHouse-User",
+			"X-ClickHouse-Key",
+			"X-ClickHouse-Database",
+			"X-ClickHouse-Format",
+			"X-ClickHouse-Query-Id",
+			"X-ClickHouse-Progress",
+			"X-ClickHouse-Summary",
 		],
 		maxAge: 86400, // 24 hours
 		credentials: true,
@@ -147,6 +156,7 @@ app.route(`${apiPrefix}/v1`, authRouter);
 app.route(`${apiPrefix}/v1`, connectionsRouter);
 app.route(`${apiPrefix}/v1`, opampRouter);
 app.route(`${apiPrefix}/v1`, sourcesRouter);
+app.route(`${apiPrefix}/v1`, proxyRouter);
 
 // utilities routes
 app.route(`${apiPrefix}/`, utilityRoutes);

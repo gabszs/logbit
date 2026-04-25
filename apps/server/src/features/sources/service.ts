@@ -10,6 +10,8 @@ import type {
 	SourceUpdateInput,
 } from "./schemas";
 
+const allowedConnections = ["clickhouse"] as const;
+
 export class SourceService extends BaseService<SourcesType> {
 	protected repository: SourceRepository;
 	protected connectionRepository: ConnectionRepository;
@@ -117,6 +119,12 @@ export class SourceService extends BaseService<SourcesType> {
 		if (!connection) {
 			throw httpErrors.notFound({
 				detail: "The specified connection was not found",
+			});
+		}
+
+		if (!allowedConnections.some((type) => type === connection.type)) {
+			throw httpErrors.badRequest({
+				detail: `Sources can only use ${allowedConnections.join(", ")} connections`,
 			});
 		}
 	}
