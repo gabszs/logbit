@@ -1,6 +1,7 @@
 import { BaseService } from "@/common/services/baseService";
 import { checkForChanges } from "@/common/utils";
 import { httpErrors } from "@/lib/errors";
+import type { ConnectionRepository } from "../connections/repository";
 import type { SourceRepository } from "./repository";
 import type {
 	SourcesType,
@@ -10,13 +11,23 @@ import type {
 
 export class SourceService extends BaseService<SourcesType> {
 	protected repository: SourceRepository;
+	protected connectionRepository: ConnectionRepository;
 
-	constructor(repository: SourceRepository) {
+	constructor(
+		repository: SourceRepository,
+		connectionRepository: ConnectionRepository,
+	) {
 		super(repository);
 		this.repository = repository;
+		this.connectionRepository = connectionRepository;
 	}
 
 	async createSource(input: SourcesUpsertInput, activeOrganizationId: string) {
+		await this.ensureConnectionBelongsToOrganization(
+			input.connectionId,
+			activeOrganizationId,
+		);
+
 		const sourceData = {
 			...input,
 			organizationId: activeOrganizationId,
@@ -42,6 +53,13 @@ export class SourceService extends BaseService<SourcesType> {
 
 		if (!checkForChanges(input, existingSource)) {
 			throw httpErrors.noChangesDetected();
+		}
+
+		if (input.connectionId !== undefined) {
+			await this.ensureConnectionBelongsToOrganization(
+				input.connectionId,
+				activeOrganizationId,
+			);
 		}
 
 		const updatedSource = await this.update(id, input, {
@@ -71,5 +89,20 @@ export class SourceService extends BaseService<SourcesType> {
 		await this.delete(id, {
 			organizationId: activeOrganizationId,
 		});
+	}
+
+	private async ensureConnectionBelongsToOrganization(
+		connectionId: string,
+		activeOrganizationId: string,
+	) {
+		const connection = await this.connectionRepository.getById(connectionId, {
+			organizationId: activeOrganizationId,
+		});
+
+		if (!connection) {
+			throw httpErrors.notFound({
+				detail: "The specified connection was not found",
+			});
+		}
 	}
 }

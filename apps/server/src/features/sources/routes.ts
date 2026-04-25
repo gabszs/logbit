@@ -5,6 +5,7 @@ import {
 	uuidV7IdParamSchema,
 } from "@/common/schemas/baseSchemas";
 import { db } from "@/db";
+import { ConnectionRepository } from "@/features/connections/repository";
 import { ContentTypes, status } from "@/lib/constants";
 import { httpErrors } from "@/lib/errors";
 import type { AuthAppContext } from "@/types";
@@ -29,7 +30,8 @@ const sourcesRouter = new OpenAPIHono<
 
 sourcesRouter.use(async (c, next) => {
 	const sourceRepository = new SourceRepository(db);
-	const sourceService = new SourceService(sourceRepository);
+	const connectionRepository = new ConnectionRepository(db);
+	const sourceService = new SourceService(sourceRepository, connectionRepository);
 	const session = c.get("session");
 	const activeOrganizationId = session.activeOrganizationId;
 	if (activeOrganizationId == null) {
