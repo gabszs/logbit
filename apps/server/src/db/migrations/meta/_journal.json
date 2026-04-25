@@ -1,104 +1,111 @@
 {
-	"version": "7",
-	"dialect": "postgresql",
-	"entries": [
-		{
-			"idx": 0,
-			"version": "7",
-			"when": 1774360633481,
-			"tag": "0000_adding_auth_models",
-			"breakpoints": true
-		},
-		{
-			"idx": 1,
-			"version": "7",
-			"when": 1774569092067,
-			"tag": "0001_adding_user_settings",
-			"breakpoints": true
-		},
-		{
-			"idx": 2,
-			"version": "7",
-			"when": 1774569503563,
-			"tag": "0002_fix_user_settings",
-			"breakpoints": true
-		},
-		{
-			"idx": 3,
-			"version": "7",
-			"when": 1776035544712,
-			"tag": "0003_adding organizations model",
-			"breakpoints": true
-		},
-		{
-			"idx": 4,
-			"version": "7",
-			"when": 1776056889547,
-			"tag": "0004_removing phone-number plugin",
-			"breakpoints": true
-		},
-		{
-			"idx": 5,
-			"version": "7",
-			"when": 1776060517608,
-			"tag": "0005_adding organaziation on user settings",
-			"breakpoints": true
-		},
-		{
-			"idx": 6,
-			"version": "7",
-			"when": 1776312441804,
-			"tag": "0006_adding totp two factor auth",
-			"breakpoints": true
-		},
-		{
-			"idx": 7,
-			"version": "7",
-			"when": 1776550895869,
-			"tag": "0007_adding orgazation id at user settings",
-			"breakpoints": true
-		},
-		{
-			"idx": 8,
-			"version": "7",
-			"when": 1776636715468,
-			"tag": "0008_adding integrations model",
-			"breakpoints": true
-		},
-		{
-			"idx": 9,
-			"version": "7",
-			"when": 1776640374637,
-			"tag": "0009_test",
-			"breakpoints": true
-		},
-		{
-			"idx": 10,
-			"version": "7",
-			"when": 1776749279216,
-			"tag": "0010_unique_default_integration_per_org",
-			"breakpoints": true
-		},
-		{
-			"idx": 11,
-			"version": "7",
-			"when": 1776805183138,
-			"tag": "0011_adding new settings fields",
-			"breakpoints": true
-		},
-		{
-			"idx": 12,
-			"version": "7",
-			"when": 1776820539774,
-			"tag": "0012_ranaming integratios to connections",
-			"breakpoints": true
-		},
-		{
-			"idx": 13,
-			"version": "7",
-			"when": 1776827840449,
-			"tag": "0013_adding new type at connections",
-			"breakpoints": true
-		}
-	]
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1774360633481,
+      "tag": "0000_adding_auth_models",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1774569092067,
+      "tag": "0001_adding_user_settings",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1774569503563,
+      "tag": "0002_fix_user_settings",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1776035544712,
+      "tag": "0003_adding organizations model",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1776056889547,
+      "tag": "0004_removing phone-number plugin",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1776060517608,
+      "tag": "0005_adding organaziation on user settings",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1776312441804,
+      "tag": "0006_adding totp two factor auth",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1776550895869,
+      "tag": "0007_adding orgazation id at user settings",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1776636715468,
+      "tag": "0008_adding integrations model",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1776640374637,
+      "tag": "0009_test",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1776749279216,
+      "tag": "0010_unique_default_integration_per_org",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1776805183138,
+      "tag": "0011_adding new settings fields",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1776820539774,
+      "tag": "0012_ranaming integratios to connections",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1776827840449,
+      "tag": "0013_adding new type at connections",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1777090616616,
+      "tag": "0014_fix: re-naming the types",
+      "breakpoints": true
+    }
+  ]
 }

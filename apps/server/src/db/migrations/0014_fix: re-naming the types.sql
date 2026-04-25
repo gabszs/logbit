@@ -1,0 +1,1 @@
+ALTER TYPE "public"."type" RENAME TO "connection_type";
