@@ -36,7 +36,7 @@ const app = new OpenAPIHono<AppContext>();
 app.use(
 	cors({
 		origin: settings.CORS_ORIGIN,
-		allowMethods: ["GET", "POST", "OPTIONS"],
+		allowMethods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
 		allowHeaders: [
 			"Content-Type",
 			"Authorization",

@@ -75,7 +75,7 @@ function formFromConnection(c: ConnectionEntityType): FormState {
 		return {
 			...base,
 			chHost: c.config.host,
-			chDatabase: c.config.database,
+			chDatabase: c.config.database ?? "",
 			chUsername: c.config.username,
 			chPassword: c.config.password,
 		};
@@ -142,7 +142,6 @@ export function AddConnectionDialog({
 
 		if (form.type === "clickhouse") {
 			if (!form.chHost.trim()) { setFormError("Host is required"); return null; }
-			if (!form.chDatabase.trim()) { setFormError("Database is required"); return null; }
 			if (!form.chUsername.trim()) { setFormError("Username is required"); return null; }
 			return {
 				name,
@@ -150,7 +149,7 @@ export function AddConnectionDialog({
 				type: "clickhouse",
 				config: {
 					host: form.chHost.trim(),
-					database: form.chDatabase.trim(),
+					database: form.chDatabase.trim() || null,
 					username: form.chUsername.trim(),
 					password: form.chPassword,
 				},
@@ -310,7 +309,7 @@ export function AddConnectionDialog({
 								/>
 							</div>
 							<div className="space-y-2">
-								<Label htmlFor="conn-ch-database">Database</Label>
+								<Label htmlFor="conn-ch-database">Database <span className="text-muted-foreground text-xs">(optional)</span></Label>
 								<Input
 									id="conn-ch-database"
 									value={form.chDatabase}
