@@ -23,7 +23,7 @@ export const sources = pgTable(
 		organizationId: uuid("organization_id")
 			.notNull()
 			.references(() => organizations.id, { onDelete: "cascade" }),
-		integrationId: uuid("integration_id")
+		connectionId: uuid("integration_id")
 			.notNull()
 			.references(() => connections.id, { onDelete: "cascade" }),
 		config: jsonb("config").$type<Record<string, unknown>>().notNull(),
@@ -34,8 +34,8 @@ export const sources = pgTable(
 			.notNull(),
 	},
 	(table) => [
-		index("data_sources_organization_id_idx").on(table.organizationId),
-		index("data_sources_integration_id_idx").on(table.integrationId),
-		index("data_sources_type_idx").on(table.type),
+		index("sources_organization_id_idx").on(table.organizationId),
+		index("sources_integration_id_idx").on(table.connectionId),
+		index("sources_type_idx").on(table.type),
 	],
 );

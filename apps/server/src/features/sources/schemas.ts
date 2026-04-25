@@ -8,7 +8,7 @@ export const baseSourcesSchema = createSelectSchema(models.sources).extend({
 	id: z.uuidv7(),
 	name: z.string().min(1).max(255),
 	organizationId: z.uuidv7(),
-	integrationId: z.uuidv7(),
+	connectionId: z.uuidv7(),
 });
 
 export type SourcesType = z.infer<typeof baseSourcesSchema>;

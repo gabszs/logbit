@@ -1,6 +1,6 @@
+import type { Context } from "@/lib/orpc";
 import { ORPCError } from "@orpc/server";
 import { eq } from "drizzle-orm";
-import type { Context } from "@/lib/orpc";
 import { userSettings } from "../../db/models/userSettings";
 import { DEFAULT_SETTINGS } from "./types";
 
@@ -19,7 +19,7 @@ export async function getUserSettings(db: Context["db"], userId: string) {
 		theme: row.theme ?? DEFAULT_SETTINGS.theme,
 		organizationId: row.organizationId ?? DEFAULT_SETTINGS.organizationId,
 		sourceId: row.sourceId ?? DEFAULT_SETTINGS.sourceId,
-		integrationId: row.integrationId ?? DEFAULT_SETTINGS.integrationId,
+		connectionId: row.connectionId ?? DEFAULT_SETTINGS.connectionId,
 	};
 }
 
@@ -34,7 +34,7 @@ export async function insertSettingsRow(
 			userId,
 			theme: DEFAULT_SETTINGS.theme,
 			sourceId: DEFAULT_SETTINGS.sourceId,
-			integrationId: DEFAULT_SETTINGS.integrationId,
+			connectionId: DEFAULT_SETTINGS.connectionId,
 			createdAt: now,
 			updatedAt: now,
 		})
@@ -48,7 +48,7 @@ export async function updateUserSettings(
 		theme?: string;
 		organizationId?: string | null;
 		sourceId?: string | null;
-		integrationId?: string | null;
+		connectionId?: string | null;
 	},
 ) {
 	await insertSettingsRow(db, userId);
@@ -69,8 +69,8 @@ export async function updateUserSettings(
 		set.sourceId = updates.sourceId;
 	}
 
-	if (updates.integrationId !== undefined) {
-		set.integrationId = updates.integrationId;
+	if (updates.connectionId !== undefined) {
+		set.connectionId = updates.connectionId;
 	}
 
 	if (Object.keys(set).length > 1) {

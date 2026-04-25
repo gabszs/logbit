@@ -7,7 +7,7 @@ const updateSettingsSchema = userSettingsSchema
 		theme: true,
 		organizationId: true,
 		sourceId: true,
-		integrationId: true,
+		connectionId: true,
 	})
 	.partial();
 

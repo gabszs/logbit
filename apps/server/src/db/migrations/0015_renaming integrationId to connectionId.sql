@@ -1,0 +1,1 @@
+ALTER TABLE "user_settings" RENAME COLUMN "integration_id" TO "connectionId";

@@ -18,7 +18,7 @@ describe("oRPC Settings over HTTP", () => {
 		expect(typeof settings.theme).toBe("string");
 		expect("organizationId" in settings).toBe(true);
 		expect("sourceId" in settings).toBe(true);
-		expect("integrationId" in settings).toBe(true);
+		expect("connectionId" in settings).toBe(true);
 	});
 
 	it("settings.get returns UNAUTHORIZED without session", async () => {
@@ -31,22 +31,22 @@ describe("oRPC Settings over HTTP", () => {
 		const client = createOrpcHttpClient(ctx.headers);
 
 		const sourceId = Bun.randomUUIDv7();
-		const integrationId = Bun.randomUUIDv7();
+		const connectionId = Bun.randomUUIDv7();
 		const firstUpdate = await client.settings.update({
 			theme: "dark",
 			sourceId,
-			integrationId,
+			connectionId,
 		});
 
 		expect(firstUpdate.theme).toBe("dark");
 		expect(firstUpdate.sourceId).toBe(sourceId);
-		expect(firstUpdate.integrationId).toBe(integrationId);
+		expect(firstUpdate.connectionId).toBe(connectionId);
 
 		await client.settings.update({ theme: "light" });
 		const afterSecondUpdate = await client.settings.get();
 		expect(afterSecondUpdate.theme).toBe("light");
 		expect(afterSecondUpdate.sourceId).toBe(sourceId);
-		expect(afterSecondUpdate.integrationId).toBe(integrationId);
+		expect(afterSecondUpdate.connectionId).toBe(connectionId);
 	});
 
 	it("settings.update validates payload for invalid UUID", async () => {

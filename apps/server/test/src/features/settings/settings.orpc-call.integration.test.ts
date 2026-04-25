@@ -24,7 +24,7 @@ describe("oRPC Settings via call()", () => {
 		expect(typeof settings.theme).toBe("string");
 		expect("organizationId" in settings).toBe(true);
 		expect("sourceId" in settings).toBe(true);
-		expect("integrationId" in settings).toBe(true);
+		expect("connectionId" in settings).toBe(true);
 	});
 
 	it("settings.get returns UNAUTHORIZED without session", async () => {
@@ -40,7 +40,7 @@ describe("oRPC Settings via call()", () => {
 		const ctx = await createAuthContext("settings-call-update@example.com");
 		const callContext = await createCallContextFromHeaders(ctx.headers);
 		const sourceId = Bun.randomUUIDv7();
-		const integrationId = Bun.randomUUIDv7();
+		const connectionId = Bun.randomUUIDv7();
 		const settingsRouter = getOrpcRouters().settings;
 
 		await call(
@@ -48,7 +48,7 @@ describe("oRPC Settings via call()", () => {
 			{
 				theme: "dark",
 				sourceId,
-				integrationId,
+				connectionId,
 			},
 			{ context: callContext },
 		);
@@ -64,7 +64,7 @@ describe("oRPC Settings via call()", () => {
 
 		expect(afterSecondUpdate.theme).toBe("light");
 		expect(afterSecondUpdate.sourceId).toBe(sourceId);
-		expect(afterSecondUpdate.integrationId).toBe(integrationId);
+		expect(afterSecondUpdate.connectionId).toBe(connectionId);
 	});
 
 	it("settings.update validates payload for invalid UUID", async () => {

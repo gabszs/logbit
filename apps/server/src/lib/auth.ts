@@ -127,7 +127,7 @@ export const createAuth = ({ settings, db, redis }: CreateAuthOptions) => {
 							userId: user.id,
 							theme: "system",
 							sourceId: null,
-							integrationId: null,
+							connectionId: null,
 							organizationId,
 							createdAt: now,
 							updatedAt: now,

@@ -101,7 +101,7 @@ export const createAuthContext = async (
 			userId: user.id,
 			theme: "system",
 			sourceId: null,
-			integrationId: null,
+			connectionId: null,
 			organizationId,
 			createdAt: now,
 			updatedAt: now,
