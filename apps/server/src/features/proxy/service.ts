@@ -1,4 +1,5 @@
 import type { ConnectionRepository } from "@/features/connections/repository";
+import { normalizeClickhouseConfig } from "@/integrations/clickhouse/config";
 import { ClickhouseConfigSchema } from "@/integrations/clickhouse/schemas";
 import { httpErrors } from "@/lib/errors";
 
@@ -20,6 +21,8 @@ export class ClickhouseProxyService {
 			});
 		}
 
-		return ClickhouseConfigSchema.parse(connection.config);
+		return normalizeClickhouseConfig(
+			ClickhouseConfigSchema.parse(connection.config),
+		);
 	}
 }

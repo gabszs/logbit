@@ -1,4 +1,4 @@
-import { Loader2 } from "lucide-react";
+import { AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import type {
@@ -25,12 +25,17 @@ import {
 	SelectValue,
 } from "@/web/components/ui/select";
 import { Switch } from "@/web/components/ui/switch";
-import { parseHonoResponse } from "@/web/lib/hono-rpc";
+import { cn } from "@/web/utils/cn";
+import { HonoRpcError, parseHonoResponse } from "@/web/lib/hono-rpc";
 import type { SupportedIntegrationKind } from "@/web/lib/integrations";
 import {
 	INTEGRATIONS,
 	supportedIntegrationTypes,
 } from "@/web/lib/integrations";
+import {
+	pingClickhouseConnection,
+	queryTestClickhouseConnection,
+} from "../-lib/clickhouse-client";
 
 const CONNECTION_TYPES = supportedIntegrationTypes.map((value) => ({
 	value,
@@ -53,6 +58,8 @@ type FormState = {
 	chUsername: string;
 	chPassword: string;
 };
+
+type ClickhouseTestStatus = "idle" | "testing" | "ok" | "fail";
 
 const EMPTY_FORM: FormState = {
 	name: "",
@@ -110,6 +117,10 @@ export function AddConnectionDialog({
 	const [form, setForm] = useState<FormState>(EMPTY_FORM);
 	const [isPending, setIsPending] = useState(false);
 	const [formError, setFormError] = useState<string | null>(null);
+	const [clickhousePingStatus, setClickhousePingStatus] =
+		useState<ClickhouseTestStatus>("idle");
+	const [clickhouseQueryTestStatus, setClickhouseQueryTestStatus] =
+		useState<ClickhouseTestStatus>("idle");
 
 	useEffect(() => {
 		if (!open) return;
@@ -119,12 +130,84 @@ export function AddConnectionDialog({
 				: EMPTY_FORM,
 		);
 		setFormError(null);
+		setClickhousePingStatus("idle");
+		setClickhouseQueryTestStatus("idle");
 		setIsPending(false);
 	}, [open, mode, connection]);
 
 	const set = (field: keyof FormState, value: string | boolean) => {
 		setFormError(null);
+		setClickhousePingStatus("idle");
+		setClickhouseQueryTestStatus("idle");
 		setForm((prev) => ({ ...prev, [field]: value }));
+	};
+
+	const getClickhouseTestPayload = () => ({
+		host: form.chHost.trim(),
+		username: form.chUsername.trim(),
+		password: form.chPassword || null,
+		database: form.chDatabase.trim() || null,
+	});
+
+	const getClickhouseErrorMessage = (error: unknown) =>
+		error instanceof HonoRpcError &&
+		typeof error.data === "object" &&
+		error.data !== null &&
+		"detail" in error.data &&
+		typeof error.data.detail === "string"
+			? error.data.detail
+			: error instanceof Error
+				? error.message
+				: "Could not reach the ClickHouse host";
+
+	const handleClickhousePingTest = async () => {
+		if (form.type !== "clickhouse") return;
+
+		if (!form.chHost.trim() || !form.chUsername.trim()) {
+			setFormError("Host and username are required to test ClickHouse");
+			return;
+		}
+
+		setFormError(null);
+		setClickhousePingStatus("testing");
+		try {
+			const result = await pingClickhouseConnection(getClickhouseTestPayload());
+			setClickhousePingStatus(result.success ? "ok" : "fail");
+			if (!result.success) {
+				toast.error(result.error ?? "Could not reach the ClickHouse host");
+			} else {
+				toast.success("ClickHouse ping successful");
+			}
+		} catch (error) {
+			setClickhousePingStatus("fail");
+			toast.error(getClickhouseErrorMessage(error));
+		}
+	};
+
+	const handleClickhouseQueryTest = async () => {
+		if (form.type !== "clickhouse") return;
+
+		if (!form.chHost.trim() || !form.chUsername.trim()) {
+			setFormError("Host and username are required to test ClickHouse");
+			return;
+		}
+
+		setFormError(null);
+		setClickhouseQueryTestStatus("testing");
+		try {
+			const result = await queryTestClickhouseConnection(
+				getClickhouseTestPayload(),
+			);
+			setClickhouseQueryTestStatus(result.success ? "ok" : "fail");
+			if (!result.success) {
+				toast.error(result.error ?? "Failed to query ClickHouse");
+			} else {
+				toast.success("ClickHouse query test successful");
+			}
+		} catch (error) {
+			setClickhouseQueryTestStatus("fail");
+			toast.error(getClickhouseErrorMessage(error));
+		}
 	};
 
 	const buildPayload = (): ConnectionUpsertInput | null => {
@@ -243,7 +326,7 @@ export function AddConnectionDialog({
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent className="sm:max-w-lg">
+			<DialogContent className="sm:max-w-2xl">
 				<DialogHeader>
 					<DialogTitle>
 						{isEdit ? "Edit connection" : "Add connection"}
@@ -256,7 +339,7 @@ export function AddConnectionDialog({
 				</DialogHeader>
 
 				<div className="space-y-4">
-					<div className="space-y-2">
+					<div className="grid gap-4 sm:grid-cols-[15rem_1fr] sm:items-center">
 						<Label htmlFor="conn-name">Name</Label>
 						<Input
 							id="conn-name"
@@ -267,14 +350,14 @@ export function AddConnectionDialog({
 						/>
 					</div>
 
-					<div className="space-y-2">
+					<div className="grid gap-4 sm:grid-cols-[15rem_1fr] sm:items-center">
 						<Label htmlFor="conn-type">Type</Label>
 						<Select
 							value={form.type}
 							onValueChange={(v) => set("type", v)}
 							disabled={isPending || isEdit}
 						>
-							<SelectTrigger id="conn-type">
+							<SelectTrigger id="conn-type" className="w-full">
 								<SelectValue placeholder="Select a type" />
 							</SelectTrigger>
 							<SelectContent>
@@ -290,20 +373,21 @@ export function AddConnectionDialog({
 						</Select>
 					</div>
 
-					<div className="flex items-center gap-3">
-						<Switch
-							id="conn-active"
-							checked={form.isActive}
-							onCheckedChange={(v) => set("isActive", v)}
-							disabled={isPending}
-						/>
+					<div className="grid gap-4 sm:grid-cols-[15rem_1fr] sm:items-center">
 						<Label htmlFor="conn-active">Active</Label>
+						<div className="flex items-center">
+							<Switch
+								id="conn-active"
+								checked={form.isActive}
+								onCheckedChange={(v) => set("isActive", v)}
+								disabled={isPending}
+							/>
+						</div>
 					</div>
 
-					{/* Resend */}
 					{form.type === "resend" && (
 						<div className="space-y-4 border-t pt-4">
-							<div className="space-y-2">
+							<div className="grid gap-4 sm:grid-cols-[15rem_1fr] sm:items-center">
 								<Label htmlFor="conn-resend-key">API Key</Label>
 								<Input
 									id="conn-resend-key"
@@ -316,10 +400,9 @@ export function AddConnectionDialog({
 						</div>
 					)}
 
-					{/* Cloudflare */}
 					{form.type === "cloudflare" && (
 						<div className="space-y-4 border-t pt-4">
-							<div className="space-y-2">
+							<div className="grid gap-4 sm:grid-cols-[15rem_1fr] sm:items-center">
 								<Label htmlFor="conn-cf-key">API Key</Label>
 								<Input
 									id="conn-cf-key"
@@ -329,7 +412,7 @@ export function AddConnectionDialog({
 									placeholder="your-api-key"
 								/>
 							</div>
-							<div className="space-y-2">
+							<div className="grid gap-4 sm:grid-cols-[15rem_1fr] sm:items-center">
 								<Label htmlFor="conn-cf-zone">Zone ID</Label>
 								<Input
 									id="conn-cf-zone"
@@ -342,10 +425,9 @@ export function AddConnectionDialog({
 						</div>
 					)}
 
-					{/* ClickHouse */}
 					{form.type === "clickhouse" && (
 						<div className="space-y-4 border-t pt-4">
-							<div className="space-y-2">
+							<div className="grid gap-4 sm:grid-cols-[15rem_1fr] sm:items-center">
 								<Label htmlFor="conn-ch-host">Host</Label>
 								<Input
 									id="conn-ch-host"
@@ -355,7 +437,7 @@ export function AddConnectionDialog({
 									placeholder="http://localhost:8123"
 								/>
 							</div>
-							<div className="space-y-2">
+							<div className="grid gap-4 sm:grid-cols-[15rem_1fr] sm:items-center">
 								<Label htmlFor="conn-ch-database">
 									Database{" "}
 									<span className="text-muted-foreground text-xs">
@@ -370,7 +452,7 @@ export function AddConnectionDialog({
 									placeholder="default"
 								/>
 							</div>
-							<div className="space-y-2">
+							<div className="grid gap-4 sm:grid-cols-[15rem_1fr] sm:items-center">
 								<Label htmlFor="conn-ch-username">Username</Label>
 								<Input
 									id="conn-ch-username"
@@ -380,7 +462,7 @@ export function AddConnectionDialog({
 									placeholder="default"
 								/>
 							</div>
-							<div className="space-y-2">
+							<div className="grid gap-4 sm:grid-cols-[15rem_1fr] sm:items-center">
 								<Label htmlFor="conn-ch-password">Password</Label>
 								<Input
 									id="conn-ch-password"
@@ -397,7 +479,49 @@ export function AddConnectionDialog({
 					{formError && <p className="text-destructive text-sm">{formError}</p>}
 				</div>
 
-				<DialogFooter className="gap-2">
+				<DialogFooter className="gap-2 sm:flex-wrap">
+					{form.type === "clickhouse" && (
+						<div className="flex flex-wrap items-center gap-2">
+							<div className="flex items-center gap-2">
+								<Button
+									type="button"
+									variant="outline"
+									onClick={handleClickhousePingTest}
+									disabled={isPending || clickhousePingStatus === "testing"}
+									className="px-3"
+								>
+									{clickhousePingStatus === "testing" ? (
+										<Loader2 className="size-4 animate-spin" />
+									) : clickhousePingStatus === "ok" ? (
+										<CheckCircle2 className="size-4 text-emerald-500" />
+									) : clickhousePingStatus === "fail" ? (
+										<AlertCircle className="size-4 text-destructive" />
+									) : null}
+									Ping
+								</Button>
+							</div>
+							<div className="flex items-center gap-2">
+								<Button
+									type="button"
+									variant="outline"
+									onClick={handleClickhouseQueryTest}
+									disabled={
+										isPending || clickhouseQueryTestStatus === "testing"
+									}
+									className="px-3"
+								>
+									{clickhouseQueryTestStatus === "testing" ? (
+										<Loader2 className="size-4 animate-spin" />
+									) : clickhouseQueryTestStatus === "ok" ? (
+										<CheckCircle2 className="size-4 text-emerald-500" />
+									) : clickhouseQueryTestStatus === "fail" ? (
+										<AlertCircle className="size-4 text-destructive" />
+									) : null}
+									Query test
+								</Button>
+							</div>
+						</div>
+					)}
 					<Button
 						type="button"
 						variant="outline"

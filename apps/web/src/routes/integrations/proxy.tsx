@@ -1,4 +1,3 @@
-import { createClient } from "@clickhouse/client-web";
 import { queryOptions, useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import {
@@ -38,6 +37,11 @@ import { parseHonoResponse } from "@/web/lib/hono-rpc";
 import { cn } from "@/web/utils/cn";
 import { IntegrationsError } from "./-components/integrations-error";
 import { IntegrationsSectionSkeleton } from "./-components/integrations-section-skeleton";
+import {
+	createManualClient,
+	createProxyClient,
+	pingClient,
+} from "./-lib/clickhouse-client";
 
 type ClickhouseColumn = { name: string; type: string };
 
@@ -68,50 +72,13 @@ function connectionsQueryOptions() {
 	});
 }
 
-// Proxy client — o @clickhouse/client-web usa apenas a origin da URL,
-// descartando qualquer path. O fetch customizado reescreve cada request
-// para incluir o path do proxy antes de enviá-la ao servidor.
-function createProxyClient(connectionId: string) {
-	const serverUrl = import.meta.env.VITE_SERVER_URL as string;
-	const proxyPrefix = `/v1/proxy/connections/${connectionId}`;
-
-	return createClient({
-		url: serverUrl,
-		fetch: ((input, init) => {
-			const url = new URL(input.toString());
-			url.pathname = proxyPrefix + url.pathname;
-			return fetch(url.toString(), { ...init, credentials: "include" });
-		}) as typeof fetch,
-	});
-}
-
-// Manual client — aponta direto para o ClickHouse com X-ClickHouse-User/Key.
-function createManualClient(host: string, username: string, password: string) {
-	return createClient({
-		url: host,
-		username: username || "default",
-		...(password ? { password } : {}),
-	});
-}
-
 async function executeQuery(
-	client: ReturnType<typeof createClient>,
+	client: ReturnType<typeof createProxyClient>,
 	sql: string,
 ): Promise<ClickhouseResult> {
 	const rs = await client.query({ query: sql, format: "JSON" });
 	// json<T> returns ResponseJSON<T> — data: T[], meta?: ..., rows?: ..., statistics?: ...
 	return rs.json<Record<string, unknown>>() as Promise<ClickhouseResult>;
-}
-
-async function pingClient(
-	client: ReturnType<typeof createClient>,
-): Promise<boolean> {
-	try {
-		const { success } = await client.ping();
-		return success;
-	} catch {
-		return false;
-	}
 }
 
 // ─── preset queries ───────────────────────────────────────────────────────────

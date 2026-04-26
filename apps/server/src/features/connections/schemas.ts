@@ -6,7 +6,13 @@ import { searchOptionsSchema } from "../../common/schemas/baseSchemas";
 
 const ResendConfigSchema = integrationRegistry.resend.configSchema;
 const CloudflareConfigSchema = integrationRegistry.cloudflare.configSchema;
-const ClickhouseConfigSchema = integrationRegistry.clickhouse.configSchema;
+
+export const testClickhouseConfigSchema = z.object({
+	host: z.string().max(200),
+	username: z.string().max(200),
+	database: z.string().max(200).nullable().optional(),
+	password: z.string().max(200).nullable().optional(),
+});
 
 export const baseConnectionSchema = createSelectSchema(
 	models.connections,
@@ -34,7 +40,7 @@ const cloudflareConnectionSchema = connectionCommonSchema.extend({
 
 const clickhouseConnectionSchema = connectionCommonSchema.extend({
 	type: z.literal("clickhouse"),
-	config: ClickhouseConfigSchema,
+	config: integrationRegistry.clickhouse.configSchema,
 });
 
 export const connectionSchema = z.discriminatedUnion("type", [
@@ -62,8 +68,20 @@ const cloudflareConnectionUpsertSchema = connectionCommonUpsertSchema.extend({
 
 const clickhouseConnectionUpsertSchema = connectionCommonUpsertSchema.extend({
 	type: z.literal("clickhouse"),
-	config: ClickhouseConfigSchema,
+	config: integrationRegistry.clickhouse.configSchema,
 });
+
+export const connectionTestResultSchema = z.object({
+	success: z.boolean(),
+	error: z.string().nullable(),
+	data: z.record(z.string(), z.unknown()).nullable(),
+});
+export type ClickhouseConnectionTestInput = z.infer<
+	typeof integrationRegistry.clickhouse.configSchema
+>;
+export type ConnectionTestResultType = z.infer<
+	typeof connectionTestResultSchema
+>;
 
 export const connectionUpsertSchema = z
 	.discriminatedUnion("type", [

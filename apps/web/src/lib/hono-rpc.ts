@@ -27,18 +27,25 @@ export class HonoRpcError extends Error {
 
 export async function parseHonoResponse<T>(response: Response): Promise<T> {
 	const contentType = response.headers.get("content-type") ?? "";
-	const data = contentType.includes("application/json")
-		? await response.json()
-		: await response.text();
+	const data =
+		contentType.includes("application/json") ||
+		contentType.includes("application/problem+json")
+			? await response.json()
+			: await response.text();
 
 	if (!response.ok) {
 		const message =
 			typeof data === "object" &&
 			data !== null &&
-			"message" in data &&
-			typeof data.message === "string"
-				? data.message
-				: `Request failed with status ${response.status}`;
+			"detail" in data &&
+			typeof data.detail === "string"
+				? data.detail
+				: typeof data === "object" &&
+						data !== null &&
+						"message" in data &&
+						typeof data.message === "string"
+					? data.message
+					: `Request failed with status ${response.status}`;
 
 		throw new HonoRpcError(response.status, message, data);
 	}

@@ -13,8 +13,10 @@ import {
 	connectionListSuccessSchema,
 	connectionSchema,
 	connectionSuccessSchema,
+	connectionTestResultSchema,
 	connectionUpdateSchema,
 	connectionUpsertSchema,
+	testClickhouseConfigSchema,
 } from "./schemas";
 import { ConnectionService } from "./service";
 
@@ -41,6 +43,74 @@ connectionsRouter.use(async (c, next) => {
 	c.set("activeOrganizationId", activeOrganizationId);
 	await next();
 });
+
+connectionsRouter.openapi(
+	createRoute({
+		tags: ["Connections"],
+		summary: "Ping a ClickHouse connection using raw credentials",
+		method: "post",
+		path: "/connections/ping",
+		request: {
+			headers: cookieAuthorizationSchema,
+			body: {
+				content: {
+					[ContentTypes.JSON]: {
+						schema: testClickhouseConfigSchema,
+					},
+				},
+			},
+		},
+		responses: {
+			[status.OK.code]: status.OK.response(connectionTestResultSchema),
+			[status.UNAUTHORIZED.code]: status.UNAUTHORIZED.response(),
+			[status.FORBIDDEN.code]: status.FORBIDDEN.response({
+				detail: "No active organization",
+			}),
+			[status.BAD_REQUEST.code]: status.BAD_REQUEST.response(),
+			[status.TOO_MANY_REQUESTS.code]: status.TOO_MANY_REQUESTS.response(),
+			[status.INTERNAL_SERVER_ERROR.code]:
+				status.INTERNAL_SERVER_ERROR.response(),
+		},
+	}),
+	async (c) => {
+		const config = c.req.valid("json");
+		return c.json(await c.get("service").testClickhousePing(config));
+	},
+);
+
+connectionsRouter.openapi(
+	createRoute({
+		tags: ["Connections"],
+		summary: "Execute a simple query test on a ClickHouse connection",
+		method: "post",
+		path: "/connections/query-test",
+		request: {
+			headers: cookieAuthorizationSchema,
+			body: {
+				content: {
+					[ContentTypes.JSON]: {
+						schema: testClickhouseConfigSchema,
+					},
+				},
+			},
+		},
+		responses: {
+			[status.OK.code]: status.OK.response(connectionTestResultSchema),
+			[status.UNAUTHORIZED.code]: status.UNAUTHORIZED.response(),
+			[status.FORBIDDEN.code]: status.FORBIDDEN.response({
+				detail: "No active organization",
+			}),
+			[status.BAD_REQUEST.code]: status.BAD_REQUEST.response(),
+			[status.TOO_MANY_REQUESTS.code]: status.TOO_MANY_REQUESTS.response(),
+			[status.INTERNAL_SERVER_ERROR.code]:
+				status.INTERNAL_SERVER_ERROR.response(),
+		},
+	}),
+	async (c) => {
+		const config = c.req.valid("json");
+		return c.json(await c.get("service").testClickhouseQuery(config));
+	},
+);
 
 connectionsRouter.openapi(
 	createRoute({

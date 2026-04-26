@@ -6,32 +6,13 @@ import { db } from "@/db";
 import { ConnectionRepository } from "@/features/connections/repository";
 import { httpErrors } from "@/lib/errors";
 import type { AuthAppContext } from "@/types";
+import {
+	applyClickhouseConnectionHeaders,
+	BLOCKED_REQUEST_HEADERS,
+	BLOCKED_RESPONSE_HEADERS,
+	buildForwardHeaders,
+} from "./headers";
 import { ClickhouseProxyService } from "./service";
-
-// Headers from the client request that must never reach ClickHouse.
-// Auth headers are always replaced with the connection's real credentials.
-const BLOCKED_REQUEST_HEADERS = new Set([
-	"host",
-	"x-clickhouse-user",
-	"x-clickhouse-key",
-	"authorization",
-	"cookie",
-]);
-
-// Hop-by-hop headers that must not be forwarded in the response.
-// www-authenticate is also blocked: if ClickHouse returns 401, forwarding
-// this header would trigger the browser's native Basic Auth dialog.
-const BLOCKED_RESPONSE_HEADERS = new Set([
-	"transfer-encoding",
-	"connection",
-	"keep-alive",
-	"upgrade",
-	"proxy-authenticate",
-	"proxy-authorization",
-	"www-authenticate",
-	"te",
-	"trailers",
-]);
 
 type ProxyContext = AuthAppContext & {
 	Variables: AuthAppContext["Variables"] & {
@@ -41,6 +22,40 @@ type ProxyContext = AuthAppContext & {
 };
 
 const clickhouseProxyRouter = new OpenAPIHono<ProxyContext>();
+
+async function forwardClickhouseRequest(
+	targetUrl: string,
+	options: {
+		method: string;
+		headers: Headers;
+		body?: ReadableStream<Uint8Array> | null;
+	},
+): Promise<Response> {
+	let upstream: Response;
+	try {
+		upstream = await proxy(targetUrl, {
+			method: options.method,
+			headers: options.headers,
+			body: options.body,
+		});
+	} catch {
+		throw httpErrors.badGateway({
+			detail: "Could not reach the ClickHouse host for this connection",
+		});
+	}
+
+	const responseHeaders = new Headers();
+	for (const [key, value] of upstream.headers.entries()) {
+		if (!BLOCKED_RESPONSE_HEADERS.has(key.toLowerCase())) {
+			responseHeaders.set(key, value);
+		}
+	}
+
+	return new Response(upstream.body, {
+		status: upstream.status,
+		headers: responseHeaders,
+	});
+}
 
 clickhouseProxyRouter.use(async (c, next) => {
 	const connectionRepository = new ConnectionRepository(db);
@@ -74,41 +89,24 @@ async function handleProxy(c: Context<ProxyContext>): Promise<Response> {
 		(wildcard ? `/${wildcard}` : "/") + incomingUrl.search,
 		config.host,
 	);
-
-	const forwardHeaders = new Headers();
-	for (const [key, value] of c.req.raw.headers.entries()) {
-		if (!BLOCKED_REQUEST_HEADERS.has(key.toLowerCase())) {
-			forwardHeaders.set(key, value);
-		}
-	}
-	forwardHeaders.set("X-ClickHouse-User", config.username);
-	if (config.password) forwardHeaders.set("X-ClickHouse-Key", config.password);
-
-	let upstream: Response;
-	try {
-		upstream = await proxy(targetUrl.toString(), {
-			method: c.req.raw.method,
-			headers: forwardHeaders,
-			body: ["GET", "HEAD"].includes(c.req.raw.method)
-				? undefined
-				: c.req.raw.body,
-		});
-	} catch {
-		throw httpErrors.badGateway({
-			detail: "Could not reach the ClickHouse host for this connection",
-		});
+	if (config.database == null) {
+		targetUrl.searchParams.delete("database");
+	} else {
+		targetUrl.searchParams.set("database", config.database);
 	}
 
-	const responseHeaders = new Headers();
-	for (const [key, value] of upstream.headers.entries()) {
-		if (!BLOCKED_RESPONSE_HEADERS.has(key.toLowerCase())) {
-			responseHeaders.set(key, value);
-		}
-	}
+	const forwardHeaders = buildForwardHeaders(
+		c.req.raw.headers,
+		BLOCKED_REQUEST_HEADERS,
+	);
+	applyClickhouseConnectionHeaders(forwardHeaders, config);
 
-	return new Response(upstream.body, {
-		status: upstream.status,
-		headers: responseHeaders,
+	return await forwardClickhouseRequest(targetUrl.toString(), {
+		method: c.req.raw.method,
+		headers: forwardHeaders,
+		body: ["GET", "HEAD"].includes(c.req.raw.method)
+			? undefined
+			: c.req.raw.body,
 	});
 }
 
