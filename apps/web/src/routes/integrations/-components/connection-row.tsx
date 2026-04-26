@@ -18,8 +18,8 @@ import {
 	TooltipContent,
 	TooltipTrigger,
 } from "@/web/components/ui/tooltip";
-import { parseHonoResponse } from "@/web/lib/hono-rpc";
 import { INTEGRATIONS } from "@/web/lib/integrations";
+import { deleteConnection } from "../-lib/source-api";
 import { AddConnectionDialog } from "./add-connection-dialog";
 
 type ConnectionRowProps = {
@@ -38,11 +38,7 @@ export function ConnectionRow({ connection, onRefresh }: ConnectionRowProps) {
 	const handleDelete = async () => {
 		setIsDeletePending(true);
 		try {
-			const response = await fetch(
-				`${import.meta.env.VITE_SERVER_URL}/v1/connections/${connection.id}`,
-				{ method: "DELETE", credentials: "include" },
-			);
-			await parseHonoResponse(response);
+			await deleteConnection(connection.id);
 			toast.success("Connection deleted successfully");
 			onRefresh();
 			setIsDeleteOpen(false);
