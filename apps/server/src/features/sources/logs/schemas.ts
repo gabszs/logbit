@@ -36,34 +36,24 @@ export const patchLogsConfigSchema = z
 		defaultOrderByQuery: logsConfigSchema.shape.defaultOrderByQuery
 			.unwrap()
 			.optional(),
-		severityField: logsConfigSchema.shape.severityField
-			.unwrap()
-			.optional(),
+		severityField: logsConfigSchema.shape.severityField.unwrap().optional(),
 		resourceAttributesField: logsConfigSchema.shape.resourceAttributesField
 			.unwrap()
 			.optional(),
 		logAttributesField: logsConfigSchema.shape.logAttributesField
 			.unwrap()
 			.optional(),
-		timestampField: logsConfigSchema.shape.timestampField
-			.unwrap()
-			.optional(),
+		timestampField: logsConfigSchema.shape.timestampField.unwrap().optional(),
 		serviceNameField: logsConfigSchema.shape.serviceNameField
 			.unwrap()
 			.optional(),
 		bodyField: logsConfigSchema.shape.bodyField.unwrap().optional(),
-		traceIdField: logsConfigSchema.shape.traceIdField
-			.unwrap()
-			.optional(),
+		traceIdField: logsConfigSchema.shape.traceIdField.unwrap().optional(),
 		spanIdField: logsConfigSchema.shape.spanIdField.unwrap().optional(),
 		luceneImplicitColumnField: logsConfigSchema.shape.luceneImplicitColumnField
 			.unwrap()
 			.optional(),
-		traceSourceId: logsConfigSchema.shape.traceSourceId
-			.unwrap()
-			.optional(),
-		metricSourceId: logsConfigSchema.shape.metricSourceId
-			.unwrap()
-			.optional(),
+		traceSourceId: logsConfigSchema.shape.traceSourceId.unwrap().optional(),
+		metricSourceId: logsConfigSchema.shape.metricSourceId.unwrap().optional(),
 	})
 	.openapi("PatchLogsConfig");

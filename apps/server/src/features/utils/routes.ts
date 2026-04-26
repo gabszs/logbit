@@ -1,5 +1,4 @@
 import { createRoute, OpenAPIHono } from "@hono/zod-openapi";
-import { logger } from "@/lib/telemetry";
 import { db } from "../../db";
 import { models } from "../../db/models";
 import { status } from "../../lib/constants";

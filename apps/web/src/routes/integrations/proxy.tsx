@@ -188,8 +188,7 @@ function ProxyTestPage() {
 	const [result, setResult] = useState<ClickhouseResult | null>(null);
 	const [error, setError] = useState<string | null>(null);
 
-	const canRun =
-		mode === "saved" ? !!connectionId : !!host && !!username;
+	const canRun = mode === "saved" ? !!connectionId : !!host && !!username;
 
 	const handleModeChange = (next: Mode) => {
 		setMode(next);
@@ -349,7 +348,9 @@ function ProxyTestPage() {
 					<div className="space-y-3">
 						<div className="flex flex-wrap items-end gap-3">
 							<div className="space-y-1.5">
-								<Label className="text-xs text-muted-foreground">Database</Label>
+								<Label className="text-muted-foreground text-xs">
+									Database
+								</Label>
 								<Input
 									className="h-8 w-32 text-xs"
 									placeholder="default"
@@ -358,7 +359,7 @@ function ProxyTestPage() {
 								/>
 							</div>
 							<div className="space-y-1.5">
-								<Label className="text-xs text-muted-foreground">Table</Label>
+								<Label className="text-muted-foreground text-xs">Table</Label>
 								<Input
 									className="h-8 w-36 text-xs"
 									placeholder="table_name"
@@ -417,9 +418,7 @@ function ProxyTestPage() {
 							placeholder="SHOW DATABASES"
 							spellCheck={false}
 						/>
-						<p className="text-muted-foreground text-xs">
-							Ctrl+Enter to run
-						</p>
+						<p className="text-muted-foreground text-xs">Ctrl+Enter to run</p>
 					</div>
 				</CardContent>
 			</Card>
@@ -458,7 +457,7 @@ function ProxyTestPage() {
 					<CardContent className="pt-4">
 						{error ? (
 							<div className="rounded-lg bg-destructive/10 p-4">
-								<p className="font-mono text-destructive text-xs whitespace-pre-wrap break-all">
+								<p className="whitespace-pre-wrap break-all font-mono text-destructive text-xs">
 									{error}
 								</p>
 							</div>
@@ -470,7 +469,7 @@ function ProxyTestPage() {
 											{(result.meta ?? []).map((col) => (
 												<th
 													key={col.name}
-													className="px-3 py-2 text-left font-medium whitespace-nowrap"
+													className="whitespace-nowrap px-3 py-2 text-left font-medium"
 												>
 													<div className="flex flex-col gap-0.5">
 														<span>{col.name}</span>

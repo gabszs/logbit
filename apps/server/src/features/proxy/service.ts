@@ -5,10 +5,7 @@ import { httpErrors } from "@/lib/errors";
 export class ClickhouseProxyService {
 	constructor(private readonly connectionRepository: ConnectionRepository) {}
 
-	async resolveClickhouseConfig(
-		connectionId: string,
-		organizationId: string,
-	) {
+	async resolveClickhouseConfig(connectionId: string, organizationId: string) {
 		const connection = await this.connectionRepository.getById(connectionId, {
 			organizationId,
 		});
