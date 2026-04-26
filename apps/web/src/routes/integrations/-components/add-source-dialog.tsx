@@ -359,7 +359,9 @@ export function AddSourceDialog({
 
 					<div className="space-y-3">
 						<div className="flex items-center gap-3">
-							<span className="text-muted-foreground text-xs font-medium uppercase tracking-wide">Correlations</span>
+							<span className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
+								Correlations
+							</span>
 							<div className="flex-1 border-t" />
 						</div>
 						<div className="grid gap-4 sm:grid-cols-2">

@@ -1,12 +1,12 @@
+import { OpenAPIHono } from "@hono/zod-openapi";
+import type { Context } from "hono";
+import { proxy } from "hono/proxy";
+import z from "zod";
 import { db } from "@/db";
 import { ConnectionRepository } from "@/features/connections/repository";
 import { httpErrors } from "@/lib/errors";
 import type { AuthAppContext } from "@/types";
-import { OpenAPIHono } from "@hono/zod-openapi";
-import type { Context } from "hono";
-import { proxy } from "hono/proxy";
 import { ClickhouseProxyService } from "./service";
-import z from "zod";
 
 // Headers from the client request that must never reach ClickHouse.
 // Auth headers are always replaced with the connection's real credentials.
