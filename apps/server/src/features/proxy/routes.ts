@@ -1,10 +1,12 @@
-import { OpenAPIHono } from "@hono/zod-openapi";
-import type { Context } from "hono";
 import { db } from "@/db";
 import { ConnectionRepository } from "@/features/connections/repository";
 import { httpErrors } from "@/lib/errors";
 import type { AuthAppContext } from "@/types";
+import { OpenAPIHono } from "@hono/zod-openapi";
+import type { Context } from "hono";
+import { proxy } from "hono/proxy";
 import { ClickhouseProxyService } from "./service";
+import z from "zod";
 
 // Headers from the client request that must never reach ClickHouse.
 // Auth headers are always replaced with the connection's real credentials.
@@ -55,21 +57,23 @@ clickhouseProxyRouter.use(async (c, next) => {
 	await next();
 });
 
-async function executeProxy(
-	c: Context<ProxyContext>,
-	connectionId: string,
-	wildcardSegment: string,
-	service: ClickhouseProxyService,
-	activeOrganizationId: string,
-): Promise<Response> {
-	const config = await service.resolveClickhouseConfig(
-		connectionId,
-		activeOrganizationId,
-	);
+async function handleProxy(c: Context<ProxyContext>): Promise<Response> {
+	const connectionId = c.req.param("connectionId");
+	if (!connectionId || !z.uuidv7().safeParse(connectionId).success) {
+		throw httpErrors.badRequest({ detail: "Invalid connection ID" });
+	}
 
-	const targetPath = wildcardSegment ? `/${wildcardSegment}` : "/";
+	const wildcard = c.req.param("*") ?? "";
+
+	const config = await c
+		.get("service")
+		.resolveClickhouseConfig(connectionId, c.get("activeOrganizationId"));
+
 	const incomingUrl = new URL(c.req.raw.url);
-	const targetUrl = new URL(targetPath + incomingUrl.search, config.host);
+	const targetUrl = new URL(
+		(wildcard ? `/${wildcard}` : "/") + incomingUrl.search,
+		config.host,
+	);
 
 	const forwardHeaders = new Headers();
 	for (const [key, value] of c.req.raw.headers.entries()) {
@@ -78,13 +82,11 @@ async function executeProxy(
 		}
 	}
 	forwardHeaders.set("X-ClickHouse-User", config.username);
-	if (config.password) {
-		forwardHeaders.set("X-ClickHouse-Key", config.password);
-	}
+	if (config.password) forwardHeaders.set("X-ClickHouse-Key", config.password);
 
 	let upstream: Response;
 	try {
-		upstream = await fetch(targetUrl.toString(), {
+		upstream = await proxy(targetUrl.toString(), {
 			method: c.req.raw.method,
 			headers: forwardHeaders,
 			body: ["GET", "HEAD"].includes(c.req.raw.method)
@@ -104,28 +106,13 @@ async function executeProxy(
 		}
 	}
 
-	return c.body(upstream.body, upstream.status, Object.fromEntries(responseHeaders));
+	return new Response(upstream.body, {
+		status: upstream.status,
+		headers: responseHeaders,
+	});
 }
 
-async function proxyResponse(c: Context<ProxyContext>, wildcardSegment: string) {
-	const connectionId = c.req.param("connectionId");
-	if (!connectionId) {
-		throw httpErrors.badRequest({ detail: "Missing connection id" });
-	}
-
-	return executeProxy(
-		c,
-		connectionId,
-		wildcardSegment,
-		c.get("service"),
-		c.get("activeOrganizationId"),
-	);
-}
-
-// Root path and sub-paths are handled by the same proxy logic.
-clickhouseProxyRouter.all("/proxy/connections/:connectionId", (c) => proxyResponse(c, ""));
-clickhouseProxyRouter.all("/proxy/connections/:connectionId/*", (c) =>
-	proxyResponse(c, c.req.param("*") ?? ""),
-);
+clickhouseProxyRouter.all("/proxy/connections/:connectionId", handleProxy);
+clickhouseProxyRouter.all("/proxy/connections/:connectionId/*", handleProxy);
 
 export default clickhouseProxyRouter;
