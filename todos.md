@@ -9,3 +9,5 @@
 -- adiconar erro para o failed to fetch quando o server cai, para deixar claro isso
 
 -- adicionar protecao, para que o user nao passe o schema de trace e um source.type=log
+
+-- fazer instrumentacao otel-http funcionar, alem disso o que sao os spans de pre-hook do better-auth?

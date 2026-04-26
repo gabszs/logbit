@@ -1,4 +1,5 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
+import type { Context } from "hono";
 import { db } from "@/db";
 import { ConnectionRepository } from "@/features/connections/repository";
 import { httpErrors } from "@/lib/errors";
@@ -55,9 +56,9 @@ clickhouseProxyRouter.use(async (c, next) => {
 });
 
 async function executeProxy(
+	c: Context<ProxyContext>,
 	connectionId: string,
 	wildcardSegment: string,
-	rawRequest: Request,
 	service: ClickhouseProxyService,
 	activeOrganizationId: string,
 ): Promise<Response> {
@@ -67,11 +68,11 @@ async function executeProxy(
 	);
 
 	const targetPath = wildcardSegment ? `/${wildcardSegment}` : "/";
-	const incomingUrl = new URL(rawRequest.url);
+	const incomingUrl = new URL(c.req.raw.url);
 	const targetUrl = new URL(targetPath + incomingUrl.search, config.host);
 
 	const forwardHeaders = new Headers();
-	for (const [key, value] of rawRequest.headers.entries()) {
+	for (const [key, value] of c.req.raw.headers.entries()) {
 		if (!BLOCKED_REQUEST_HEADERS.has(key.toLowerCase())) {
 			forwardHeaders.set(key, value);
 		}
@@ -84,11 +85,11 @@ async function executeProxy(
 	let upstream: Response;
 	try {
 		upstream = await fetch(targetUrl.toString(), {
-			method: rawRequest.method,
+			method: c.req.raw.method,
 			headers: forwardHeaders,
-			body: ["GET", "HEAD"].includes(rawRequest.method)
+			body: ["GET", "HEAD"].includes(c.req.raw.method)
 				? undefined
-				: rawRequest.body,
+				: c.req.raw.body,
 		});
 	} catch {
 		throw httpErrors.badGateway({
@@ -103,36 +104,28 @@ async function executeProxy(
 		}
 	}
 
-	return new Response(upstream.body, {
-		status: upstream.status,
-		headers: responseHeaders,
-	});
+	return c.body(upstream.body, upstream.status, Object.fromEntries(responseHeaders));
 }
 
-// Root path — ClickHouse HTTP interface default endpoint
-clickhouseProxyRouter.all(
-	"/proxy/connections/:connectionId",
-	(c) =>
-		executeProxy(
-			c.req.param("connectionId"),
-			"",
-			c.req.raw,
-			c.get("service"),
-			c.get("activeOrganizationId"),
-		),
-);
+async function proxyResponse(c: Context<ProxyContext>, wildcardSegment: string) {
+	const connectionId = c.req.param("connectionId");
+	if (!connectionId) {
+		throw httpErrors.badRequest({ detail: "Missing connection id" });
+	}
 
-// All sub-paths — /ping, named routes, etc.
-clickhouseProxyRouter.all(
-	"/proxy/connections/:connectionId/*",
-	(c) =>
-		executeProxy(
-			c.req.param("connectionId"),
-			c.req.param("*") ?? "",
-			c.req.raw,
-			c.get("service"),
-			c.get("activeOrganizationId"),
-		),
+	return executeProxy(
+		c,
+		connectionId,
+		wildcardSegment,
+		c.get("service"),
+		c.get("activeOrganizationId"),
+	);
+}
+
+// Root path and sub-paths are handled by the same proxy logic.
+clickhouseProxyRouter.all("/proxy/connections/:connectionId", (c) => proxyResponse(c, ""));
+clickhouseProxyRouter.all("/proxy/connections/:connectionId/*", (c) =>
+	proxyResponse(c, c.req.param("*") ?? ""),
 );
 
 export default clickhouseProxyRouter;

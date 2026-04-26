@@ -14,7 +14,7 @@ utilityRouter.openapi(
 		summary: "Health check endpoint",
 		description:
 			"Returns the health status of the service along with the current timestamp",
-		method: "post",
+		method: "get",
 		path: "/health",
 		responses: {
 			[status.OK.code]: status.OK.response(healthSchema),
@@ -24,7 +24,11 @@ utilityRouter.openapi(
 		},
 	}),
 	async (c) => {
-		logger.info("Health check endpoint called");
+		// logger.info("Health check endpoint called");
+		// logger.debug("Health check endpoint called");
+		// logger.warn("Health check endpoint called");
+		// logger.error("Health check endpoint called");
+		// logger.trace("Health check endpoint called");
 		return c.json({
 			status: "ok",
 			timestamp: new Date().toISOString(),

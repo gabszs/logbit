@@ -42,9 +42,11 @@ const sdk = new NodeSDK({
 	instrumentations: [
 		new BunPgInstrumentation(),
 		new BunRedisInstrumentation(),
-		new HttpInstrumentation(),
-		new UndiciInstrumentation(),
-		new RuntimeNodeInstrumentation(),
+		new HttpInstrumentation({
+			enabled: true,
+		}),
+		// new UndiciInstrumentation(),
+		// new RuntimeNodeInstrumentation(),
 	],
 });
 

@@ -126,7 +126,7 @@ const PRESET_QUERIES: Array<{
 		query: (db) =>
 			db
 				? `SHOW TABLES FROM ${db}`
-				: "SELECT database, name, engine FROM system.tables ORDER BY database, name LIMIT 200",
+				: "SELECT database, name, engine FROM system.tables WHERE database = 'default' ORDER BY database, name LIMIT 200",
 	},
 	{
 		label: "Describe table",

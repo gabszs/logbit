@@ -19,26 +19,26 @@ services:
   #   ports:
   #     - "6379:6379"
 
-  # clickhouse:
-  #   image: clickhouse/clickhouse-server:25.3
-  #   container_name: loglog-clickhouse
-  #   environment:
-  #     CLICKHOUSE_USER: default
-  #     CLICKHOUSE_PASSWORD: "clickhouse"
-  #     CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
-  #   ports:
-  #     - "8123:8123" # HTTP (UI / queries)
-  #     - "9000:9000" # Native TCP (collector)
-  #   ulimits:
-  #     nofile:
-  #       soft: 262144
-  #       hard: 262144
-  #   healthcheck:
-  #     test: ["CMD", "clickhouse-client", "--password", "clickhouse", "--query", "SELECT 1"]
-  #     interval: 5s
-  #     timeout: 5s
-  #     retries: 10
-  #     start_period: 10s
+  clickhouse:
+    image: clickhouse/clickhouse-server:25.3
+    container_name: loglog-clickhouse
+    environment:
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: "clickhouse"
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
+    ports:
+      - "8123:8123" # HTTP (UI / queries)
+      - "9000:9000" # Native TCP (collector)
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    healthcheck:
+      test: ["CMD", "clickhouse-client", "--password", "clickhouse", "--query", "SELECT 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
 
   otel-collector:
     image: otel/opentelemetry-collector-contrib:0.147.0
@@ -49,9 +49,9 @@ services:
     ports:
       - "4327:4317" # gRPC
       - "4328:4318" # HTTP
-    # depends_on:
-    #   clickhouse:
-    #     condition: service_healthy
+    depends_on:
+      clickhouse:
+        condition: service_healthy
 
 # volumes:
 #   postgres_data1:
