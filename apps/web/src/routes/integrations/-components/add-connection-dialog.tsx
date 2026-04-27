@@ -25,7 +25,6 @@ import {
 	SelectValue,
 } from "@/web/components/ui/select";
 import { Switch } from "@/web/components/ui/switch";
-import { cn } from "@/web/utils/cn";
 import { HonoRpcError, parseHonoResponse } from "@/web/lib/hono-rpc";
 import type { SupportedIntegrationKind } from "@/web/lib/integrations";
 import {
