@@ -14,6 +14,8 @@ import {
 const { models } = await import("@/db/models");
 
 const defaultLogConfig = {
+	database: null,
+	table: null,
 	defaultSelectQuery:
 		"Timestamp, ServiceName as service, SeverityText as level, Body",
 	defaultOrderByQuery: "Timestamp DESC",
@@ -45,6 +47,8 @@ export const buildLogSourcePayload = (
 	overrides?: {
 		name?: string;
 		config?: Partial<{
+			database: string | null;
+			table: string | null;
 			defaultSelectQuery: string;
 			defaultOrderByQuery: string;
 			severityField: string;
@@ -95,6 +99,8 @@ export const createSource = async ({
 			type: "log";
 			connectionId: string;
 			config: {
+				database: string | null;
+				table: string | null;
 				defaultSelectQuery: string;
 				defaultOrderByQuery: string;
 				severityField: string;

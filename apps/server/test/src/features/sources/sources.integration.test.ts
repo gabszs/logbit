@@ -210,6 +210,8 @@ describe("Sources integration", () => {
 		expect(row?.name).toBe("new-name");
 		expect(row?.connectionId).toBe(nextConnectionId);
 		expect(row?.config).toEqual({
+			database: null,
+			table: null,
 			defaultSelectQuery:
 				"Timestamp, ServiceName as service, SeverityText as level, Body",
 			defaultOrderByQuery: "Timestamp DESC",
@@ -224,6 +226,63 @@ describe("Sources integration", () => {
 			luceneImplicitColumnField: "Body",
 			traceSourceId: null,
 			metricSourceId: null,
+		});
+	});
+
+	it("creates log source with explicit database and table config", async () => {
+		const ctx = await createAuthContextWithClickhouseConnection(
+			"sources-create-non-null-config@example.com",
+		);
+		const source = await createSource({
+			headers: ctx.headers,
+			connectionId: ctx.connectionId,
+			name: "logs-explicit-target",
+			config: {
+				database: "observability",
+				table: "logs",
+				severityField: "SeverityText",
+			},
+		});
+
+		const row = await getSourceRow(source.id);
+		expect(row?.config).toMatchObject({
+			database: "observability",
+			table: "logs",
+			severityField: "SeverityText",
+		});
+	});
+
+	it("preserves explicit database and table when patch config is partial", async () => {
+		const ctx = await createAuthContextWithClickhouseConnection(
+			"sources-patch-non-null-config@example.com",
+		);
+		const source = await createSource({
+			headers: ctx.headers,
+			connectionId: ctx.connectionId,
+			config: {
+				database: "observability",
+				table: "logs",
+				severityField: "SeverityText",
+			},
+		});
+
+		const res = await requestWithAuth(`/v1/sources/${source.id}`, {
+			method: "PATCH",
+			headers: ctx.headers,
+			body: {
+				config: {
+					bodyField: "Message",
+				},
+			},
+		});
+
+		expect(res.status).toBe(200);
+		const row = await getSourceRow(source.id);
+		expect(row?.config).toMatchObject({
+			database: "observability",
+			table: "logs",
+			bodyField: "Message",
+			severityField: "SeverityText",
 		});
 	});
 
