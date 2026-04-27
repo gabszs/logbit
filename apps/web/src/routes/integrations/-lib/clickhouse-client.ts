@@ -1,6 +1,4 @@
 import { createClient } from "@clickhouse/client-web";
-import { hc } from "hono/client";
-import type connectionsRouter from "@/server/features/connections/routes";
 import type {
 	ClickhouseConnectionTestInput,
 	ConnectionTestResultType,
@@ -24,14 +22,96 @@ export function createProxyClient(connectionId: string) {
 	});
 }
 
-const connectionsClient = hc<typeof connectionsRouter>(
-	`${import.meta.env.VITE_SERVER_URL}/v1`,
-	{
-		init: {
-			credentials: "include",
+export type ClickhouseJsonResult<T = Record<string, unknown>> = {
+	data: T[];
+	meta?: Array<{
+		name: string;
+		type: string;
+	}>;
+	rows?: number;
+	statistics?: {
+		elapsed: number;
+		rows_read: number;
+		bytes_read: number;
+	};
+	query_id?: string;
+	totals?: T;
+	extremes?: Record<string, unknown>;
+	rows_before_limit_at_least?: number;
+};
+
+export async function executeClickhouseJsonQuery<T = Record<string, unknown>>(
+	client: ReturnType<typeof createProxyClient>,
+	query: string,
+): Promise<ClickhouseJsonResult<T>> {
+	const result = await client.query({
+		query,
+		format: "JSON",
+	});
+
+	try {
+		return await result.json<T>();
+	} finally {
+		await result.close();
+	}
+}
+
+function looksLikeHtmlError(message: string) {
+	const normalized = message.trim().toLowerCase();
+	return (
+		normalized.startsWith("<!doctype html>") ||
+		normalized.startsWith("<html") ||
+		normalized.includes("cloudflare") ||
+		normalized.includes("bad gateway")
+	);
+}
+
+export function formatClickhouseQueryError(error: unknown) {
+	if (!(error instanceof Error)) {
+		return "Failed to run the ClickHouse query";
+	}
+
+	const message = error.message.trim();
+	if (looksLikeHtmlError(message)) {
+		return "The ClickHouse host returned a bad gateway response. Check the source connection host, proxy reachability, and TLS/Cloudflare configuration.";
+	}
+
+	return message || "Failed to run the ClickHouse query";
+}
+
+const serverUrl = import.meta.env.VITE_SERVER_URL as string;
+
+async function requestConnections(path: string, init?: RequestInit) {
+	return await fetch(`${serverUrl}/v1${path}`, {
+		...init,
+		credentials: "include",
+	});
+}
+
+const connectionsClient = {
+	connections: {
+		ping: {
+			$post: async ({ json }: { json: ClickhouseConnectionTestInput }) =>
+				await requestConnections("/connections/ping", {
+					method: "POST",
+					headers: {
+						"content-type": "application/json",
+					},
+					body: JSON.stringify(json),
+				}),
+		},
+		"query-test": {
+			$post: async ({ json }: { json: ClickhouseConnectionTestInput }) =>
+				await requestConnections("/connections/query-test", {
+					method: "POST",
+					headers: {
+						"content-type": "application/json",
+					},
+					body: JSON.stringify(json),
+				}),
 		},
 	},
-);
+};
 
 async function postClickhouseConnectionTest(
 	path: "/ping" | "/query-test",

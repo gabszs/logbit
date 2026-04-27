@@ -1,0 +1,49 @@
+import type { ErrorComponentProps } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
+import { AlertTriangle, ArrowLeft, RotateCcw } from "lucide-react";
+import { Button } from "@/web/components/ui/button";
+import {
+	Card,
+	CardContent,
+	CardDescription,
+	CardHeader,
+	CardTitle,
+} from "@/web/components/ui/card";
+
+export function LogsError({ error, reset }: ErrorComponentProps) {
+	return (
+		<div className="flex flex-1 items-start justify-center px-4 pt-20 pb-10">
+			<Card className="w-full max-w-2xl border-border/60 bg-card/90 shadow-lg backdrop-blur-sm">
+				<CardHeader className="space-y-3">
+					<div className="flex items-center gap-2 text-destructive">
+						<AlertTriangle className="size-5" />
+						<CardTitle className="text-2xl">
+							Logs explorer unavailable
+						</CardTitle>
+					</div>
+					<CardDescription className="text-base leading-7">
+						The log explorer could not load its data. Try again or go back to
+						the integrations area to verify the source configuration.
+					</CardDescription>
+				</CardHeader>
+				<CardContent className="space-y-4">
+					<div className="rounded-2xl border border-border/70 bg-muted/20 p-4 font-mono text-muted-foreground text-sm">
+						{error instanceof Error ? error.message : "Unknown error"}
+					</div>
+					<div className="flex flex-wrap gap-3">
+						<Button onClick={reset}>
+							<RotateCcw className="size-4" />
+							Try again
+						</Button>
+						<Button asChild variant="outline">
+							<Link to="/integrations/sources">
+								<ArrowLeft className="size-4" />
+								Open sources
+							</Link>
+						</Button>
+					</div>
+				</CardContent>
+			</Card>
+		</div>
+	);
+}

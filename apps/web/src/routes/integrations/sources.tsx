@@ -1,5 +1,5 @@
 import { queryOptions, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
 	ChevronLeft,
 	ChevronRight,
@@ -42,6 +42,12 @@ function connectionsQueryOptionsForSelect() {
 }
 
 export const Route = createFileRoute("/integrations/sources")({
+	validateSearch: (search: Record<string, unknown>) => {
+		const create = search.create;
+		return {
+			...(create === "1" || create === true ? { create: "1" } : {}),
+		};
+	},
 	loader: async ({ context }) => {
 		await Promise.all([
 			context.queryClient.ensureQueryData(sourcesQueryOptions(1)),
@@ -55,8 +61,10 @@ export const Route = createFileRoute("/integrations/sources")({
 
 function SourcesPage() {
 	const queryClient = useQueryClient();
+	const navigate = useNavigate();
+	const search = Route.useSearch();
 	const [page, setPage] = useState(1);
-	const [dialogOpen, setDialogOpen] = useState(false);
+	const [dialogOpen, setDialogOpen] = useState(search.create === "1");
 
 	const { data: sources = [], isFetching: isSourcesFetching } = useQuery(
 		sourcesQueryOptions(page),
@@ -73,6 +81,22 @@ function SourcesPage() {
 		queryClient.invalidateQueries({
 			queryKey: ["connections", "source-select"],
 		});
+	};
+
+	const handleDialogOpenChange = (open: boolean) => {
+		setDialogOpen(open);
+
+		if (!open && search.create === "1") {
+			void navigate({
+				to: "/integrations/sources",
+				replace: true,
+				search: (prev) => {
+					const next = { ...prev };
+					delete next.create;
+					return next;
+				},
+			});
+		}
 	};
 
 	return (
@@ -186,7 +210,7 @@ function SourcesPage() {
 
 			<AddSourceDialog
 				open={dialogOpen}
-				onOpenChange={setDialogOpen}
+				onOpenChange={handleDialogOpenChange}
 				onSuccess={handleRefresh}
 				connections={connections}
 			/>

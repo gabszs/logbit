@@ -74,6 +74,24 @@ export const INTEGRATIONS_NAV_ITEMS = [
 	},
 ] as const;
 
+export const APP_NAV_ITEMS = [
+	{
+		to: "/",
+		label: "Home",
+		description: "Workspace overview",
+	},
+	{
+		to: "/logs",
+		label: "Logs",
+		description: "Explore ClickHouse logs",
+	},
+	{
+		to: "/integrations/connections",
+		label: "Integrations",
+		description: "Manage organization connections",
+	},
+] as const;
+
 export type TechStackItem = {
 	name: string;
 	href: string;
