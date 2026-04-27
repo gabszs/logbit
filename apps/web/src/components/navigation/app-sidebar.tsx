@@ -10,6 +10,7 @@ import {
 	PanelLeftClose,
 	PanelLeftOpen,
 	PlugZap,
+	ScrollText,
 	Settings,
 	Sun,
 } from "lucide-react";
@@ -61,7 +62,7 @@ export function AppSidebar() {
 	const isAuthenticated = Boolean(auth.session?.user);
 
 	const navigationItems: Array<{
-		to: "/" | "/integrations/connections";
+		to: "/" | "/logging" | "/integrations/connections";
 		label: string;
 		icon: LucideIcon;
 		isActive: boolean;
@@ -71,6 +72,12 @@ export function AppSidebar() {
 			label: "Home",
 			icon: House,
 			isActive: pathname === "/",
+		},
+		{
+			to: "/logs",
+			label: "Logs",
+			icon: ScrollText,
+			isActive: pathname.startsWith("/logs"),
 		},
 		{
 			to: "/integrations/connections",

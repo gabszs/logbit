@@ -77,7 +77,7 @@ export const connectionTestResultSchema = z.object({
 	data: z.record(z.string(), z.unknown()).nullable(),
 });
 export type ClickhouseConnectionTestInput = z.infer<
-	typeof integrationRegistry.clickhouse.configSchema
+	typeof testClickhouseConfigSchema
 >;
 export type ConnectionTestResultType = z.infer<
 	typeof connectionTestResultSchema

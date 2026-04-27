@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as DocsRouteImport } from './routes/docs'
 import { Route as SettingsRouteRouteImport } from './routes/settings/route'
+import { Route as LogsRouteRouteImport } from './routes/logs/route'
 import { Route as IntegrationsRouteRouteImport } from './routes/integrations/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SettingsProfileRouteImport } from './routes/settings/profile'
@@ -40,6 +41,11 @@ const DocsRoute = DocsRouteImport.update({
 const SettingsRouteRoute = SettingsRouteRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LogsRouteRoute = LogsRouteRouteImport.update({
+  id: '/logs',
+  path: '/logs',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IntegrationsRouteRoute = IntegrationsRouteRouteImport.update({
@@ -118,6 +124,7 @@ const SettingsInvitationsInvitationIdRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/integrations': typeof IntegrationsRouteRouteWithChildren
+  '/logs': typeof LogsRouteRoute
   '/settings': typeof SettingsRouteRouteWithChildren
   '/docs': typeof DocsRoute
   '/privacy': typeof PrivacyRoute
@@ -137,6 +144,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/integrations': typeof IntegrationsRouteRouteWithChildren
+  '/logs': typeof LogsRouteRoute
   '/settings': typeof SettingsRouteRouteWithChildren
   '/docs': typeof DocsRoute
   '/privacy': typeof PrivacyRoute
@@ -157,6 +165,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/integrations': typeof IntegrationsRouteRouteWithChildren
+  '/logs': typeof LogsRouteRoute
   '/settings': typeof SettingsRouteRouteWithChildren
   '/docs': typeof DocsRoute
   '/privacy': typeof PrivacyRoute
@@ -178,6 +187,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/integrations'
+    | '/logs'
     | '/settings'
     | '/docs'
     | '/privacy'
@@ -197,6 +207,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/integrations'
+    | '/logs'
     | '/settings'
     | '/docs'
     | '/privacy'
@@ -216,6 +227,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/integrations'
+    | '/logs'
     | '/settings'
     | '/docs'
     | '/privacy'
@@ -236,6 +248,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   IntegrationsRouteRoute: typeof IntegrationsRouteRouteWithChildren
+  LogsRouteRoute: typeof LogsRouteRoute
   SettingsRouteRoute: typeof SettingsRouteRouteWithChildren
   DocsRoute: typeof DocsRoute
   PrivacyRoute: typeof PrivacyRoute
@@ -265,6 +278,13 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof SettingsRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/logs': {
+      id: '/logs'
+      path: '/logs'
+      fullPath: '/logs'
+      preLoaderRoute: typeof LogsRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/integrations': {
@@ -420,6 +440,7 @@ const SettingsRouteRouteWithChildren = SettingsRouteRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   IntegrationsRouteRoute: IntegrationsRouteRouteWithChildren,
+  LogsRouteRoute: LogsRouteRoute,
   SettingsRouteRoute: SettingsRouteRouteWithChildren,
   DocsRoute: DocsRoute,
   PrivacyRoute: PrivacyRoute,

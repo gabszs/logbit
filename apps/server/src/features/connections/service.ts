@@ -2,6 +2,7 @@ import { createClient } from "@clickhouse/client";
 import { BaseService } from "@/common/services/baseService";
 import { checkForChanges } from "@/common/utils";
 import { normalizeClickhouseConfig } from "@/integrations/clickhouse/config";
+import { ClickhouseConfigSchema } from "@/integrations/clickhouse/schemas";
 import { parseIntegrationConfig } from "@/integrations/registry";
 import { httpErrors } from "@/lib/errors";
 import type { ConnectionRepository } from "./repository";
@@ -24,20 +25,18 @@ export class ConnectionService extends BaseService<ConnectionType> {
 		input: ConnectionUpsertInput,
 		activeOrganizationId: string,
 	) {
-		const normalizedInput =
-			input.type === "clickhouse"
-				? {
-						...input,
-						config: normalizeClickhouseConfig(input.config),
-					}
-				: input;
+		if (input.type === "clickhouse") {
+			return await this.create({
+				...input,
+				config: normalizeClickhouseConfig(input.config),
+				organizationId: activeOrganizationId,
+			});
+		}
 
-		const integrationData = {
-			...normalizedInput,
+		return await this.create({
+			...input,
 			organizationId: activeOrganizationId,
-		};
-
-		return await this.create(integrationData);
+		});
 	}
 
 	async updateConnection(
@@ -62,14 +61,23 @@ export class ConnectionService extends BaseService<ConnectionType> {
 		const updateData = { ...input };
 		if (input.config !== undefined) {
 			try {
-				const parsedConfig = parseIntegrationConfig(
-					existingConnection.type,
-					input.config,
-				);
-				updateData.config =
-					existingConnection.type === "clickhouse"
-						? normalizeClickhouseConfig(parsedConfig)
-						: parsedConfig;
+				switch (existingConnection.type) {
+					case "clickhouse": {
+						updateData.config = normalizeClickhouseConfig(
+							ClickhouseConfigSchema.parse(input.config),
+						);
+						break;
+					}
+					case "resend":
+						updateData.config = parseIntegrationConfig("resend", input.config);
+						break;
+					case "cloudflare":
+						updateData.config = parseIntegrationConfig(
+							"cloudflare",
+							input.config,
+						);
+						break;
+				}
 			} catch {
 				throw httpErrors.badRequest({
 					detail: `Invalid config for connection type "${existingConnection.type}"`,
@@ -109,7 +117,12 @@ export class ConnectionService extends BaseService<ConnectionType> {
 	async testClickhousePing(config: ClickhouseConnectionTestInput) {
 		let client = null;
 		try {
-			client = createClient(normalizeClickhouseConfig(config));
+			client = createClient({
+				host: config.host,
+				username: config.username,
+				...(config.database != null ? { database: config.database } : {}),
+				...(config.password != null ? { password: config.password } : {}),
+			});
 			const result = await client.ping();
 			return {
 				success: result.success,
@@ -136,7 +149,12 @@ export class ConnectionService extends BaseService<ConnectionType> {
 	async testClickhouseQuery(config: ClickhouseConnectionTestInput) {
 		let client = null;
 		try {
-			client = createClient(normalizeClickhouseConfig(config));
+			client = createClient({
+				host: config.host,
+				username: config.username,
+				...(config.database != null ? { database: config.database } : {}),
+				...(config.password != null ? { password: config.password } : {}),
+			});
 			const result = await client.query({
 				query: "SELECT 1 AS ok",
 				format: "JSONEachRow",

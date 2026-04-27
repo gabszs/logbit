@@ -1,6 +1,7 @@
 import { useRouterState } from "@tanstack/react-router";
 
 import { useAuth } from "@/web/components/auth-provider";
+import { LogSourceSwitcher } from "@/web/components/navigation/log-source-switcher";
 import { OrganizationSwitcher } from "@/web/components/navigation/organization-switcher";
 import { useContentSidebar } from "@/web/hooks/use-content-sidebar";
 import { cn } from "@/web/utils/cn";
@@ -9,6 +10,7 @@ function usePageTitle() {
 	const pathname = useRouterState({
 		select: (s) => s.location.pathname,
 	});
+	if (pathname.startsWith("/logs")) return null;
 	if (pathname.startsWith("/settings")) return "Settings";
 	if (pathname.startsWith("/integrations")) return "Integrations";
 	if (pathname.startsWith("/docs")) return "Documentation";
@@ -17,6 +19,9 @@ function usePageTitle() {
 }
 
 export default function Header() {
+	const pathname = useRouterState({
+		select: (s) => s.location.pathname,
+	});
 	const title = usePageTitle();
 	const auth = useAuth();
 	const { isExpanded: isSidebarExpanded } = useContentSidebar();
@@ -30,18 +35,29 @@ export default function Header() {
 			)}
 		>
 			<nav className="flex h-full items-center gap-4 px-4">
-				<div className="flex min-w-0 items-center gap-5">
+				<div className="flex min-w-0 flex-wrap items-center gap-3 sm:gap-5">
 					{title && (
 						<span className="truncate font-medium text-sm">{title}</span>
 					)}
-					{auth.isAuthenticated && title && (
-						<span className="px-1 text-muted-foreground">|</span>
-					)}
-					{auth.isAuthenticated && (
-						<div className="min-w-0 shrink-0">
-							<OrganizationSwitcher />
-						</div>
-					)}
+					{auth.isAuthenticated &&
+						(pathname.startsWith("/logs") ? (
+							<>
+								<div className="min-w-0 shrink-0">
+									<LogSourceSwitcher />
+								</div>
+								<span className="px-1 text-muted-foreground">|</span>
+								<div className="min-w-0 shrink-0">
+									<OrganizationSwitcher />
+								</div>
+							</>
+						) : (
+							<>
+								<span className="px-1 text-muted-foreground">|</span>
+								<div className="min-w-0 shrink-0">
+									<OrganizationSwitcher />
+								</div>
+							</>
+						))}
 				</div>
 				<div className="flex-1" />
 			</nav>

@@ -4,8 +4,8 @@ import { RPCLink } from "@orpc/client/fetch";
 import type { RouterClient } from "@orpc/server";
 import type { TestHelpers } from "better-auth/plugins";
 import { eq } from "drizzle-orm";
-import type { AppRouter } from "@/client/contracts";
 import { overrideSettings, resetSettings } from "@/env";
+import type { AppRouter } from "./orpc-contracts";
 
 const { models } = await import("@/db/models");
 const { truncateAllTables } = await import("./db");
