@@ -1,4 +1,4 @@
-import type { RouteConfig } from "@hono/zod-openapi";
+import type { OpenAPIHono, RouteConfig } from "@hono/zod-openapi";
 import { Scalar } from "@scalar/hono-api-reference";
 import { createMarkdownFromOpenApi } from "@scalar/openapi-to-markdown";
 import type {
@@ -7,7 +7,6 @@ import type {
 	OpenAPIModelSchema,
 } from "better-auth/plugins";
 import { type Settings, settings } from "@/env";
-import type { AppType } from "@/types";
 import { type AuthType, auth } from "./auth";
 
 const HTTP_METHODS = [
@@ -487,8 +486,8 @@ function mapBetterAuthOperationToRouteConfig(
 	};
 }
 
-export function setupOpenApi(
-	app: AppType,
+export function setupOpenApi<T extends OpenAPIHono>(
+	app: T,
 	apiPrefix: string,
 	options?: {
 		settings?: Settings;

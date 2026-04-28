@@ -1,25 +1,23 @@
 import { create, fromBinary, toBinary, toJson } from "@bufbuild/protobuf";
-import { createRoute, OpenAPIHono } from "@hono/zod-openapi";
+import { $, createRoute, OpenAPIHono } from "@hono/zod-openapi";
 
 import { requireContentType } from "@/lib/middleware";
 import { logger } from "@/lib/telemetry";
 import { AgentToServerSchema, ServerToAgentSchema } from "@/proto/gen/opamp_pb";
 
 import { status } from "../../lib/constants";
-import type { AppContext } from "../../types";
+import type { AppContextType } from "../../types";
 import {
 	AgentToServerResponseSchema,
 	serverToAgentResponseSchema,
 } from "./schemas";
 
-const opampRouter = new OpenAPIHono<AppContext>();
-
-opampRouter.use(
-	"/opamp",
-	requireContentType(["application/x-protobuf", "application/protobuf"]),
-);
-
-opampRouter.openapi(
+const opampRouter = $(
+	new OpenAPIHono<AppContextType>().use(
+		"/opamp",
+		requireContentType(["application/x-protobuf", "application/protobuf"]),
+	),
+).openapi(
 	createRoute({
 		tags: ["Opamp"],
 		summary: "OpamP control endpoint",

@@ -1,9 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
+import type { RouterOutputs } from "@/server/index";
 import { useAuth } from "@/web/components/auth-provider";
 import { useAuthenticatedQueryEnabled } from "@/web/hooks/use-authenticated-query-enabled";
 import { orpc } from "@/web/lib/orpc";
-import type { RouterOutputs } from "@/server/index";
 
 export type UserSettings = RouterOutputs["settings"]["get"];
 

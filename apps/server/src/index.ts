@@ -14,7 +14,6 @@ import { db, pgClient } from "./db";
 import { settings } from "./env";
 import authRouter from "./features/auth/routes";
 import connectionsRouter from "./features/connections/routes";
-import opampRouter from "./features/opamp/routes";
 import { profileRouter } from "./features/profile/routes";
 import proxyRouter from "./features/proxy/routes";
 import { settingsRouter } from "./features/settings/routes";
@@ -25,92 +24,85 @@ import { authenticateSession } from "./lib/middleware";
 import { setupOpenApi } from "./lib/openapi";
 import { createContext } from "./lib/orpc";
 import { injectOtelTraceHeader, logger } from "./lib/telemetry";
-import type { AppContext } from "./types";
+import type { AppContextType } from "./types";
 
 // RUN MIGRATIONS
 await migrate(db, { migrationsFolder: "./src/db/migrations" });
 
-// create app
-const app = new OpenAPIHono<AppContext>();
-
-// cors
-app.use(
-	cors({
-		origin: settings.CORS_ORIGIN,
-		allowMethods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
-		allowHeaders: [
-			"Content-Type",
-			"Authorization",
-			"x-client-ip",
-			"cf-connecting-ip",
-			"x-forwarded-for",
-			// ClickHouse HTTP protocol headers (used by @clickhouse/client-web)
-			"X-ClickHouse-User",
-			"X-ClickHouse-Key",
-			"X-ClickHouse-Database",
-			"X-ClickHouse-Format",
-			"X-ClickHouse-Query-Id",
-			"X-ClickHouse-Progress",
-			"X-ClickHouse-Summary",
-		],
-		maxAge: 86400, // 24 hours
-		credentials: true,
-	}),
-);
-
-// on-error handler
-app.onError(
-	problemDetailsHandler({
-		// includeStack: settings.NODE_ENV === "development",
-		mapError: (err) => {
-			const status = err instanceof HTTPException ? err.status : 500;
-			if (status >= 500) console.error(err);
-			return undefined;
-		},
-	}),
-);
-
-// middlewares
-// compress
-app.use(compress());
-
-// open-telemetry
+// Keep the prefix as a literal union so Hono RPC can infer concrete route keys.
+const apiPrefix: "" | "/api" = settings.SERVE_STATIC ? "/api" : "";
 const instrumentationConfig = {
 	serviceName: settings.OTEL_SERVICE_NAME,
 	serviceVersion: settings.OTEL_SERVICE_VERSION,
 	captureRequestHeaders:
 		settings.OTEL_INSTRUMENTATION_HTTP_CAPTURE_HEADERS_SERVER,
 };
-app.use("*", httpInstrumentationMiddleware(instrumentationConfig));
-app.use(injectOtelTraceHeader());
 
-// rate-limiter middleware
-if (settings.RATE_LIMIT_ENABLED) {
-	if (!settings.REDIS_URL) {
-		logger.warn(
-			"[rate-limit] RATE_LIMIT_SLIDING_WINDOW is enabled but REDIS_URL is not set — falling back to MemoryStore.",
-			{ printConsole: true },
-		);
-	}
-	app.use(
-		rateLimiter<AppContext>({
-			standardHeaders: settings.RATE_LIMIT_HEADERS,
-			windowMs: settings.RATE_LIMIT_WINDOW_SECONDS * 1000,
-			limit: settings.RATE_LIMIT_MAX_REQUESTS,
-			keyGenerator: (c) =>
-				c.req.header("x-client-ip") ||
-				c.req.header("cf-connecting-ip") ||
-				c.req.header("x-forwarded-for")?.split(",")[0].trim() ||
-				"",
-			store: settings.REDIS_URL
-				? new BunRedisStore<AppContext>(
-						settings.RATE_LIMIT_PREFIX,
-						settings.RATE_LIMIT_SLIDING_WINDOW,
-					)
-				: new MemoryStore<AppContext>(),
+const rateLimitMiddleware = settings.RATE_LIMIT_ENABLED
+	? [
+			rateLimiter<AppContextType>({
+				standardHeaders: settings.RATE_LIMIT_HEADERS,
+				windowMs: settings.RATE_LIMIT_WINDOW_SECONDS * 1000,
+				limit: settings.RATE_LIMIT_MAX_REQUESTS,
+				keyGenerator: (c) =>
+					c.req.header("x-client-ip") ||
+					c.req.header("cf-connecting-ip") ||
+					c.req.header("x-forwarded-for")?.split(",")[0].trim() ||
+					"",
+				store: settings.REDIS_URL
+					? new BunRedisStore<AppContextType>(
+							settings.RATE_LIMIT_PREFIX,
+							settings.RATE_LIMIT_SLIDING_WINDOW,
+						)
+					: new MemoryStore<AppContextType>(),
+			}),
+		]
+	: [];
+
+const app = new OpenAPIHono<AppContextType>()
+	.use(
+		cors({
+			origin: settings.CORS_ORIGIN,
+			allowMethods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+			allowHeaders: [
+				"Content-Type",
+				"Authorization",
+				"x-client-ip",
+				"cf-connecting-ip",
+				"x-forwarded-for",
+				// ClickHouse HTTP protocol headers (used by @clickhouse/client-web)
+				"X-ClickHouse-User",
+				"X-ClickHouse-Key",
+				"X-ClickHouse-Database",
+				"X-ClickHouse-Format",
+				"X-ClickHouse-Query-Id",
+				"X-ClickHouse-Progress",
+				"X-ClickHouse-Summary",
+			],
+			maxAge: 86400, // 24 hours
+			credentials: true,
+		}),
+	)
+	.use(compress())
+	.use("*", httpInstrumentationMiddleware(instrumentationConfig))
+	.use(injectOtelTraceHeader())
+	.use(`${apiPrefix}/v1/*`, ...rateLimitMiddleware)
+	.use(`${apiPrefix}/v1/*`, authenticateSession)
+	.route(`${apiPrefix}/v1`, authRouter)
+	.route(`${apiPrefix}/v1`, connectionsRouter)
+	.route(`${apiPrefix}/v1`, proxyRouter)
+	.route(`${apiPrefix}/v1`, sourcesRouter)
+	.route(`${apiPrefix}/`, utilityRoutes)
+	.onError(
+		problemDetailsHandler({
+			// includeStack: settings.NODE_ENV === "development",
+			mapError: (err) => {
+				const status = err instanceof HTTPException ? err.status : 500;
+				if (status >= 500) console.error(err);
+				return undefined;
+			},
 		}),
 	);
-}
 
 // ORPC - Profile routes
 type OrpcRouterType = {
@@ -129,8 +121,6 @@ export type AppRouter = typeof OrpcRouter;
 export type RouterOutputs = InferRouterOutputs<AppRouter>;
 export type RouterInputs = InferRouterInputs<AppRouter>;
 
-const apiPrefix = settings.SERVE_STATIC ? "/api" : "";
-
 app.use(`${apiPrefix}/orpc/*`, async (c) => {
 	try {
 		const { matched, response } = await rpcHandler.handle(c.req.raw, {
@@ -148,22 +138,10 @@ app.use(`${apiPrefix}/orpc/*`, async (c) => {
 	}
 });
 
-// AUTH Middleware
-app.use(`${apiPrefix}/v1/*`, authenticateSession);
-
-// V1 Routes
-app.route(`${apiPrefix}/v1`, authRouter);
-app.route(`${apiPrefix}/v1`, connectionsRouter);
-app.route(`${apiPrefix}/v1`, opampRouter);
-app.route(`${apiPrefix}/v1`, sourcesRouter);
-app.route(`${apiPrefix}/v1`, proxyRouter);
-
-// utilities routes
-app.route(`${apiPrefix}/`, utilityRoutes);
-
 // docs
 if (settings.ENABLE_OPEN_API) {
-	setupOpenApi(app, apiPrefix);
+	// @ts-expect-error
+	setupOpenApi<typeof app>(app, apiPrefix);
 }
 
 if (settings.SERVE_STATIC) {

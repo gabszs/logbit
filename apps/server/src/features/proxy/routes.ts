@@ -1,11 +1,12 @@
-import { OpenAPIHono } from "@hono/zod-openapi";
+import { $, OpenAPIHono } from "@hono/zod-openapi";
 import type { Context } from "hono";
+import { createMiddleware } from "hono/factory";
 import { proxy } from "hono/proxy";
 import z from "zod";
 import { db } from "@/db";
 import { ConnectionRepository } from "@/features/connections/repository";
 import { httpErrors } from "@/lib/errors";
-import type { AuthAppContext } from "@/types";
+import type { AuthAppContextType } from "@/types";
 import {
 	applyClickhouseConnectionHeaders,
 	BLOCKED_REQUEST_HEADERS,
@@ -14,14 +15,29 @@ import {
 } from "./headers";
 import { ClickhouseProxyService } from "./service";
 
-type ProxyContext = AuthAppContext & {
-	Variables: AuthAppContext["Variables"] & {
+type ProxyContext = AuthAppContextType & {
+	Variables: AuthAppContextType["Variables"] & {
 		service: ClickhouseProxyService;
 		activeOrganizationId: string;
 	};
 };
 
-const clickhouseProxyRouter = new OpenAPIHono<ProxyContext>();
+const proxyContextMiddleware = createMiddleware<ProxyContext>(
+	async (c, next) => {
+		const connectionRepository = new ConnectionRepository(db);
+		const service = new ClickhouseProxyService(connectionRepository);
+		const session = c.get("session");
+		const activeOrganizationId = session.activeOrganizationId;
+
+		if (activeOrganizationId == null) {
+			throw httpErrors.forbidden({ detail: "No active organization" });
+		}
+
+		c.set("service", service);
+		c.set("activeOrganizationId", activeOrganizationId);
+		await next();
+	},
+);
 
 async function forwardClickhouseRequest(
 	targetUrl: string,
@@ -56,21 +72,6 @@ async function forwardClickhouseRequest(
 		headers: responseHeaders,
 	});
 }
-
-clickhouseProxyRouter.use(async (c, next) => {
-	const connectionRepository = new ConnectionRepository(db);
-	const service = new ClickhouseProxyService(connectionRepository);
-	const session = c.get("session");
-	const activeOrganizationId = session.activeOrganizationId;
-
-	if (activeOrganizationId == null) {
-		throw httpErrors.forbidden({ detail: "No active organization" });
-	}
-
-	c.set("service", service);
-	c.set("activeOrganizationId", activeOrganizationId);
-	await next();
-});
 
 async function handleProxy(c: Context<ProxyContext>): Promise<Response> {
 	const connectionId = c.req.param("connectionId");
@@ -110,7 +111,10 @@ async function handleProxy(c: Context<ProxyContext>): Promise<Response> {
 	});
 }
 
-clickhouseProxyRouter.all("/proxy/connections/:connectionId", handleProxy);
-clickhouseProxyRouter.all("/proxy/connections/:connectionId/*", handleProxy);
+const clickhouseProxyRouter = $(
+	new OpenAPIHono<ProxyContext>().use(proxyContextMiddleware),
+)
+	.all("/proxy/connections/:connectionId", handleProxy)
+	.all("/proxy/connections/:connectionId/*", handleProxy);
 
 export default clickhouseProxyRouter;

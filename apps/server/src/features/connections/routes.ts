@@ -1,4 +1,5 @@
-import { createRoute, OpenAPIHono } from "@hono/zod-openapi";
+import { $, createRoute, OpenAPIHono } from "@hono/zod-openapi";
+import { createMiddleware } from "hono/factory";
 import {
 	cookieAuthorizationSchema,
 	searchOptionsSchema,
@@ -7,7 +8,7 @@ import {
 import { db } from "@/db";
 import { ContentTypes, status } from "@/lib/constants";
 import { httpErrors } from "@/lib/errors";
-import type { AuthAppContext } from "@/types";
+import type { AuthAppContextType } from "@/types";
 import { ConnectionRepository } from "./repository";
 import {
 	connectionListSuccessSchema,
@@ -20,306 +21,303 @@ import {
 } from "./schemas";
 import { ConnectionService } from "./service";
 
-const connectionsRouter = new OpenAPIHono<
-	AuthAppContext & {
-		Variables: AuthAppContext["Variables"] & {
-			service: ConnectionService;
-			activeOrganizationId: string;
-		};
-	}
->();
+type ConnectionContext = AuthAppContextType & {
+	Variables: AuthAppContextType["Variables"] & {
+		service: ConnectionService;
+		activeOrganizationId: string;
+	};
+};
 
-connectionsRouter.use(async (c, next) => {
+const connectionContextMiddleware = createMiddleware(async (c, next) => {
 	const connectionRepository = new ConnectionRepository(db);
 	const connectionService = new ConnectionService(connectionRepository);
 	const session = c.get("session");
 	const activeOrganizationId = session.activeOrganizationId;
+
 	if (activeOrganizationId == null) {
 		throw httpErrors.forbidden({
 			detail: "No active organization",
 		});
 	}
+
 	c.set("service", connectionService);
 	c.set("activeOrganizationId", activeOrganizationId);
 	await next();
 });
 
-connectionsRouter.openapi(
-	createRoute({
-		tags: ["Connections"],
-		summary: "Ping a ClickHouse connection using raw credentials",
-		method: "post",
-		path: "/connections/ping",
-		request: {
-			headers: cookieAuthorizationSchema,
-			body: {
-				content: {
-					[ContentTypes.JSON]: {
-						schema: testClickhouseConfigSchema,
+const connectionsRouter = $(
+	new OpenAPIHono<ConnectionContext>().use(connectionContextMiddleware),
+)
+	.openapi(
+		createRoute({
+			tags: ["Connections"],
+			summary: "Ping a ClickHouse connection using raw credentials",
+			method: "post",
+			path: "/connections/ping",
+			request: {
+				headers: cookieAuthorizationSchema,
+				body: {
+					content: {
+						[ContentTypes.JSON]: {
+							schema: testClickhouseConfigSchema,
+						},
 					},
 				},
 			},
+			responses: {
+				[status.OK.code]: status.OK.response(connectionTestResultSchema),
+				[status.UNAUTHORIZED.code]: status.UNAUTHORIZED.response(),
+				[status.FORBIDDEN.code]: status.FORBIDDEN.response({
+					detail: "No active organization",
+				}),
+				[status.BAD_REQUEST.code]: status.BAD_REQUEST.response(),
+				[status.TOO_MANY_REQUESTS.code]: status.TOO_MANY_REQUESTS.response(),
+				[status.INTERNAL_SERVER_ERROR.code]:
+					status.INTERNAL_SERVER_ERROR.response(),
+			},
+		}),
+		async (c) => {
+			const config = c.req.valid("json");
+			return c.json(await c.get("service").testClickhousePing(config));
 		},
-		responses: {
-			[status.OK.code]: status.OK.response(connectionTestResultSchema),
-			[status.UNAUTHORIZED.code]: status.UNAUTHORIZED.response(),
-			[status.FORBIDDEN.code]: status.FORBIDDEN.response({
-				detail: "No active organization",
-			}),
-			[status.BAD_REQUEST.code]: status.BAD_REQUEST.response(),
-			[status.TOO_MANY_REQUESTS.code]: status.TOO_MANY_REQUESTS.response(),
-			[status.INTERNAL_SERVER_ERROR.code]:
-				status.INTERNAL_SERVER_ERROR.response(),
-		},
-	}),
-	async (c) => {
-		const config = c.req.valid("json");
-		return c.json(await c.get("service").testClickhousePing(config));
-	},
-);
-
-connectionsRouter.openapi(
-	createRoute({
-		tags: ["Connections"],
-		summary: "Execute a simple query test on a ClickHouse connection",
-		method: "post",
-		path: "/connections/query-test",
-		request: {
-			headers: cookieAuthorizationSchema,
-			body: {
-				content: {
-					[ContentTypes.JSON]: {
-						schema: testClickhouseConfigSchema,
+	)
+	.openapi(
+		createRoute({
+			tags: ["Connections"],
+			summary: "Execute a simple query test on a ClickHouse connection",
+			method: "post",
+			path: "/connections/query-test",
+			request: {
+				headers: cookieAuthorizationSchema,
+				body: {
+					content: {
+						[ContentTypes.JSON]: {
+							schema: testClickhouseConfigSchema,
+						},
 					},
 				},
 			},
+			responses: {
+				[status.OK.code]: status.OK.response(connectionTestResultSchema),
+				[status.UNAUTHORIZED.code]: status.UNAUTHORIZED.response(),
+				[status.FORBIDDEN.code]: status.FORBIDDEN.response({
+					detail: "No active organization",
+				}),
+				[status.BAD_REQUEST.code]: status.BAD_REQUEST.response(),
+				[status.TOO_MANY_REQUESTS.code]: status.TOO_MANY_REQUESTS.response(),
+				[status.INTERNAL_SERVER_ERROR.code]:
+					status.INTERNAL_SERVER_ERROR.response(),
+			},
+		}),
+		async (c) => {
+			const config = c.req.valid("json");
+			return c.json(await c.get("service").testClickhouseQuery(config));
 		},
-		responses: {
-			[status.OK.code]: status.OK.response(connectionTestResultSchema),
-			[status.UNAUTHORIZED.code]: status.UNAUTHORIZED.response(),
-			[status.FORBIDDEN.code]: status.FORBIDDEN.response({
-				detail: "No active organization",
-			}),
-			[status.BAD_REQUEST.code]: status.BAD_REQUEST.response(),
-			[status.TOO_MANY_REQUESTS.code]: status.TOO_MANY_REQUESTS.response(),
-			[status.INTERNAL_SERVER_ERROR.code]:
-				status.INTERNAL_SERVER_ERROR.response(),
-		},
-	}),
-	async (c) => {
-		const config = c.req.valid("json");
-		return c.json(await c.get("service").testClickhouseQuery(config));
-	},
-);
-
-connectionsRouter.openapi(
-	createRoute({
-		tags: ["Connections"],
-		summary: "Get the connection by ID",
-		method: "get",
-		path: "/connections/{id}",
-		request: {
-			params: uuidV7IdParamSchema,
-			headers: cookieAuthorizationSchema,
-		},
-		responses: {
-			[status.OK.code]: status.OK.response(connectionSchema),
-			[status.NOT_FOUND.code]: status.NOT_FOUND.response(),
-			[status.UNAUTHORIZED.code]: status.UNAUTHORIZED.response(),
-			[status.FORBIDDEN.code]: status.FORBIDDEN.response({
-				detail: "No active organization",
-			}),
-			[status.BAD_REQUEST.code]: status.BAD_REQUEST.response(),
-			[status.TOO_MANY_REQUESTS.code]: status.TOO_MANY_REQUESTS.response(),
-			[status.INTERNAL_SERVER_ERROR.code]:
-				status.INTERNAL_SERVER_ERROR.response(),
-		},
-	}),
-	async (c) => {
-		const { id } = c.req.param();
-		const service = c.get("service");
-		const activeOrganizationId = c.get("activeOrganizationId");
-		const connection = await service.getById(id, {
-			organizationId: activeOrganizationId,
-		});
-
-		if (!connection)
-			throw httpErrors.notFound({
-				detail: "The requested connection was not found",
+	)
+	.openapi(
+		createRoute({
+			tags: ["Connections"],
+			summary: "Get the connection by ID",
+			method: "get",
+			path: "/connections/{id}",
+			request: {
+				params: uuidV7IdParamSchema,
+				headers: cookieAuthorizationSchema,
+			},
+			responses: {
+				[status.OK.code]: status.OK.response(connectionSchema),
+				[status.NOT_FOUND.code]: status.NOT_FOUND.response(),
+				[status.UNAUTHORIZED.code]: status.UNAUTHORIZED.response(),
+				[status.FORBIDDEN.code]: status.FORBIDDEN.response({
+					detail: "No active organization",
+				}),
+				[status.BAD_REQUEST.code]: status.BAD_REQUEST.response(),
+				[status.TOO_MANY_REQUESTS.code]: status.TOO_MANY_REQUESTS.response(),
+				[status.INTERNAL_SERVER_ERROR.code]:
+					status.INTERNAL_SERVER_ERROR.response(),
+			},
+		}),
+		async (c) => {
+			const { id } = c.req.param();
+			const service = c.get("service");
+			const activeOrganizationId = c.get("activeOrganizationId");
+			const connection = await service.getById(id, {
+				organizationId: activeOrganizationId,
 			});
 
-		return c.json(connection);
-	},
-);
+			if (!connection)
+				throw httpErrors.notFound({
+					detail: "The requested connection was not found",
+				});
 
-connectionsRouter.openapi(
-	createRoute({
-		tags: ["Connections"],
-		summary: "Get all connection for the active organization",
-		method: "get",
-		path: "/connections",
-		request: {
-			query: searchOptionsSchema,
-			headers: cookieAuthorizationSchema,
+			return c.json(connection);
 		},
-		responses: {
-			[status.OK.code]: status.OK.response(connectionListSuccessSchema),
-			[status.UNAUTHORIZED.code]: status.UNAUTHORIZED.response(),
-			[status.FORBIDDEN.code]: status.FORBIDDEN.response({
-				detail: "No active organization",
-			}),
-			[status.BAD_REQUEST.code]: status.BAD_REQUEST.response(),
-			[status.TOO_MANY_REQUESTS.code]: status.TOO_MANY_REQUESTS.response(),
-			[status.INTERNAL_SERVER_ERROR.code]:
-				status.INTERNAL_SERVER_ERROR.response(),
+	)
+	.openapi(
+		createRoute({
+			tags: ["Connections"],
+			summary: "Get all connection for the active organization",
+			method: "get",
+			path: "/connections",
+			request: {
+				query: searchOptionsSchema,
+				headers: cookieAuthorizationSchema,
+			},
+			responses: {
+				[status.OK.code]: status.OK.response(connectionListSuccessSchema),
+				[status.UNAUTHORIZED.code]: status.UNAUTHORIZED.response(),
+				[status.FORBIDDEN.code]: status.FORBIDDEN.response({
+					detail: "No active organization",
+				}),
+				[status.BAD_REQUEST.code]: status.BAD_REQUEST.response(),
+				[status.TOO_MANY_REQUESTS.code]: status.TOO_MANY_REQUESTS.response(),
+				[status.INTERNAL_SERVER_ERROR.code]:
+					status.INTERNAL_SERVER_ERROR.response(),
+			},
+		}),
+		async (c) => {
+			const query = c.req.valid("query");
+			const service = c.get("service");
+			const activeOrganizationId = c.get("activeOrganizationId");
+			const connections = await service.getAll(query, {
+				organizationId: activeOrganizationId,
+			});
+
+			return c.json({
+				message: "Connection successfully retrieved",
+				data: connections,
+				metadata: query,
+			});
 		},
-	}),
-	async (c) => {
-		const query = c.req.valid("query");
-		const service = c.get("service");
-		const activeOrganizationId = c.get("activeOrganizationId");
-		const connections = await service.getAll(query, {
-			organizationId: activeOrganizationId,
-		});
-
-		return c.json({
-			message: "Connection successfully retrieved",
-			data: connections,
-			metadata: query,
-		});
-	},
-);
-
-connectionsRouter.openapi(
-	createRoute({
-		tags: ["Connections"],
-		summary: "Create a new integration",
-		method: "post",
-		path: "/connections",
-		request: {
-			headers: cookieAuthorizationSchema,
-			body: {
-				content: {
-					[ContentTypes.JSON]: {
-						schema: connectionUpsertSchema,
+	)
+	.openapi(
+		createRoute({
+			tags: ["Connections"],
+			summary: "Create a new integration",
+			method: "post",
+			path: "/connections",
+			request: {
+				headers: cookieAuthorizationSchema,
+				body: {
+					content: {
+						[ContentTypes.JSON]: {
+							schema: connectionUpsertSchema,
+						},
 					},
 				},
 			},
-		},
-		responses: {
-			[status.CREATED.code]: status.CREATED.response(connectionSuccessSchema),
-			[status.BAD_REQUEST.code]: status.BAD_REQUEST.response(),
-			[status.UNAUTHORIZED.code]: status.UNAUTHORIZED.response(),
-			[status.FORBIDDEN.code]: status.FORBIDDEN.response({
-				detail: "No active organization",
-			}),
-			[status.TOO_MANY_REQUESTS.code]: status.TOO_MANY_REQUESTS.response(),
-			[status.INTERNAL_SERVER_ERROR.code]:
-				status.INTERNAL_SERVER_ERROR.response(),
-		},
-	}),
-	async (c) => {
-		const body = c.req.valid("json");
-		const service = c.get("service");
-		const activeOrganizationId = c.get("activeOrganizationId");
-		const connection = await service.createConnection(
-			body,
-			activeOrganizationId,
-		);
+			responses: {
+				[status.CREATED.code]: status.CREATED.response(connectionSuccessSchema),
+				[status.BAD_REQUEST.code]: status.BAD_REQUEST.response(),
+				[status.UNAUTHORIZED.code]: status.UNAUTHORIZED.response(),
+				[status.FORBIDDEN.code]: status.FORBIDDEN.response({
+					detail: "No active organization",
+				}),
+				[status.TOO_MANY_REQUESTS.code]: status.TOO_MANY_REQUESTS.response(),
+				[status.INTERNAL_SERVER_ERROR.code]:
+					status.INTERNAL_SERVER_ERROR.response(),
+			},
+		}),
+		async (c) => {
+			const body = c.req.valid("json");
+			const service = c.get("service");
+			const activeOrganizationId = c.get("activeOrganizationId");
+			const connection = await service.createConnection(
+				body,
+				activeOrganizationId,
+			);
 
-		return c.json(
-			{
-				message: "Connection successfully created",
+			return c.json(
+				{
+					message: "Connection successfully created",
+					data: connection,
+					metadata: null,
+				},
+				status.CREATED.code,
+				{
+					location: `${c.req.url}/${connection.id}`,
+				},
+			);
+		},
+	)
+	.openapi(
+		createRoute({
+			tags: ["Connections"],
+			summary: "Update an integration",
+			method: "patch",
+			path: "/connections/{id}",
+			request: {
+				params: uuidV7IdParamSchema,
+				headers: cookieAuthorizationSchema,
+				body: {
+					content: {
+						[ContentTypes.JSON]: {
+							schema: connectionUpdateSchema,
+						},
+					},
+				},
+			},
+			responses: {
+				[status.OK.code]: status.OK.response(connectionSuccessSchema),
+				[status.NOT_FOUND.code]: status.NOT_FOUND.response(),
+				[status.BAD_REQUEST.code]: status.BAD_REQUEST.response(),
+				[status.UNAUTHORIZED.code]: status.UNAUTHORIZED.response(),
+				[status.FORBIDDEN.code]: status.FORBIDDEN.response({
+					detail: "No active organization",
+				}),
+				[status.TOO_MANY_REQUESTS.code]: status.TOO_MANY_REQUESTS.response(),
+				[status.INTERNAL_SERVER_ERROR.code]:
+					status.INTERNAL_SERVER_ERROR.response(),
+			},
+		}),
+		async (c) => {
+			const { id } = c.req.param();
+			const body = c.req.valid("json");
+			const service = c.get("service");
+			const activeOrganizationId = c.get("activeOrganizationId");
+			const connection = await service.updateConnection(
+				id,
+				body,
+				activeOrganizationId,
+			);
+
+			return c.json({
+				message: "Connection successfully updated",
 				data: connection,
 				metadata: null,
+			});
+		},
+	)
+	.openapi(
+		createRoute({
+			tags: ["Connections"],
+			summary: "Delete an integration",
+			method: "delete",
+			path: "/connections/{id}",
+			request: {
+				params: uuidV7IdParamSchema,
+				headers: cookieAuthorizationSchema,
 			},
-			status.CREATED.code,
-			{
-				location: `${c.req.url}/${connection.id}`,
+			responses: {
+				[status.NO_CONTENT.code]: status.NO_CONTENT.response(),
+				[status.NOT_FOUND.code]: status.NOT_FOUND.response(),
+				[status.UNAUTHORIZED.code]: status.UNAUTHORIZED.response(),
+				[status.FORBIDDEN.code]: status.FORBIDDEN.response({
+					detail: "No active organization",
+				}),
+				[status.TOO_MANY_REQUESTS.code]: status.TOO_MANY_REQUESTS.response(),
+				[status.INTERNAL_SERVER_ERROR.code]:
+					status.INTERNAL_SERVER_ERROR.response(),
 			},
-		);
-	},
-);
+		}),
+		async (c) => {
+			const { id } = c.req.param();
+			const service = c.get("service");
+			const activeOrganizationId = c.get("activeOrganizationId");
+			await service.deleteConnection(id, activeOrganizationId);
 
-connectionsRouter.openapi(
-	createRoute({
-		tags: ["Connections"],
-		summary: "Update an integration",
-		method: "patch",
-		path: "/connections/{id}",
-		request: {
-			params: uuidV7IdParamSchema,
-			headers: cookieAuthorizationSchema,
-			body: {
-				content: {
-					[ContentTypes.JSON]: {
-						schema: connectionUpdateSchema,
-					},
-				},
-			},
+			return c.body(null, 204);
 		},
-		responses: {
-			[status.OK.code]: status.OK.response(connectionSuccessSchema),
-			[status.NOT_FOUND.code]: status.NOT_FOUND.response(),
-			[status.BAD_REQUEST.code]: status.BAD_REQUEST.response(),
-			[status.UNAUTHORIZED.code]: status.UNAUTHORIZED.response(),
-			[status.FORBIDDEN.code]: status.FORBIDDEN.response({
-				detail: "No active organization",
-			}),
-			[status.TOO_MANY_REQUESTS.code]: status.TOO_MANY_REQUESTS.response(),
-			[status.INTERNAL_SERVER_ERROR.code]:
-				status.INTERNAL_SERVER_ERROR.response(),
-		},
-	}),
-	async (c) => {
-		const { id } = c.req.param();
-		const body = c.req.valid("json");
-		const service = c.get("service");
-		const activeOrganizationId = c.get("activeOrganizationId");
-		const connection = await service.updateConnection(
-			id,
-			body,
-			activeOrganizationId,
-		);
-
-		return c.json({
-			message: "Connection successfully updated",
-			data: connection,
-			metadata: null,
-		});
-	},
-);
-
-connectionsRouter.openapi(
-	createRoute({
-		tags: ["Connections"],
-		summary: "Delete an integration",
-		method: "delete",
-		path: "/connections/{id}",
-		request: {
-			params: uuidV7IdParamSchema,
-			headers: cookieAuthorizationSchema,
-		},
-		responses: {
-			[status.NO_CONTENT.code]: status.NO_CONTENT.response(),
-			[status.NOT_FOUND.code]: status.NOT_FOUND.response(),
-			[status.UNAUTHORIZED.code]: status.UNAUTHORIZED.response(),
-			[status.FORBIDDEN.code]: status.FORBIDDEN.response({
-				detail: "No active organization",
-			}),
-			[status.TOO_MANY_REQUESTS.code]: status.TOO_MANY_REQUESTS.response(),
-			[status.INTERNAL_SERVER_ERROR.code]:
-				status.INTERNAL_SERVER_ERROR.response(),
-		},
-	}),
-	async (c) => {
-		const { id } = c.req.param();
-		const service = c.get("service");
-		const activeOrganizationId = c.get("activeOrganizationId");
-		await service.deleteConnection(id, activeOrganizationId);
-
-		return c.body(null, 204);
-	},
-);
+	);
 
 export default connectionsRouter;

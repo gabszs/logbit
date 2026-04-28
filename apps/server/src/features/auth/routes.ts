@@ -1,13 +1,11 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { settings } from "@/env";
 import { auth } from "@/lib/auth";
-import type { AppContext } from "@/types";
+import type { AppContextType } from "@/types";
 
-const authRouter = new OpenAPIHono<AppContext>({
+const authRouter = new OpenAPIHono<AppContextType>({
 	strict: false,
-});
-
-authRouter.on(["POST", "GET"], "/auth/*", async (c) => {
+}).on(["POST", "GET"], "/auth/*", async (c) => {
 	if (c.req.path === `${settings.AUTH_BASE_PATH}/open-api/generate-schema`) {
 		return c.notFound();
 	}

@@ -1,5 +1,9 @@
-import { hc } from "hono/client";
-import type { AppType } from "@/server/client/contracts";
+import type { ConnectionListSuccessType } from "@/server/features/connections/schemas";
+import type {
+	SourcesListSuccessType,
+	SourcesUpsertInput,
+	SourceUpdateInput,
+} from "@/server/features/sources/schemas";
 
 const serverUrl = import.meta.env.VITE_SERVER_URL;
 
@@ -7,11 +11,56 @@ if (!serverUrl) {
 	throw new Error("VITE_SERVER_URL is not defined");
 }
 
-export const honoClient = hc<AppType>(serverUrl, {
-	init: {
+type SearchQuery = {
+	page?: string;
+	page_size?: string;
+	ordering?: string;
+};
+
+async function request(path: string, init?: RequestInit) {
+	return await fetch(`${serverUrl}${path}`, {
+		...init,
 		credentials: "include",
-	},
-});
+	});
+}
+
+function withJsonBody(body: unknown): RequestInit {
+	return {
+		method: "POST",
+		headers: {
+			"content-type": "application/json",
+		},
+		body: JSON.stringify(body),
+	};
+}
+
+function withPatchJsonBody(body: unknown): RequestInit {
+	return {
+		method: "PATCH",
+		headers: {
+			"content-type": "application/json",
+		},
+		body: JSON.stringify(body),
+	};
+}
+
+function withDelete(): RequestInit {
+	return {
+		method: "DELETE",
+	};
+}
+
+function buildQueryString(query?: SearchQuery) {
+	if (!query) return "";
+
+	const params = new URLSearchParams();
+	for (const [key, value] of Object.entries(query)) {
+		if (value != null && value !== "") {
+			params.set(key, value);
+		}
+	}
+	return params.toString() ? `?${params.toString()}` : "";
+}
 
 export class HonoRpcError extends Error {
 	status: number;
@@ -53,18 +102,68 @@ export async function parseHonoResponse<T>(response: Response): Promise<T> {
 	return data as T;
 }
 
+type HonoClient = {
+	setup: {
+		$get: () => Promise<Response>;
+	};
+	v1: {
+		connections: {
+			$get: (args: { query?: SearchQuery }) => Promise<Response>;
+			":id": {
+				$delete: (args: { param: { id: string } }) => Promise<Response>;
+			};
+		};
+		sources: {
+			$get: (args: { query?: SearchQuery }) => Promise<Response>;
+			$post: (args: { json: SourcesUpsertInput }) => Promise<Response>;
+			":id": {
+				$patch: (args: {
+					param: { id: string };
+					json: SourceUpdateInput;
+				}) => Promise<Response>;
+				$delete: (args: { param: { id: string } }) => Promise<Response>;
+			};
+		};
+	};
+};
+
+export const honoClient: HonoClient = {
+	setup: {
+		$get: async () => await request("/setup"),
+	},
+	v1: {
+		connections: {
+			$get: async ({ query }) =>
+				await request(`/v1/connections${buildQueryString(query)}`),
+			":id": {
+				$delete: async ({ param }) =>
+					await request(`/v1/connections/${param.id}`, withDelete()),
+			},
+		},
+		sources: {
+			$get: async ({ query }) =>
+				await request(`/v1/sources${buildQueryString(query)}`),
+			$post: async ({ json }) =>
+				await request("/v1/sources", withJsonBody(json)),
+			":id": {
+				$patch: async ({ param, json }) =>
+					await request(`/v1/sources/${param.id}`, withPatchJsonBody(json)),
+				$delete: async ({ param }) =>
+					await request(`/v1/sources/${param.id}`, withDelete()),
+			},
+		},
+	},
+};
+
 export interface SetupStatusResponse {
 	hasUsers: boolean;
 }
 
-type SetupClient = {
-	setup: {
-		$get: () => Promise<Response>;
-	};
-};
-
 export async function getSetupStatus() {
 	return await parseHonoResponse<SetupStatusResponse>(
-		await (honoClient as SetupClient).setup.$get(),
+		await honoClient.setup.$get(),
 	);
 }
+
+export type ConnectionsListResponse = ConnectionListSuccessType;
+export type SourcesListResponse = SourcesListSuccessType;

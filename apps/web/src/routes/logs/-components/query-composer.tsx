@@ -45,24 +45,24 @@ export function QueryComposer({
 		<div className="space-y-1">
 			<div className="grid gap-1.5 xl:grid-cols-[minmax(0,1.75fr)_minmax(0,0.85fr)]">
 				<div className="flex h-8 min-w-0 overflow-hidden rounded-xl border border-border/70 bg-background/70">
-					<div className="flex h-8 items-center border-border/70 border-r bg-background/70 px-3 font-mono text-sm leading-none text-foreground">
+					<div className="flex h-8 items-center border-border/70 border-r bg-background/70 px-3 font-mono text-foreground text-sm leading-none">
 						SELECT
 					</div>
 					<Input
 						value={selectQuery}
 						onChange={(event) => onSelectQueryChange(event.target.value)}
-						className="h-8 flex-1 rounded-none border-0 bg-transparent font-mono text-sm leading-none shadow-none !py-0 focus-visible:ring-0"
+						className="!py-0 h-8 flex-1 rounded-none border-0 bg-transparent font-mono text-sm leading-none shadow-none focus-visible:ring-0"
 						placeholder="Timestamp, ServiceName as service, SeverityText as level, Body"
 					/>
 				</div>
 				<div className="flex h-8 min-w-0 overflow-hidden rounded-xl border border-border/70 bg-background/70">
-					<div className="flex h-8 items-center border-border/70 border-r bg-background/70 px-3 font-mono text-sm leading-none text-foreground">
+					<div className="flex h-8 items-center border-border/70 border-r bg-background/70 px-3 font-mono text-foreground text-sm leading-none">
 						ORDER BY
 					</div>
 					<Input
 						value={orderByQuery}
 						onChange={(event) => onOrderByQueryChange(event.target.value)}
-						className="h-8 flex-1 rounded-none border-0 bg-transparent font-mono text-sm leading-none shadow-none !py-0 focus-visible:ring-0"
+						className="!py-0 h-8 flex-1 rounded-none border-0 bg-transparent font-mono text-sm leading-none shadow-none focus-visible:ring-0"
 						placeholder="(TimestampTime, Timestamp) DESC"
 					/>
 				</div>
@@ -77,7 +77,7 @@ export function QueryComposer({
 						>
 							<SelectTrigger
 								size="sm"
-								className="w-28 rounded-none border-0 bg-background/70 font-mono text-sm leading-none text-foreground shadow-none"
+								className="w-28 rounded-none border-0 bg-background/70 font-mono text-foreground text-sm leading-none shadow-none"
 							>
 								<SelectValue />
 							</SelectTrigger>
@@ -92,7 +92,7 @@ export function QueryComposer({
 					<Input
 						value={whereQuery}
 						onChange={(event) => onWhereQueryChange(event.target.value)}
-						className="h-8 flex-1 rounded-none border-0 bg-transparent font-mono text-sm leading-none shadow-none !py-0 focus-visible:ring-0"
+						className="!py-0 h-8 flex-1 rounded-none border-0 bg-transparent font-mono text-sm leading-none shadow-none focus-visible:ring-0"
 						placeholder="WHERE SQL clause (ex. column = 'foo')"
 					/>
 				</div>

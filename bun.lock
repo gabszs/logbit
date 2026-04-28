@@ -193,6 +193,7 @@
   },
   "overrides": {
     "@better-auth/core": "1.6.5",
+    "hono": "^4.12.15",
   },
   "catalog": {
     "@types/node": "^25.5.0",
@@ -200,7 +201,7 @@
     "better-auth": "1.6.5",
     "bun": "^1.3.10",
     "dotenv": "^17.3.1",
-    "hono": "^4.12.11",
+    "hono": "^4.12.15",
     "tsdown": "^0.20.3",
     "typescript": "^5.9.3",
     "vitest": "^4.1.0",
@@ -1823,7 +1824,7 @@
 
     "highlightjs-curl": ["highlightjs-curl@1.3.0", "", {}, "sha512-50UEfZq1KR0Lfk2Tr6xb/MUIZH3h10oNC0OTy9g7WELcs5Fgy/mKN1vEhuKTkKbdo8vr5F9GXstu2eLhApfQ3A=="],
 
-    "hono": ["hono@4.12.14", "", {}, "sha512-am5zfg3yu6sqn5yjKBNqhnTX7Cv+m00ox+7jbaKkrLMRJ4rAdldd1xPd/JzbBWspqaQv6RSTrgFN95EsfhC+7w=="],
+    "hono": ["hono@4.12.15", "", {}, "sha512-qM0jDhFEaCBb4TxoW7f53Qrpv9RBiayUHo0S52JudprkhvpjIrGoU1mnnr29Fvd1U335ZFPZQY1wlkqgfGXyLg=="],
 
     "hono-openapi": ["hono-openapi@1.3.0", "", { "peerDependencies": { "@hono/standard-validator": "^0.2.0", "@standard-community/standard-json": "^0.3.5", "@standard-community/standard-openapi": "^0.2.9", "@types/json-schema": "^7.0.15", "hono": "^4.8.3", "openapi-types": "^12.1.3" }, "optionalPeers": ["@hono/standard-validator", "hono"] }, "sha512-xDvCWpWEIv0weEmnl3EjRQzqbHIO8LnfzMuYOCmbuyE5aes6aXxLg4vM3ybnoZD5TiTUkA6PuRQPJs3R7WRBig=="],
 

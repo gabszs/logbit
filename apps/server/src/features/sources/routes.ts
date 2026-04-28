@@ -1,4 +1,5 @@
-import { createRoute, OpenAPIHono } from "@hono/zod-openapi";
+import { $, createRoute, OpenAPIHono } from "@hono/zod-openapi";
+import { createMiddleware } from "hono/factory";
 import {
 	cookieAuthorizationSchema,
 	searchOptionsSchema,
@@ -8,7 +9,7 @@ import { db } from "@/db";
 import { ConnectionRepository } from "@/features/connections/repository";
 import { ContentTypes, status } from "@/lib/constants";
 import { httpErrors } from "@/lib/errors";
-import type { AuthAppContext } from "@/types";
+import type { AuthAppContextType } from "@/types";
 import { SourceRepository } from "./repository";
 import {
 	sourcesListSuccessSchema,
@@ -19,235 +20,234 @@ import {
 } from "./schemas";
 import { SourceService } from "./service";
 
-const sourcesRouter = new OpenAPIHono<
-	AuthAppContext & {
-		Variables: AuthAppContext["Variables"] & {
-			service: SourceService;
-			activeOrganizationId: string;
-		};
-	}
->();
+type SourceContext = AuthAppContextType & {
+	Variables: AuthAppContextType["Variables"] & {
+		service: SourceService;
+		activeOrganizationId: string;
+	};
+};
 
-sourcesRouter.use(async (c, next) => {
-	const sourceRepository = new SourceRepository(db);
-	const connectionRepository = new ConnectionRepository(db);
-	const sourceService = new SourceService(
-		sourceRepository,
-		connectionRepository,
-	);
-	const session = c.get("session");
-	const activeOrganizationId = session.activeOrganizationId;
-	if (activeOrganizationId == null) {
-		throw httpErrors.forbidden({
-			detail: "No active organization",
-		});
-	}
-	c.set("service", sourceService);
-	c.set("activeOrganizationId", activeOrganizationId);
-	await next();
-});
-
-sourcesRouter.openapi(
-	createRoute({
-		tags: ["Sources"],
-		summary: "Get the source by ID",
-		method: "get",
-		path: "/sources/{id}",
-		request: {
-			params: uuidV7IdParamSchema,
-			headers: cookieAuthorizationSchema,
-		},
-		responses: {
-			[status.OK.code]: status.OK.response(sourcesSchema),
-			[status.NOT_FOUND.code]: status.NOT_FOUND.response(),
-			[status.UNAUTHORIZED.code]: status.UNAUTHORIZED.response(),
-			[status.FORBIDDEN.code]: status.FORBIDDEN.response({
+const sourcesContextMiddleware = createMiddleware<SourceContext>(
+	async (c, next) => {
+		const sourceRepository = new SourceRepository(db);
+		const connectionRepository = new ConnectionRepository(db);
+		const sourceService = new SourceService(
+			sourceRepository,
+			connectionRepository,
+		);
+		const session = c.get("session");
+		const activeOrganizationId = session.activeOrganizationId;
+		if (activeOrganizationId == null) {
+			throw httpErrors.forbidden({
 				detail: "No active organization",
-			}),
-			[status.BAD_REQUEST.code]: status.BAD_REQUEST.response(),
-			[status.TOO_MANY_REQUESTS.code]: status.TOO_MANY_REQUESTS.response(),
-			[status.INTERNAL_SERVER_ERROR.code]:
-				status.INTERNAL_SERVER_ERROR.response(),
-		},
-	}),
-	async (c) => {
-		const { id } = c.req.param();
-		const service = c.get("service");
-		const activeOrganizationId = c.get("activeOrganizationId");
-		const source = await service.getById(id, {
-			organizationId: activeOrganizationId,
-		});
+			});
+		}
+		c.set("service", sourceService);
+		c.set("activeOrganizationId", activeOrganizationId);
+		await next();
+	},
+);
 
-		if (!source)
-			throw httpErrors.notFound({
-				detail: "The requested source was not found",
+const sourcesRouter = $(
+	new OpenAPIHono<SourceContext>().use(sourcesContextMiddleware),
+)
+	.openapi(
+		createRoute({
+			tags: ["Sources"],
+			summary: "Get the source by ID",
+			method: "get",
+			path: "/sources/{id}",
+			request: {
+				params: uuidV7IdParamSchema,
+				headers: cookieAuthorizationSchema,
+			},
+			responses: {
+				[status.OK.code]: status.OK.response(sourcesSchema),
+				[status.NOT_FOUND.code]: status.NOT_FOUND.response(),
+				[status.UNAUTHORIZED.code]: status.UNAUTHORIZED.response(),
+				[status.FORBIDDEN.code]: status.FORBIDDEN.response({
+					detail: "No active organization",
+				}),
+				[status.BAD_REQUEST.code]: status.BAD_REQUEST.response(),
+				[status.TOO_MANY_REQUESTS.code]: status.TOO_MANY_REQUESTS.response(),
+				[status.INTERNAL_SERVER_ERROR.code]:
+					status.INTERNAL_SERVER_ERROR.response(),
+			},
+		}),
+		async (c) => {
+			const { id } = c.req.param();
+			const service = c.get("service");
+			const activeOrganizationId = c.get("activeOrganizationId");
+			const source = await service.getById(id, {
+				organizationId: activeOrganizationId,
 			});
 
-		return c.json(source);
-	},
-);
+			if (!source)
+				throw httpErrors.notFound({
+					detail: "The requested source was not found",
+				});
 
-sourcesRouter.openapi(
-	createRoute({
-		tags: ["Sources"],
-		summary: "Get all sources for the active organization",
-		method: "get",
-		path: "/sources",
-		request: {
-			query: searchOptionsSchema,
-			headers: cookieAuthorizationSchema,
+			return c.json(source);
 		},
-		responses: {
-			[status.OK.code]: status.OK.response(sourcesListSuccessSchema),
-			[status.UNAUTHORIZED.code]: status.UNAUTHORIZED.response(),
-			[status.FORBIDDEN.code]: status.FORBIDDEN.response({
-				detail: "No active organization",
-			}),
-			[status.BAD_REQUEST.code]: status.BAD_REQUEST.response(),
-			[status.TOO_MANY_REQUESTS.code]: status.TOO_MANY_REQUESTS.response(),
-			[status.INTERNAL_SERVER_ERROR.code]:
-				status.INTERNAL_SERVER_ERROR.response(),
+	)
+	.openapi(
+		createRoute({
+			tags: ["Sources"],
+			summary: "Get all sources for the active organization",
+			method: "get",
+			path: "/sources",
+			request: {
+				query: searchOptionsSchema,
+				headers: cookieAuthorizationSchema,
+			},
+			responses: {
+				[status.OK.code]: status.OK.response(sourcesListSuccessSchema),
+				[status.UNAUTHORIZED.code]: status.UNAUTHORIZED.response(),
+				[status.FORBIDDEN.code]: status.FORBIDDEN.response({
+					detail: "No active organization",
+				}),
+				[status.BAD_REQUEST.code]: status.BAD_REQUEST.response(),
+				[status.TOO_MANY_REQUESTS.code]: status.TOO_MANY_REQUESTS.response(),
+				[status.INTERNAL_SERVER_ERROR.code]:
+					status.INTERNAL_SERVER_ERROR.response(),
+			},
+		}),
+		async (c) => {
+			const query = c.req.valid("query");
+			const service = c.get("service");
+			const activeOrganizationId = c.get("activeOrganizationId");
+			const sourceList = await service.getAll(query, {
+				organizationId: activeOrganizationId,
+			});
+
+			return c.json({
+				message: "Sources successfully retrieved",
+				data: sourceList,
+				metadata: query,
+			});
 		},
-	}),
-	async (c) => {
-		const query = c.req.valid("query");
-		const service = c.get("service");
-		const activeOrganizationId = c.get("activeOrganizationId");
-		const sourceList = await service.getAll(query, {
-			organizationId: activeOrganizationId,
-		});
-
-		return c.json({
-			message: "Sources successfully retrieved",
-			data: sourceList,
-			metadata: query,
-		});
-	},
-);
-
-sourcesRouter.openapi(
-	createRoute({
-		tags: ["Sources"],
-		summary: "Create a new source",
-		method: "post",
-		path: "/sources",
-		request: {
-			headers: cookieAuthorizationSchema,
-			body: {
-				content: {
-					[ContentTypes.JSON]: {
-						schema: sourcesUpsertSchema,
+	)
+	.openapi(
+		createRoute({
+			tags: ["Sources"],
+			summary: "Create a new source",
+			method: "post",
+			path: "/sources",
+			request: {
+				headers: cookieAuthorizationSchema,
+				body: {
+					content: {
+						[ContentTypes.JSON]: {
+							schema: sourcesUpsertSchema,
+						},
 					},
 				},
 			},
-		},
-		responses: {
-			[status.CREATED.code]: status.CREATED.response(sourcesSuccessSchema),
-			[status.BAD_REQUEST.code]: status.BAD_REQUEST.response(),
-			[status.UNAUTHORIZED.code]: status.UNAUTHORIZED.response(),
-			[status.FORBIDDEN.code]: status.FORBIDDEN.response({
-				detail: "No active organization",
-			}),
-			[status.TOO_MANY_REQUESTS.code]: status.TOO_MANY_REQUESTS.response(),
-			[status.INTERNAL_SERVER_ERROR.code]:
-				status.INTERNAL_SERVER_ERROR.response(),
-		},
-	}),
-	async (c) => {
-		const body = c.req.valid("json");
-		const service = c.get("service");
-		const activeOrganizationId = c.get("activeOrganizationId");
-		const source = await service.createSource(body, activeOrganizationId);
+			responses: {
+				[status.CREATED.code]: status.CREATED.response(sourcesSuccessSchema),
+				[status.BAD_REQUEST.code]: status.BAD_REQUEST.response(),
+				[status.UNAUTHORIZED.code]: status.UNAUTHORIZED.response(),
+				[status.FORBIDDEN.code]: status.FORBIDDEN.response({
+					detail: "No active organization",
+				}),
+				[status.TOO_MANY_REQUESTS.code]: status.TOO_MANY_REQUESTS.response(),
+				[status.INTERNAL_SERVER_ERROR.code]:
+					status.INTERNAL_SERVER_ERROR.response(),
+			},
+		}),
+		async (c) => {
+			const body = c.req.valid("json");
+			const service = c.get("service");
+			const activeOrganizationId = c.get("activeOrganizationId");
+			const source = await service.createSource(body, activeOrganizationId);
 
-		return c.json(
-			{
-				message: "Source successfully created",
+			return c.json(
+				{
+					message: "Source successfully created",
+					data: source,
+					metadata: null,
+				},
+				status.CREATED.code,
+				{
+					location: `${c.req.url}/${source.id}`,
+				},
+			);
+		},
+	)
+	.openapi(
+		createRoute({
+			tags: ["Sources"],
+			summary: "Update a source",
+			method: "patch",
+			path: "/sources/{id}",
+			request: {
+				params: uuidV7IdParamSchema,
+				headers: cookieAuthorizationSchema,
+				body: {
+					content: {
+						[ContentTypes.JSON]: {
+							schema: sourceUpdateSchema,
+						},
+					},
+				},
+			},
+			responses: {
+				[status.OK.code]: status.OK.response(sourcesSuccessSchema),
+				[status.NOT_FOUND.code]: status.NOT_FOUND.response(),
+				[status.BAD_REQUEST.code]: status.BAD_REQUEST.response(),
+				[status.UNAUTHORIZED.code]: status.UNAUTHORIZED.response(),
+				[status.FORBIDDEN.code]: status.FORBIDDEN.response({
+					detail: "No active organization",
+				}),
+				[status.TOO_MANY_REQUESTS.code]: status.TOO_MANY_REQUESTS.response(),
+				[status.INTERNAL_SERVER_ERROR.code]:
+					status.INTERNAL_SERVER_ERROR.response(),
+			},
+		}),
+		async (c) => {
+			const { id } = c.req.param();
+			const body = c.req.valid("json");
+			const service = c.get("service");
+			const activeOrganizationId = c.get("activeOrganizationId");
+			const source = await service.updateSource(id, body, activeOrganizationId);
+
+			return c.json({
+				message: "Source successfully updated",
 				data: source,
 				metadata: null,
+			});
+		},
+	)
+	.openapi(
+		createRoute({
+			tags: ["Sources"],
+			summary: "Delete a source",
+			method: "delete",
+			path: "/sources/{id}",
+			request: {
+				params: uuidV7IdParamSchema,
+				headers: cookieAuthorizationSchema,
 			},
-			status.CREATED.code,
-			{
-				location: `${c.req.url}/${source.id}`,
+			responses: {
+				[status.NO_CONTENT.code]: status.NO_CONTENT.response(),
+				[status.NOT_FOUND.code]: status.NOT_FOUND.response(),
+				[status.UNAUTHORIZED.code]: status.UNAUTHORIZED.response(),
+				[status.FORBIDDEN.code]: status.FORBIDDEN.response({
+					detail: "No active organization",
+				}),
+				[status.TOO_MANY_REQUESTS.code]: status.TOO_MANY_REQUESTS.response(),
+				[status.INTERNAL_SERVER_ERROR.code]:
+					status.INTERNAL_SERVER_ERROR.response(),
 			},
-		);
-	},
-);
+		}),
+		async (c) => {
+			const { id } = c.req.param();
+			const service = c.get("service");
+			const activeOrganizationId = c.get("activeOrganizationId");
+			await service.deleteSource(id, activeOrganizationId);
 
-sourcesRouter.openapi(
-	createRoute({
-		tags: ["Sources"],
-		summary: "Update a source",
-		method: "patch",
-		path: "/sources/{id}",
-		request: {
-			params: uuidV7IdParamSchema,
-			headers: cookieAuthorizationSchema,
-			body: {
-				content: {
-					[ContentTypes.JSON]: {
-						schema: sourceUpdateSchema,
-					},
-				},
-			},
+			return c.body(null, 204);
 		},
-		responses: {
-			[status.OK.code]: status.OK.response(sourcesSuccessSchema),
-			[status.NOT_FOUND.code]: status.NOT_FOUND.response(),
-			[status.BAD_REQUEST.code]: status.BAD_REQUEST.response(),
-			[status.UNAUTHORIZED.code]: status.UNAUTHORIZED.response(),
-			[status.FORBIDDEN.code]: status.FORBIDDEN.response({
-				detail: "No active organization",
-			}),
-			[status.TOO_MANY_REQUESTS.code]: status.TOO_MANY_REQUESTS.response(),
-			[status.INTERNAL_SERVER_ERROR.code]:
-				status.INTERNAL_SERVER_ERROR.response(),
-		},
-	}),
-	async (c) => {
-		const { id } = c.req.param();
-		const body = c.req.valid("json");
-		const service = c.get("service");
-		const activeOrganizationId = c.get("activeOrganizationId");
-		const source = await service.updateSource(id, body, activeOrganizationId);
-
-		return c.json({
-			message: "Source successfully updated",
-			data: source,
-			metadata: null,
-		});
-	},
-);
-
-sourcesRouter.openapi(
-	createRoute({
-		tags: ["Sources"],
-		summary: "Delete a source",
-		method: "delete",
-		path: "/sources/{id}",
-		request: {
-			params: uuidV7IdParamSchema,
-			headers: cookieAuthorizationSchema,
-		},
-		responses: {
-			[status.NO_CONTENT.code]: status.NO_CONTENT.response(),
-			[status.NOT_FOUND.code]: status.NOT_FOUND.response(),
-			[status.UNAUTHORIZED.code]: status.UNAUTHORIZED.response(),
-			[status.FORBIDDEN.code]: status.FORBIDDEN.response({
-				detail: "No active organization",
-			}),
-			[status.TOO_MANY_REQUESTS.code]: status.TOO_MANY_REQUESTS.response(),
-			[status.INTERNAL_SERVER_ERROR.code]:
-				status.INTERNAL_SERVER_ERROR.response(),
-		},
-	}),
-	async (c) => {
-		const { id } = c.req.param();
-		const service = c.get("service");
-		const activeOrganizationId = c.get("activeOrganizationId");
-		await service.deleteSource(id, activeOrganizationId);
-
-		return c.body(null, 204);
-	},
-);
+	);
 
 export default sourcesRouter;

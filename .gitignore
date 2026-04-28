@@ -154,3 +154,4 @@ apps/server/src/features/opamp/payloads/9005424414213311.json
 apps/server/resend-test-email.ts
 apps/server/src/cloudflare-email-test.ts
 apps/server/src/resend-test.ts
+apps/server/src/test-hono-rpc.ts

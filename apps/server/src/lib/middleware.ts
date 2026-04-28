@@ -1,7 +1,7 @@
 import { createMiddleware } from "hono/factory";
 import { HTTPException } from "hono/http-exception";
 import { type Settings, settings } from "@/env";
-import type { AppContext, AuthAppContext } from "../types";
+import type { AppContextType, AuthAppContextType } from "../types";
 import { type AuthSessionData, type AuthType, auth } from "./auth";
 import { httpErrors } from "./errors";
 
@@ -14,7 +14,7 @@ export const createAuthenticateSession = ({
 }) => {
 	const authBasePath = `${settings.SERVE_STATIC ? "/api" : ""}${settings.AUTH_BASE_PATH}`;
 
-	return createMiddleware<AuthAppContext>(async (c, next) => {
+	return createMiddleware<AuthAppContextType>(async (c, next) => {
 		if (
 			c.req.path === authBasePath ||
 			c.req.path.startsWith(`${authBasePath}/`)
@@ -40,7 +40,7 @@ export const authenticateSession = createAuthenticateSession({
 });
 
 export const requireContentType = (allowedContentTypes: string[]) =>
-	createMiddleware<AppContext>(async (c, next) => {
+	createMiddleware<AppContextType>(async (c, next) => {
 		const contentType = c.req.header("content-type");
 		if (
 			!contentType ||
