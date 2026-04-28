@@ -12,7 +12,7 @@
 
 -- fazer instrumentacao otel-http funcionar, alem disso o que sao os spans de pre-hook do better-auth?
 
-
+-- arrumar testes do middelware de front end que aparenta nao esta funcionando quando ativado, tbm nao ta tendo trace quando eu dipsaro reqeust normal (mas pode ser a rota)
 
 ---
 frontend:
