@@ -1,12 +1,12 @@
+import { settings } from "@/env";
 import type { Attributes } from "@opentelemetry/api";
 import { context as otelContext, trace } from "@opentelemetry/api";
 import type { LogAttributes } from "@opentelemetry/api-logs";
 import { logs, SeverityNumber } from "@opentelemetry/api-logs";
-import type { Context as HonoContext, MiddlewareHandler, Next } from "hono";
+import type { Context as HonoContext, Next } from "hono";
 import { createMiddleware } from "hono/factory";
 import pino from "pino";
 import { UAParser } from "ua-parser-js";
-import { settings } from "@/env";
 
 const consoleLogger = pino(
 	{},
@@ -129,19 +129,16 @@ function safeJsonStringify(value: unknown, maxLength = 2000) {
 	}
 }
 
-export const injectOtelTraceHeader = (): MiddlewareHandler => {
+export const injectOtelTraceHeader = createMiddleware(async (c, next) => {
 	const headerName = settings.OTEL_TRACE_HEADER_NAME;
+	const traceId = trace.getActiveSpan()?.spanContext().traceId;
 
-	return async (c, next) => {
-		await next();
+	if (traceId) {
+		c.header(headerName, traceId);
+	}
 
-		const traceId = trace.getActiveSpan()?.spanContext().traceId;
-
-		if (traceId) {
-			c.header(headerName, traceId);
-		}
-	};
-};
+	await next();
+});
 
 type ClassMethod = ((...args: unknown[]) => unknown) & {
 	__isInstrumented?: boolean;
