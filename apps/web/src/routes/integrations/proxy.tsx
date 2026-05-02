@@ -1,18 +1,3 @@
-import { queryOptions, useQuery } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
-import {
-	CheckCircle2,
-	Database,
-	Loader2,
-	Play,
-	Terminal,
-	XCircle,
-} from "lucide-react";
-import { useState } from "react";
-import type {
-	ConnectionEntityType,
-	ConnectionListSuccessType,
-} from "@/server/features/connections/schemas";
 import { Badge } from "@/web/components/ui/badge";
 import { Button } from "@/web/components/ui/button";
 import {
@@ -33,8 +18,19 @@ import {
 } from "@/web/components/ui/select";
 import { Separator } from "@/web/components/ui/separator";
 import { Textarea } from "@/web/components/ui/textarea";
-import { parseHonoResponse } from "@/web/lib/hono-rpc";
+import { getResponseErrorMessage, honoClient } from "@/web/lib/hono-rpc";
 import { cn } from "@/web/utils/cn";
+import { queryOptions, useQuery } from "@tanstack/react-query";
+import { createFileRoute } from "@tanstack/react-router";
+import {
+	CheckCircle2,
+	Database,
+	Loader2,
+	Play,
+	Terminal,
+	XCircle,
+} from "lucide-react";
+import { useState } from "react";
 import { IntegrationsError } from "./-components/integrations-error";
 import { IntegrationsSectionSkeleton } from "./-components/integrations-section-skeleton";
 import {
@@ -57,12 +53,18 @@ type Mode = "saved" | "manual";
 
 // ─── data fetching ───────────────────────────────────────────────────────────
 
-async function fetchConnections(): Promise<ConnectionEntityType[]> {
-	const url = new URL(`${import.meta.env.VITE_SERVER_URL}/v1/connections`);
-	url.searchParams.set("page_size", "100");
-	const response = await fetch(url.toString(), { credentials: "include" });
-	const result = await parseHonoResponse<ConnectionListSuccessType>(response);
-	return result.data;
+async function fetchConnections() {
+	const response = await honoClient.v1.connections.$get({
+		header: {},
+		query: {
+			page_size: 100,
+		},
+	});
+	if (!response.ok) {
+		throw new Error(await getResponseErrorMessage(response));
+	}
+
+	return await response.json();
 }
 
 function connectionsQueryOptions() {

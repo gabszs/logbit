@@ -1,11 +1,11 @@
-import { z } from "zod";
 import { settings } from "@/env";
+import { z } from "zod";
 
 export const searchOptionsSchema = z.object({
-	page: z.coerce.number().int().optional().default(1).describe("Page number"),
+	page: z.number().int().optional().default(1).describe("Page number"),
 	page_size: z
 		.union([
-			z.coerce
+			z
 				.number()
 				.int()
 				.max(settings.MAX_PAGE_SIZE, {
@@ -19,20 +19,23 @@ export const searchOptionsSchema = z.object({
 			'Number of items per page (integer or "all" to return all records)',
 		),
 	ordering: z.string().default("-created_at").describe("Ordering field"),
-	created_before: z.iso
-		.datetime()
+	created_before: z
+		.date()
 		.optional()
+
 		.describe("Filter by creation date before (ISO 8601)"),
-	created_on_or_before: z.iso
-		.datetime()
+	created_on_or_before: z
+		.date()
 		.optional()
+
 		.describe("Filter by creation date on or before (ISO 8601)"),
-	created_after: z.iso
-		.datetime()
+	created_after: z
+		.date()
 		.optional()
+
 		.describe("Filter by creation date after (ISO 8601)"),
-	created_on_or_after: z.iso
-		.datetime()
+	created_on_or_after: z
+		.date()
 		.optional()
 		.describe("Filter by creation date on or after (ISO 8601)"),
 });
