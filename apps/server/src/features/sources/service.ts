@@ -1,5 +1,6 @@
 import { BaseService } from "@/common/services/baseService";
 import { checkForChanges } from "@/common/utils";
+import type { LogsConfigType } from "@/features/sources/logs/schemas";
 import { logsConfigSchema } from "@/features/sources/logs/schemas";
 import { httpErrors } from "@/lib/errors";
 import type { ConnectionRepository } from "../connections/repository";
@@ -61,12 +62,16 @@ export class SourceService extends BaseService<SourcesType> {
 			);
 		}
 
-		const updateData = { ...input };
-		if (input.config !== undefined) {
+		const { config, ...rest } = input;
+		const updateData: Omit<SourceUpdateInput, "config"> & {
+			config?: LogsConfigType;
+		} = { ...rest };
+
+		if (config !== undefined) {
 			try {
 				updateData.config = logsConfigSchema.parse({
 					...existingSource.config,
-					...input.config,
+					...config,
 				});
 			} catch {
 				throw httpErrors.badRequest({

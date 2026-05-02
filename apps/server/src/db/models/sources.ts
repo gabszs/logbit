@@ -7,10 +7,11 @@ import {
 	uuid,
 	varchar,
 } from "drizzle-orm/pg-core";
+import type { LogsConfigType } from "@/features/sources/logs/schemas";
 import { organizations } from "./authModels";
 import { connections } from "./connections";
 
-export const sourceTypeEnum = pgEnum("source_type", ["trace", "log", "metric"]);
+export const sourceTypeEnum = pgEnum("source_type", ["log"]);
 
 export const sources = pgTable(
 	"sources",
@@ -26,7 +27,7 @@ export const sources = pgTable(
 		connectionId: uuid("integration_id")
 			.notNull()
 			.references(() => connections.id, { onDelete: "cascade" }),
-		config: jsonb("config").$type<Record<string, unknown>>().notNull(),
+		config: jsonb("config").$type<LogsConfigType>().notNull(),
 		createdAt: timestamp("created_at").defaultNow().notNull(),
 		updatedAt: timestamp("updated_at")
 			.defaultNow()

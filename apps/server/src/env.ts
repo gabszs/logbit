@@ -22,6 +22,8 @@ export const envSchema = z.object({
 	NODE_ENV: z
 		.enum(["development", "production", "test"])
 		.default("development"),
+	PAGE_SIZE: z.coerce.number().default(100),
+	MAX_PAGE_SIZE: z.coerce.number().default(1000),
 
 	// EPHEMERAL
 	SCALAR_THEME: z

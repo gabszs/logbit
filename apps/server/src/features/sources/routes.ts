@@ -62,7 +62,14 @@ const sourcesRouter = $(
 				headers: cookieAuthorizationSchema,
 			},
 			responses: {
-				[status.OK.code]: status.OK.response(sourcesSchema),
+				[status.OK.code]: {
+					description: "Source successfully retrieved",
+					content: {
+						[ContentTypes.JSON]: {
+							schema: sourcesSchema,
+						},
+					},
+				},
 				[status.NOT_FOUND.code]: status.NOT_FOUND.response(),
 				[status.UNAUTHORIZED.code]: status.UNAUTHORIZED.response(),
 				[status.FORBIDDEN.code]: status.FORBIDDEN.response({
@@ -87,7 +94,7 @@ const sourcesRouter = $(
 					detail: "The requested source was not found",
 				});
 
-			return c.json(source);
+			return c.json(source, 200);
 		},
 	)
 	.openapi(
@@ -101,7 +108,14 @@ const sourcesRouter = $(
 				headers: cookieAuthorizationSchema,
 			},
 			responses: {
-				[status.OK.code]: status.OK.response(sourcesListSuccessSchema),
+				[status.OK.code]: {
+					description: "Sources successfully retrieved",
+					content: {
+						[ContentTypes.JSON]: {
+							schema: sourcesListSuccessSchema,
+						},
+					},
+				},
 				[status.UNAUTHORIZED.code]: status.UNAUTHORIZED.response(),
 				[status.FORBIDDEN.code]: status.FORBIDDEN.response({
 					detail: "No active organization",
@@ -120,11 +134,14 @@ const sourcesRouter = $(
 				organizationId: activeOrganizationId,
 			});
 
-			return c.json({
-				message: "Sources successfully retrieved",
-				data: sourceList,
-				metadata: query,
-			});
+			return c.json(
+				{
+					message: "Sources successfully retrieved",
+					data: sourceList,
+					metadata: query,
+				},
+				200,
+			);
 		},
 	)
 	.openapi(
@@ -144,7 +161,14 @@ const sourcesRouter = $(
 				},
 			},
 			responses: {
-				[status.CREATED.code]: status.CREATED.response(sourcesSuccessSchema),
+				[status.CREATED.code]: {
+					description: "Source successfully created",
+					content: {
+						[ContentTypes.JSON]: {
+							schema: sourcesSuccessSchema,
+						},
+					},
+				},
 				[status.BAD_REQUEST.code]: status.BAD_REQUEST.response(),
 				[status.UNAUTHORIZED.code]: status.UNAUTHORIZED.response(),
 				[status.FORBIDDEN.code]: status.FORBIDDEN.response({

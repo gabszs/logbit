@@ -84,5 +84,6 @@ export const sourcesListSuccessSchema = sourcesSuccessSchema
 	.openapi("SourcesListSuccess");
 
 export type SourcesListSuccessType = z.infer<typeof sourcesListSuccessSchema>;
+export type SourceResponseType = z.infer<typeof sourcesSchema>;
 export type SourcesUpsertInput = z.infer<typeof sourcesUpsertSchema>;
 export type SourceUpdateInput = z.infer<typeof sourceUpdateSchema>;

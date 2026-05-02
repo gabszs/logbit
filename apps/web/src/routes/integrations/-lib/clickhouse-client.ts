@@ -1,9 +1,6 @@
 import { createClient } from "@clickhouse/client-web";
-import type {
-	ClickhouseConnectionTestInput,
-	ConnectionTestResultType,
-} from "@/server/features/connections/schemas";
-import { parseHonoResponse } from "@/web/lib/hono-rpc";
+import type { ClickhouseConnectionTestInput } from "@/server/features/connections/schemas";
+import { getResponseErrorMessage, honoClient } from "@/web/lib/hono-rpc";
 
 // Proxy client — @clickhouse/client-web usa apenas a origin da URL,
 // descartando qualquer path. O fetch customizado reescreve cada request
@@ -79,54 +76,26 @@ export function formatClickhouseQueryError(error: unknown) {
 	return message || "Failed to run the ClickHouse query";
 }
 
-const serverUrl = import.meta.env.VITE_SERVER_URL as string;
-
-async function requestConnections(path: string, init?: RequestInit) {
-	return await fetch(`${serverUrl}/v1${path}`, {
-		...init,
-		credentials: "include",
-	});
-}
-
-const connectionsClient = {
-	connections: {
-		ping: {
-			$post: async ({ json }: { json: ClickhouseConnectionTestInput }) =>
-				await requestConnections("/connections/ping", {
-					method: "POST",
-					headers: {
-						"content-type": "application/json",
-					},
-					body: JSON.stringify(json),
-				}),
-		},
-		"query-test": {
-			$post: async ({ json }: { json: ClickhouseConnectionTestInput }) =>
-				await requestConnections("/connections/query-test", {
-					method: "POST",
-					headers: {
-						"content-type": "application/json",
-					},
-					body: JSON.stringify(json),
-				}),
-		},
-	},
-};
-
 async function postClickhouseConnectionTest(
 	path: "/ping" | "/query-test",
 	config: ClickhouseConnectionTestInput,
 ) {
 	const response =
 		path === "/ping"
-			? await connectionsClient.connections.ping.$post({
+			? await honoClient.v1.connections.ping.$post({
+					header: {},
 					json: config,
 				})
-			: await connectionsClient.connections["query-test"].$post({
+			: await honoClient.v1.connections["query-test"].$post({
+					header: {},
 					json: config,
 				});
 
-	return await parseHonoResponse<ConnectionTestResultType>(response);
+	if (!response.ok) {
+		throw new Error(await getResponseErrorMessage(response));
+	}
+
+	return await response.json();
 }
 
 export async function pingClickhouseConnection(

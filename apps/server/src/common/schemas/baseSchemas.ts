@@ -1,19 +1,20 @@
 import { z } from "zod";
+import { settings } from "@/env";
 
 export const searchOptionsSchema = z.object({
-	page: z
-		.preprocess(
-			(val) => (val ? Number(val) : 1),
-			z.number().int().max(200, { message: "Page must be <= 200" }),
-		)
-		.default(1)
-		.describe("Page number"),
+	page: z.coerce.number().int().optional().default(1).describe("Page number"),
 	page_size: z
-		.preprocess(
-			(val) => (val === "all" ? "all" : val ? Number(val) : 50),
-			z.union([z.number().int(), z.literal("all")]),
-		)
-		.default(100)
+		.union([
+			z.coerce
+				.number()
+				.int()
+				.max(settings.MAX_PAGE_SIZE, {
+					message: `Page must be <= ${settings.MAX_PAGE_SIZE}`,
+				}),
+			z.literal("all"),
+		])
+		.optional()
+		.default(settings.PAGE_SIZE)
 		.describe(
 			'Number of items per page (integer or "all" to return all records)',
 		),

@@ -9,4 +9,4 @@ export const ClickhouseConfigSchema = z.object({
 	password: z.string().nullable(),
 });
 
-export type ClickhouseConfig = z.infer<typeof ClickhouseConfigSchema>;
+export type ClickhouseConfigType = z.infer<typeof ClickhouseConfigSchema>;

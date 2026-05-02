@@ -62,7 +62,7 @@ export function AppSidebar() {
 	const isAuthenticated = Boolean(auth.session?.user);
 
 	const navigationItems: Array<{
-		to: "/" | "/logging" | "/integrations/connections";
+		to: "/" | "/logs" | "/integrations/connections";
 		label: string;
 		icon: LucideIcon;
 		isActive: boolean;
@@ -75,7 +75,7 @@ export function AppSidebar() {
 		},
 		{
 			to: "/logs",
-			label: "Logs",
+			label: "Logging",
 			icon: ScrollText,
 			isActive: pathname.startsWith("/logs"),
 		},

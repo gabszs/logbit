@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import type {
 	ConnectionEntityType,
-	ConnectionUpdateInput,
 	ConnectionUpsertInput,
 } from "@/server/features/connections/schemas";
 import { Button } from "@/web/components/ui/button";
@@ -25,7 +24,7 @@ import {
 	SelectValue,
 } from "@/web/components/ui/select";
 import { Switch } from "@/web/components/ui/switch";
-import { HonoRpcError, parseHonoResponse } from "@/web/lib/hono-rpc";
+import { getResponseErrorMessage, honoClient } from "@/web/lib/hono-rpc";
 import type { SupportedIntegrationKind } from "@/web/lib/integrations";
 import {
 	INTEGRATIONS,
@@ -149,15 +148,9 @@ export function AddConnectionDialog({
 	});
 
 	const getClickhouseErrorMessage = (error: unknown) =>
-		error instanceof HonoRpcError &&
-		typeof error.data === "object" &&
-		error.data !== null &&
-		"detail" in error.data &&
-		typeof error.data.detail === "string"
-			? error.data.detail
-			: error instanceof Error
-				? error.message
-				: "Could not reach the ClickHouse host";
+		error instanceof Error
+			? error.message
+			: "Could not reach the ClickHouse host";
 
 	const handleClickhousePingTest = async () => {
 		if (form.type !== "clickhouse") return;
@@ -281,25 +274,24 @@ export function AddConnectionDialog({
 
 		setIsPending(true);
 		try {
-			const url =
+			const response =
 				mode === "edit" && connection
-					? `${import.meta.env.VITE_SERVER_URL}/v1/connections/${connection.id}`
-					: `${import.meta.env.VITE_SERVER_URL}/v1/connections`;
-			const requestPayload: ConnectionUpsertInput | ConnectionUpdateInput =
-				mode === "edit"
-					? {
-							name: payload.name,
-							isActive: payload.isActive,
-							config: payload.config,
-						}
-					: payload;
-			const response = await fetch(url, {
-				method: mode === "edit" ? "PATCH" : "POST",
-				credentials: "include",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify(requestPayload),
-			});
-			await parseHonoResponse(response);
+					? await honoClient.v1.connections[":id"].$patch({
+							header: {},
+							param: { id: connection.id },
+							json: {
+								name: payload.name,
+								isActive: payload.isActive,
+								config: payload.config,
+							},
+						})
+					: await honoClient.v1.connections.$post({
+							header: {},
+							json: payload,
+						});
+			if (!response.ok) {
+				throw new Error(await getResponseErrorMessage(response));
+			}
 			toast.success(
 				mode === "edit"
 					? "Connection updated successfully"

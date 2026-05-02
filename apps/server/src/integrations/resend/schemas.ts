@@ -7,4 +7,4 @@ export const ResendConfigSchema = z.object({
 		.startsWith("re_", { message: "API Key must start with 're_'" }),
 });
 
-export type ResendConfig = z.infer<typeof ResendConfigSchema>;
+export type ResendConfigType = z.infer<typeof ResendConfigSchema>;

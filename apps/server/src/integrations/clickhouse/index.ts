@@ -1,11 +1,11 @@
 import { type ClickHouseClient, createClient } from "@clickhouse/client";
 import { normalizeClickhouseConfig } from "./config";
-import type { ClickhouseConfig } from "./schemas";
+import type { ClickhouseConfigType } from "./schemas";
 
 export type ClickhouseClient = ClickHouseClient;
 
 export function createClickhouseClient(
-	config: ClickhouseConfig,
+	config: ClickhouseConfigType,
 ): ClickhouseClient {
 	const normalizedConfig = normalizeClickhouseConfig(config);
 	return createClient({

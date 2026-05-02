@@ -1,4 +1,3 @@
-import { settings } from "@/env";
 import type { Attributes } from "@opentelemetry/api";
 import { context as otelContext, trace } from "@opentelemetry/api";
 import type { LogAttributes } from "@opentelemetry/api-logs";
@@ -7,6 +6,7 @@ import type { Context as HonoContext, Next } from "hono";
 import { createMiddleware } from "hono/factory";
 import pino from "pino";
 import { UAParser } from "ua-parser-js";
+import { settings } from "@/env";
 
 const consoleLogger = pino(
 	{},

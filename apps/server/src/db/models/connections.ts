@@ -8,7 +8,10 @@ import {
 	uuid,
 	varchar,
 } from "drizzle-orm/pg-core";
+import type { ClickhouseConfigType } from "@/integrations/clickhouse/schemas";
+import type { CloudflareConfigType } from "@/integrations/cloudflare/schemas";
 import { supportedIntegrationTypes } from "@/integrations/registry";
+import type { ResendConfigType } from "@/integrations/resend/schemas";
 import { organizations } from "./authModels";
 
 export const connectionsTypeEnum = pgEnum(
@@ -27,7 +30,9 @@ export const connections = pgTable(
 		organizationId: uuid("organization_id")
 			.notNull()
 			.references(() => organizations.id, { onDelete: "cascade" }),
-		config: jsonb("config").$type<Record<string, unknown>>().notNull(),
+		config: jsonb("config")
+			.$type<ClickhouseConfigType | CloudflareConfigType | ResendConfigType>()
+			.notNull(),
 		isActive: boolean("is_active").default(true).notNull(),
 		createdAt: timestamp("created_at").defaultNow().notNull(),
 		updatedAt: timestamp("updated_at")

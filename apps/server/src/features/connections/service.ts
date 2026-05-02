@@ -58,7 +58,7 @@ export class ConnectionService extends BaseService<ConnectionType> {
 			throw httpErrors.noChangesDetected();
 		}
 
-		const updateData = { ...input };
+		const updateData = { ...input } as Partial<ConnectionType>;
 		if (input.config !== undefined) {
 			try {
 				switch (existingConnection.type) {

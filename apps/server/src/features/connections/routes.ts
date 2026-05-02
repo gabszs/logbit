@@ -12,7 +12,7 @@ import type { AuthAppContextType } from "@/types";
 import { ConnectionRepository } from "./repository";
 import {
 	connectionListSuccessSchema,
-	connectionSchema,
+	connectionResponseSchema,
 	connectionSuccessSchema,
 	connectionTestResultSchema,
 	connectionUpdateSchema,
@@ -65,7 +65,14 @@ const connectionsRouter = $(
 				},
 			},
 			responses: {
-				[status.OK.code]: status.OK.response(connectionTestResultSchema),
+				[status.OK.code]: {
+					description: "Connection successful",
+					content: {
+						[ContentTypes.JSON]: {
+							schema: connectionTestResultSchema,
+						},
+					},
+				},
 				[status.UNAUTHORIZED.code]: status.UNAUTHORIZED.response(),
 				[status.FORBIDDEN.code]: status.FORBIDDEN.response({
 					detail: "No active organization",
@@ -78,7 +85,7 @@ const connectionsRouter = $(
 		}),
 		async (c) => {
 			const config = c.req.valid("json");
-			return c.json(await c.get("service").testClickhousePing(config));
+			return c.json(await c.get("service").testClickhousePing(config), 200);
 		},
 	)
 	.openapi(
@@ -98,7 +105,14 @@ const connectionsRouter = $(
 				},
 			},
 			responses: {
-				[status.OK.code]: status.OK.response(connectionTestResultSchema),
+				[status.OK.code]: {
+					description: "Query executed successfully",
+					content: {
+						[ContentTypes.JSON]: {
+							schema: connectionTestResultSchema,
+						},
+					},
+				},
 				[status.UNAUTHORIZED.code]: status.UNAUTHORIZED.response(),
 				[status.FORBIDDEN.code]: status.FORBIDDEN.response({
 					detail: "No active organization",
@@ -111,7 +125,7 @@ const connectionsRouter = $(
 		}),
 		async (c) => {
 			const config = c.req.valid("json");
-			return c.json(await c.get("service").testClickhouseQuery(config));
+			return c.json(await c.get("service").testClickhouseQuery(config), 200);
 		},
 	)
 	.openapi(
@@ -125,7 +139,14 @@ const connectionsRouter = $(
 				headers: cookieAuthorizationSchema,
 			},
 			responses: {
-				[status.OK.code]: status.OK.response(connectionSchema),
+				[status.OK.code]: {
+					description: "Connection retrieved successfully",
+					content: {
+						[ContentTypes.JSON]: {
+							schema: connectionResponseSchema,
+						},
+					},
+				},
 				[status.NOT_FOUND.code]: status.NOT_FOUND.response(),
 				[status.UNAUTHORIZED.code]: status.UNAUTHORIZED.response(),
 				[status.FORBIDDEN.code]: status.FORBIDDEN.response({
@@ -150,7 +171,7 @@ const connectionsRouter = $(
 					detail: "The requested connection was not found",
 				});
 
-			return c.json(connection);
+			return c.json(connection, 200);
 		},
 	)
 	.openapi(
@@ -164,7 +185,14 @@ const connectionsRouter = $(
 				headers: cookieAuthorizationSchema,
 			},
 			responses: {
-				[status.OK.code]: status.OK.response(connectionListSuccessSchema),
+				[status.OK.code]: {
+					description: "Connections retrieved successfully",
+					content: {
+						[ContentTypes.JSON]: {
+							schema: connectionListSuccessSchema,
+						},
+					},
+				},
 				[status.UNAUTHORIZED.code]: status.UNAUTHORIZED.response(),
 				[status.FORBIDDEN.code]: status.FORBIDDEN.response({
 					detail: "No active organization",
@@ -183,11 +211,14 @@ const connectionsRouter = $(
 				organizationId: activeOrganizationId,
 			});
 
-			return c.json({
-				message: "Connection successfully retrieved",
-				data: connections,
-				metadata: query,
-			});
+			return c.json(
+				{
+					message: "Connection successfully retrieved",
+					data: connections,
+					metadata: query,
+				},
+				200,
+			);
 		},
 	)
 	.openapi(
@@ -207,7 +238,15 @@ const connectionsRouter = $(
 				},
 			},
 			responses: {
-				[status.CREATED.code]: status.CREATED.response(connectionSuccessSchema),
+				[status.CREATED.code]: {
+					description: "Connection successfully created",
+					content: {
+						[ContentTypes.JSON]: {
+							schema: connectionSuccessSchema,
+						},
+					},
+				},
+				[status.NOT_FOUND.code]: status.NOT_FOUND.response(),
 				[status.BAD_REQUEST.code]: status.BAD_REQUEST.response(),
 				[status.UNAUTHORIZED.code]: status.UNAUTHORIZED.response(),
 				[status.FORBIDDEN.code]: status.FORBIDDEN.response({
@@ -258,7 +297,14 @@ const connectionsRouter = $(
 				},
 			},
 			responses: {
-				[status.OK.code]: status.OK.response(connectionSuccessSchema),
+				[status.OK.code]: {
+					description: "Connection successfully updated",
+					content: {
+						[ContentTypes.JSON]: {
+							schema: connectionSuccessSchema,
+						},
+					},
+				},
 				[status.NOT_FOUND.code]: status.NOT_FOUND.response(),
 				[status.BAD_REQUEST.code]: status.BAD_REQUEST.response(),
 				[status.UNAUTHORIZED.code]: status.UNAUTHORIZED.response(),
@@ -281,11 +327,14 @@ const connectionsRouter = $(
 				activeOrganizationId,
 			);
 
-			return c.json({
-				message: "Connection successfully updated",
-				data: connection,
-				metadata: null,
-			});
+			return c.json(
+				{
+					message: "Connection successfully updated",
+					data: connection,
+					metadata: null,
+				},
+				200,
+			);
 		},
 	)
 	.openapi(

@@ -1,7 +1,7 @@
 import { createRoute, OpenAPIHono } from "@hono/zod-openapi";
 import { db } from "../../db";
 import { models } from "../../db/models";
-import { status } from "../../lib/constants";
+import { ContentTypes, status } from "../../lib/constants";
 import type { AppContextType } from "../../types";
 import { healthSchema, setupSchema } from "./schemas";
 
@@ -15,7 +15,14 @@ const utilityRouter = new OpenAPIHono<AppContextType>()
 			method: "get",
 			path: "/health",
 			responses: {
-				[status.OK.code]: status.OK.response(healthSchema),
+				[status.OK.code]: {
+					description: "Service is healthy",
+					content: {
+						[ContentTypes.JSON]: {
+							schema: healthSchema,
+						},
+					},
+				},
 				[status.TOO_MANY_REQUESTS.code]: status.TOO_MANY_REQUESTS.response(),
 				[status.INTERNAL_SERVER_ERROR.code]:
 					status.INTERNAL_SERVER_ERROR.response(),
@@ -44,7 +51,14 @@ const utilityRouter = new OpenAPIHono<AppContextType>()
 			method: "get",
 			path: "/setup",
 			responses: {
-				[status.OK.code]: status.OK.response(setupSchema),
+				[status.OK.code]: {
+					description: "Setup status retrieved successfully",
+					content: {
+						[ContentTypes.JSON]: {
+							schema: setupSchema,
+						},
+					},
+				},
 				[status.TOO_MANY_REQUESTS.code]: status.TOO_MANY_REQUESTS.response(),
 				[status.INTERNAL_SERVER_ERROR.code]:
 					status.INTERNAL_SERVER_ERROR.response(),

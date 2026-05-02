@@ -5,7 +5,7 @@ import { createTanstackQueryUtils } from "@orpc/tanstack-query";
 import type { QueryClient as TanStackQueryClient } from "@tanstack/react-query";
 import { QueryCache, QueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import type { AppRouter } from "@/server/client/contracts";
+import type { AppRouter } from "@/index";
 
 export const queryClient = new QueryClient({
 	queryCache: new QueryCache({

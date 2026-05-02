@@ -1,4 +1,4 @@
-import type { ClickhouseConfig } from "./schemas";
+import type { ClickhouseConfigType } from "./schemas";
 
 export function normalizeClickhouseHost(host: string) {
 	const url = new URL(host);
@@ -6,8 +6,8 @@ export function normalizeClickhouseHost(host: string) {
 }
 
 export function normalizeClickhouseConfig(
-	config: ClickhouseConfig,
-): ClickhouseConfig {
+	config: ClickhouseConfigType,
+): ClickhouseConfigType {
 	return {
 		...config,
 		host: normalizeClickhouseHost(config.host),

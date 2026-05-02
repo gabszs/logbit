@@ -108,36 +108,36 @@ export const createErrorHttpResponse = (
 
 export const status = {
 	CONTINUE: {
-		code: 100,
+		code: 100 as const,
 		title: "Continue",
 		detail: "Continue.",
 	},
 	SWITCHING_PROTOCOLS: {
-		code: 101,
+		code: 101 as const,
 		title: "Switching Protocols",
 		detail: "Switching Protocols.",
 	},
 	PROCESSING: {
-		code: 102,
+		code: 102 as const,
 		title: "Processing",
 		detail: "Processing.",
 	},
 	EARLY_HINTS: {
-		code: 103,
+		code: 103 as const,
 		title: "Early Hints",
 		detail: "Early Hints.",
 	},
 	OK: {
-		code: 200,
-		title: "OK",
-		detail: "Request completed successfully.",
+		code: 200 as const,
+		title: "OK" as const,
+		detail: "Request completed successfully." as const,
 		response: <TSchema>(
 			schema: TSchema,
 			description = "Request completed successfully.",
 		) => createHttpResponse(schema, description),
 	},
 	OK_PROTOBUF: {
-		code: 200,
+		code: 200 as const,
 		title: "OK",
 		detail: "Request completed successfully.",
 		response: <TSchema>(
@@ -146,7 +146,7 @@ export const status = {
 		) => createHttpResponse(schema, description, ContentTypes.X_PROTOBUF),
 	},
 	CREATED: {
-		code: 201,
+		code: 201 as const,
 		title: "Created",
 		detail: "Resource created successfully.",
 		response: <TSchema>(
@@ -155,17 +155,17 @@ export const status = {
 		) => createHttpResponse(schema, description),
 	},
 	ACCEPTED: {
-		code: 202,
+		code: 202 as const,
 		title: "Accepted",
 		detail: "Request accepted and being processed.",
 	},
 	NON_AUTHORITATIVE_INFORMATION: {
-		code: 203,
+		code: 203 as const,
 		title: "Non Authoritative Information",
 		detail: "Non Authoritative Information.",
 	},
 	NO_CONTENT: {
-		code: 204,
+		code: 204 as const,
 		title: "No Content",
 		detail: "Request completed. No content to return.",
 		response: (description = "Request completed. No content to return.") => ({
@@ -173,82 +173,82 @@ export const status = {
 		}),
 	},
 	RESET_CONTENT: {
-		code: 205,
+		code: 205 as const,
 		title: "Reset Content",
 		detail: "Reset Content.",
 	},
 	PARTIAL_CONTENT: {
-		code: 206,
+		code: 206 as const,
 		title: "Partial Content",
 		detail: "Partial Content.",
 	},
 	MULTI_STATUS: {
-		code: 207,
+		code: 207 as const,
 		title: "Multi-Status",
 		detail: "Multi-Status.",
 	},
 	ALREADY_REPORTED: {
-		code: 208,
+		code: 208 as const,
 		title: "Already Reported",
 		detail: "Already Reported.",
 	},
 	IM_USED: {
-		code: 226,
+		code: 226 as const,
 		title: "IM Used",
 		detail: "IM Used.",
 	},
 	MULTIPLE_CHOICES: {
-		code: 300,
+		code: 300 as const,
 		title: "Multiple Choices",
 		detail: "Multiple Choices.",
 	},
 	MOVED_PERMANENTLY: {
-		code: 301,
+		code: 301 as const,
 		title: "Moved Permanently",
 		detail: "Moved Permanently.",
 	},
 	FOUND: {
-		code: 302,
+		code: 302 as const,
 		title: "Found",
 		detail: "Found.",
 	},
 	MOVED_TEMPORARILY: {
-		code: 302,
+		code: 302 as const,
 		title: "Moved Temporarily",
 		detail: "Moved Temporarily.",
 	},
 	SEE_OTHER: {
-		code: 303,
+		code: 303 as const,
 		title: "See Other",
 		detail: "See Other.",
 	},
 	NOT_MODIFIED: {
-		code: 304,
+		code: 304 as const,
 		title: "Not Modified",
 		detail: "Not Modified.",
 	},
 	USE_PROXY: {
-		code: 305,
+		code: 305 as const,
 		title: "Use Proxy",
 		detail: "Use Proxy.",
 	},
 	RESERVED: {
-		code: 306,
+		code: 306 as const,
 		title: "Reserved",
 		detail: "Reserved.",
 	},
 	TEMPORARY_REDIRECT: {
-		code: 307,
+		code: 307 as const,
 		title: "Temporary Redirect",
 		detail: "Temporary Redirect.",
 	},
 	PERMANENT_REDIRECT: {
-		code: 308,
+		code: 308 as const,
 		title: "Permanent Redirect",
 		detail: "Permanent Redirect.",
 	},
 	BAD_REQUEST: {
-		code: 400,
+		code: 400 as const,
 		title: "Bad Request",
 		detail: "Invalid request. Check the parameters sent.",
 		response: (options: HttpErrorResponseOptions = {}) =>
@@ -262,7 +262,7 @@ export const status = {
 			),
 	},
 	UNAUTHORIZED: {
-		code: 401,
+		code: 401 as const,
 		title: "Unauthorized",
 		detail: "Authentication required to access this resource.",
 		response: (options: HttpErrorResponseOptions = {}) =>
@@ -276,7 +276,7 @@ export const status = {
 			),
 	},
 	PAYMENT_REQUIRED: {
-		code: 402,
+		code: 402 as const,
 		title: "Payment Required",
 		detail: "Payment Required.",
 		response: (options: HttpErrorResponseOptions = {}) =>
@@ -290,7 +290,7 @@ export const status = {
 			),
 	},
 	FORBIDDEN: {
-		code: 403,
+		code: 403 as const,
 		title: "Forbidden",
 		detail: "You don't have permission to access this resource.",
 		response: (options: HttpErrorResponseOptions = {}) =>
@@ -304,7 +304,7 @@ export const status = {
 			),
 	},
 	NOT_FOUND: {
-		code: 404,
+		code: 404 as const,
 		title: "Not Found",
 		detail: "The requested resource was not found.",
 		response: (options: HttpErrorResponseOptions = {}) =>
@@ -318,7 +318,7 @@ export const status = {
 			),
 	},
 	METHOD_NOT_ALLOWED: {
-		code: 405,
+		code: 405 as const,
 		title: "Method Not Allowed",
 		detail: "Method Not Allowed.",
 		response: (options: HttpErrorResponseOptions = {}) =>
@@ -332,7 +332,7 @@ export const status = {
 			),
 	},
 	NOT_ACCEPTABLE: {
-		code: 406,
+		code: 406 as const,
 		title: "Not Acceptable",
 		detail: "Not Acceptable.",
 		response: (options: HttpErrorResponseOptions = {}) =>
@@ -346,7 +346,7 @@ export const status = {
 			),
 	},
 	PROXY_AUTHENTICATION_REQUIRED: {
-		code: 407,
+		code: 407 as const,
 		title: "Proxy Authentication Required",
 		detail: "Proxy Authentication Required.",
 		response: (options: HttpErrorResponseOptions = {}) =>
@@ -360,7 +360,7 @@ export const status = {
 			),
 	},
 	REQUEST_TIMEOUT: {
-		code: 408,
+		code: 408 as const,
 		title: "Request Timeout",
 		detail: "Request Timeout.",
 		response: (options: HttpErrorResponseOptions = {}) =>
@@ -374,7 +374,7 @@ export const status = {
 			),
 	},
 	CONFLICT: {
-		code: 409,
+		code: 409 as const,
 		title: "Conflict",
 		detail: "Request conflicts with the current state of the resource.",
 		response: (options: HttpErrorResponseOptions = {}) =>
@@ -388,7 +388,7 @@ export const status = {
 			),
 	},
 	GONE: {
-		code: 410,
+		code: 410 as const,
 		title: "Gone",
 		detail: "Gone.",
 		response: (options: HttpErrorResponseOptions = {}) =>
@@ -402,7 +402,7 @@ export const status = {
 			),
 	},
 	LENGTH_REQUIRED: {
-		code: 411,
+		code: 411 as const,
 		title: "Length Required",
 		detail: "Length Required.",
 		response: (options: HttpErrorResponseOptions = {}) =>
@@ -416,7 +416,7 @@ export const status = {
 			),
 	},
 	PRECONDITION_FAILED: {
-		code: 412,
+		code: 412 as const,
 		title: "Precondition Failed",
 		detail: "Precondition Failed.",
 		response: (options: HttpErrorResponseOptions = {}) =>
@@ -430,7 +430,7 @@ export const status = {
 			),
 	},
 	REQUEST_ENTITY_TOO_LARGE: {
-		code: 413,
+		code: 413 as const,
 		title: "Request Entity Too Large",
 		detail: "Request Entity Too Large.",
 		response: (options: HttpErrorResponseOptions = {}) =>
@@ -444,7 +444,7 @@ export const status = {
 			),
 	},
 	REQUEST_TOO_LONG: {
-		code: 413,
+		code: 413 as const,
 		title: "Request Entity Too Large",
 		detail: "Request Entity Too Large.",
 		response: (options: HttpErrorResponseOptions = {}) =>
@@ -458,7 +458,7 @@ export const status = {
 			),
 	},
 	REQUEST_URI_TOO_LONG: {
-		code: 414,
+		code: 414 as const,
 		title: "Request URI Too Long",
 		detail: "Request URI Too Long.",
 		response: (options: HttpErrorResponseOptions = {}) =>
@@ -472,7 +472,7 @@ export const status = {
 			),
 	},
 	UNSUPPORTED_MEDIA_TYPE: {
-		code: 415,
+		code: 415 as const,
 		title: "Unsupported Media Type",
 		detail: "Unsupported Media Type.",
 		response: (options: HttpErrorResponseOptions = {}) =>
@@ -486,7 +486,7 @@ export const status = {
 			),
 	},
 	REQUESTED_RANGE_NOT_SATISFIABLE: {
-		code: 416,
+		code: 416 as const,
 		title: "Requested Range Not Satisfiable",
 		detail: "Requested Range Not Satisfiable.",
 		response: (options: HttpErrorResponseOptions = {}) =>
@@ -500,7 +500,7 @@ export const status = {
 			),
 	},
 	EXPECTATION_FAILED: {
-		code: 417,
+		code: 417 as const,
 		title: "Expectation Failed",
 		detail: "Expectation Failed.",
 		response: (options: HttpErrorResponseOptions = {}) =>
@@ -514,7 +514,7 @@ export const status = {
 			),
 	},
 	IM_A_TEAPOT: {
-		code: 418,
+		code: 418 as const,
 		title: "I'm a teapot",
 		detail: "I'm a teapot.",
 		response: (options: HttpErrorResponseOptions = {}) =>
@@ -528,7 +528,7 @@ export const status = {
 			),
 	},
 	INSUFFICIENT_SPACE_ON_RESOURCE: {
-		code: 419,
+		code: 419 as const,
 		title: "Insufficient Space on Resource",
 		detail: "Insufficient Space on Resource.",
 		response: (options: HttpErrorResponseOptions = {}) =>
@@ -542,7 +542,7 @@ export const status = {
 			),
 	},
 	METHOD_FAILURE: {
-		code: 420,
+		code: 420 as const,
 		title: "Method Failure",
 		detail: "Method Failure.",
 		response: (options: HttpErrorResponseOptions = {}) =>
@@ -556,7 +556,7 @@ export const status = {
 			),
 	},
 	MISDIRECTED_REQUEST: {
-		code: 421,
+		code: 421 as const,
 		title: "Misdirected Request",
 		detail: "Misdirected Request.",
 		response: (options: HttpErrorResponseOptions = {}) =>
@@ -570,7 +570,7 @@ export const status = {
 			),
 	},
 	UNPROCESSABLE_ENTITY: {
-		code: 422,
+		code: 422 as const,
 		title: "Unprocessable Entity",
 		detail: "The data sent could not be processed.",
 		response: (options: HttpErrorResponseOptions = {}) =>
@@ -584,7 +584,7 @@ export const status = {
 			),
 	},
 	LOCKED: {
-		code: 423,
+		code: 423 as const,
 		title: "Locked",
 		detail: "Locked.",
 		response: (options: HttpErrorResponseOptions = {}) =>
@@ -598,7 +598,7 @@ export const status = {
 			),
 	},
 	FAILED_DEPENDENCY: {
-		code: 424,
+		code: 424 as const,
 		title: "Failed Dependency",
 		detail: "Failed Dependency.",
 		response: (options: HttpErrorResponseOptions = {}) =>
@@ -612,7 +612,7 @@ export const status = {
 			),
 	},
 	TOO_EARLY: {
-		code: 425,
+		code: 425 as const,
 		title: "Too Early",
 		detail: "Too Early.",
 		response: (options: HttpErrorResponseOptions = {}) =>
@@ -626,7 +626,7 @@ export const status = {
 			),
 	},
 	UPGRADE_REQUIRED: {
-		code: 426,
+		code: 426 as const,
 		title: "Upgrade Required",
 		detail: "Upgrade Required.",
 		response: (options: HttpErrorResponseOptions = {}) =>
@@ -640,7 +640,7 @@ export const status = {
 			),
 	},
 	PRECONDITION_REQUIRED: {
-		code: 428,
+		code: 428 as const,
 		title: "Precondition Required",
 		detail: "Precondition Required.",
 		response: (options: HttpErrorResponseOptions = {}) =>
@@ -654,7 +654,7 @@ export const status = {
 			),
 	},
 	TOO_MANY_REQUESTS: {
-		code: 429,
+		code: 429 as const,
 		title: "Too Many Requests",
 		detail: "Too many requests. Please try again later.",
 		response: (options: HttpErrorResponseOptions = {}) =>
@@ -668,7 +668,7 @@ export const status = {
 			),
 	},
 	REQUEST_HEADER_FIELDS_TOO_LARGE: {
-		code: 431,
+		code: 431 as const,
 		title: "Request Header Fields Too Large",
 		detail: "Request Header Fields Too Large.",
 		response: (options: HttpErrorResponseOptions = {}) =>
@@ -682,7 +682,7 @@ export const status = {
 			),
 	},
 	UNAVAILABLE_FOR_LEGAL_REASONS: {
-		code: 451,
+		code: 451 as const,
 		title: "Unavailable For Legal Reasons",
 		detail: "Unavailable For Legal Reasons.",
 		response: (options: HttpErrorResponseOptions = {}) =>
@@ -696,7 +696,7 @@ export const status = {
 			),
 	},
 	INTERNAL_SERVER_ERROR: {
-		code: 500,
+		code: 500 as const,
 		title: "Internal Server Error",
 		detail: "An unexpected error occurred. Please try again later.",
 		response: (options: HttpErrorResponseOptions = {}) =>
@@ -710,7 +710,7 @@ export const status = {
 			),
 	},
 	NOT_IMPLEMENTED: {
-		code: 501,
+		code: 501 as const,
 		title: "Not Implemented",
 		detail: "Not Implemented.",
 		response: (options: HttpErrorResponseOptions = {}) =>
@@ -724,7 +724,7 @@ export const status = {
 			),
 	},
 	BAD_GATEWAY: {
-		code: 502,
+		code: 502 as const,
 		title: "Bad Gateway",
 		detail: "Invalid response received from upstream server.",
 		response: (options: HttpErrorResponseOptions = {}) =>
@@ -738,7 +738,7 @@ export const status = {
 			),
 	},
 	SERVICE_UNAVAILABLE: {
-		code: 503,
+		code: 503 as const,
 		title: "Service Unavailable",
 		detail: "Service temporarily unavailable. Please try again later.",
 		response: (options: HttpErrorResponseOptions = {}) =>
@@ -752,7 +752,7 @@ export const status = {
 			),
 	},
 	GATEWAY_TIMEOUT: {
-		code: 504,
+		code: 504 as const,
 		title: "Gateway Timeout",
 		detail: "Upstream server took too long to respond.",
 		response: (options: HttpErrorResponseOptions = {}) =>
@@ -766,7 +766,7 @@ export const status = {
 			),
 	},
 	HTTP_VERSION_NOT_SUPPORTED: {
-		code: 505,
+		code: 505 as const,
 		title: "HTTP Version Not Supported",
 		detail: "HTTP Version Not Supported.",
 		response: (options: HttpErrorResponseOptions = {}) =>
@@ -780,7 +780,7 @@ export const status = {
 			),
 	},
 	VARIANT_ALSO_NEGOTIATES: {
-		code: 506,
+		code: 506 as const,
 		title: "Variant Also Negotiates",
 		detail: "Variant Also Negotiates.",
 		response: (options: HttpErrorResponseOptions = {}) =>
@@ -794,7 +794,7 @@ export const status = {
 			),
 	},
 	INSUFFICIENT_STORAGE: {
-		code: 507,
+		code: 507 as const,
 		title: "Insufficient Storage",
 		detail: "Insufficient Storage.",
 		response: (options: HttpErrorResponseOptions = {}) =>
@@ -808,7 +808,7 @@ export const status = {
 			),
 	},
 	LOOP_DETECTED: {
-		code: 508,
+		code: 508 as const,
 		title: "Loop Detected",
 		detail: "Loop Detected.",
 		response: (options: HttpErrorResponseOptions = {}) =>
@@ -822,7 +822,7 @@ export const status = {
 			),
 	},
 	NOT_EXTENDED: {
-		code: 510,
+		code: 510 as const,
 		title: "Not Extended",
 		detail: "Not Extended.",
 		response: (options: HttpErrorResponseOptions = {}) =>
@@ -836,7 +836,7 @@ export const status = {
 			),
 	},
 	NETWORK_AUTHENTICATION_REQUIRED: {
-		code: 511,
+		code: 511 as const,
 		title: "Network Authentication Required",
 		detail: "Network Authentication Required.",
 		response: (options: HttpErrorResponseOptions = {}) =>

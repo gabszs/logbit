@@ -49,6 +49,16 @@ export const connectionSchema = z.discriminatedUnion("type", [
 	clickhouseConnectionSchema,
 ]);
 
+export const connectionResponseSchema = baseConnectionSchema.extend({
+	createdAt: z.date(),
+	updatedAt: z.date(),
+	config: z.union([
+		clickhouseConnectionSchema.shape.config,
+		cloudflareConnectionSchema.shape.config,
+		resendConnectionSchema.shape.config,
+	]),
+});
+
 const connectionCommonUpsertSchema = connectionCommonSchema.omit({
 	id: true,
 	organizationId: true,
@@ -119,19 +129,20 @@ export const connectionSuccessSchema = z
 			description: "Response message",
 			example: "Connection successfully created",
 		}),
-		data: connectionSchema,
+		data: connectionResponseSchema,
 		metadata: z.object({}).nullable(),
 	})
 	.openapi("ConnectionSuccess");
 
 export const connectionListSuccessSchema = connectionSuccessSchema
 	.extend({
-		data: z.array(connectionSchema),
+		data: z.array(connectionResponseSchema),
 		metadata: searchOptionsSchema.nullable(),
 	})
 	.openapi("ConnectionListSuccess");
 
 export type ConnectionEntityType = z.infer<typeof connectionSchema>;
+export type ConnectionResponseType = z.infer<typeof connectionResponseSchema>;
 export type ConnectionListSuccessType = z.infer<
 	typeof connectionListSuccessSchema
 >;

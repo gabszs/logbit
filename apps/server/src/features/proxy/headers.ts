@@ -1,4 +1,4 @@
-import type { ClickhouseConfig } from "@/integrations/clickhouse/schemas";
+import type { ClickhouseConfigType } from "@/integrations/clickhouse/schemas";
 
 // Headers from the client request that must never reach ClickHouse.
 // Auth and database are always replaced with the connection's saved config.
@@ -41,7 +41,7 @@ export function buildForwardHeaders(
 
 export function applyClickhouseConnectionHeaders(
 	forwardHeaders: Headers,
-	config: Pick<ClickhouseConfig, "username" | "password" | "database">,
+	config: Pick<ClickhouseConfigType, "username" | "password" | "database">,
 ) {
 	forwardHeaders.set("X-ClickHouse-User", config.username);
 	if (config.password != null) {

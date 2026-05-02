@@ -5,4 +5,4 @@ export const CloudflareConfigSchema = z.object({
 	zoneId: z.string().min(1, { message: "Zone ID is required" }),
 });
 
-export type CloudflareConfig = z.infer<typeof CloudflareConfigSchema>;
+export type CloudflareConfigType = z.infer<typeof CloudflareConfigSchema>;
