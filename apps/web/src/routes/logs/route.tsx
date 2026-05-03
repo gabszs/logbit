@@ -1,8 +1,24 @@
 import { queryOptions, useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { AlertTriangle, BarChart3, Rows3, TimerReset } from "lucide-react";
+import {
+	AlertTriangle,
+	BarChart3,
+	PanelLeft,
+	Rows3,
+	TimerReset,
+} from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Badge } from "@/web/components/ui/badge";
+import { Button } from "@/web/components/ui/button";
+import {
+	Sheet,
+	SheetContent,
+	SheetDescription,
+	SheetHeader,
+	SheetTitle,
+	SheetTrigger,
+} from "@/web/components/ui/sheet";
+import { useContentSidebar } from "@/web/hooks/use-content-sidebar";
 import { requireAuthenticated } from "@/web/lib/route-guards";
 import { getLogSources } from "@/web/lib/sources";
 import {
@@ -70,6 +86,7 @@ export const Route = createFileRoute("/logs")({
 function LogsRoute() {
 	const navigate = useNavigate();
 	const { data: logSources = [] } = useQuery(logSourcesQueryOptions);
+	const { isExpanded: isAppSidebarExpanded } = useContentSidebar();
 	const search = Route.useSearch();
 	const [queryMode, setQueryMode] = useState<"sql" | "lucene">("sql");
 	const [timeRange, setTimeRange] = useState<LogTimeRange>("15m");
@@ -86,6 +103,7 @@ function LogsRoute() {
 		bytesRead: null,
 	});
 	const [runError, setRunError] = useState<string | null>(null);
+	const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 	const previousSourceIdRef = useRef<string | null>(null);
 	const timeRangeRef = useRef(timeRange);
 
@@ -268,10 +286,45 @@ function LogsRoute() {
 
 	return (
 		<div className="flex flex-1 flex-col px-4 pt-20 pb-10 sm:px-6 lg:px-8">
-			<div className="mx-auto grid w-full max-w-[1600px] gap-5 xl:min-h-[calc(100svh-7.5rem)] xl:grid-cols-[240px_minmax(0,1fr)] xl:items-stretch">
-				<LogsSidebarPreview className="h-full self-stretch xl:sticky xl:top-20 xl:max-h-[calc(100svh-7.5rem)] xl:overflow-auto" />
+			<div className="w-full xl:pl-[280px]">
+				<div className="mb-4 flex items-center justify-between rounded-2xl border border-[color:var(--surface-border)] bg-[color:var(--surface-background)]/92 px-4 py-3 shadow-[var(--surface-shadow)] backdrop-blur-sm xl:hidden">
+					<div>
+						<div className="text-[10px] text-muted-foreground uppercase tracking-[0.18em]">
+							Log explorer
+						</div>
+						<h2 className="mt-1 text-lg leading-none">Sidebar controls</h2>
+					</div>
 
-				<div className="flex min-h-0 flex-col gap-5">
+					<Sheet open={isSidebarOpen} onOpenChange={setIsSidebarOpen}>
+						<SheetTrigger asChild>
+							<Button
+								variant="outline"
+								className="border-[color:var(--surface-border)] bg-[color:var(--surface-background)]/80"
+							>
+								<PanelLeft className="size-4" />
+								Open sidebar
+							</Button>
+						</SheetTrigger>
+						<SheetContent
+							side="left"
+							className="w-[18.5rem] max-w-[88vw] gap-0 border-[color:var(--surface-border)] bg-[color:var(--surface-background)] p-0 sm:max-w-[18.5rem]"
+						>
+							<SheetHeader className="border-[color:var(--surface-border)] border-b px-4 py-4 text-left">
+								<SheetTitle>Sidebar controls</SheetTitle>
+								<SheetDescription>
+									Browse presets, models, memory, and mode options.
+								</SheetDescription>
+							</SheetHeader>
+							<LogsSidebarPreview className="min-h-0 flex-1" />
+						</SheetContent>
+					</Sheet>
+				</div>
+
+				<LogsSidebarPreview
+					className={`fixed top-13 bottom-0 z-20 hidden w-[280px] border-[color:var(--surface-border)] border-r bg-[color:var(--surface-background)] shadow-[12px_0_32px_rgba(0,0,0,0.08)] xl:flex dark:shadow-[12px_0_32px_rgba(0,0,0,0.24)] ${isAppSidebarExpanded ? "left-48" : "left-12"}`}
+				/>
+
+				<div className="mx-auto flex min-h-0 w-full max-w-[1400px] flex-col gap-5 xl:pl-5">
 					<QueryComposer
 						mode={queryMode}
 						timeRange={timeRange}
@@ -338,8 +391,8 @@ function LogsRoute() {
 								</div>
 							) : (
 								<div className="logs-surface-divider pt-4 text-muted-foreground text-sm leading-7">
-									`SELECT` and `ORDER BY` are reset when you switch sources in the
-									header. Use `WHERE` to narrow the active time window.
+									`SELECT` and `ORDER BY` are reset when you switch sources in
+									the header. Use `WHERE` to narrow the active time window.
 								</div>
 							)}
 						</div>
