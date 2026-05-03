@@ -285,7 +285,7 @@ function LogsRoute() {
 	];
 
 	return (
-		<div className="flex flex-1 flex-col px-4 pt-20 pb-10 sm:px-6 lg:px-8">
+		<div className="flex flex-1 flex-col px-4 pt-20 pb-10 sm:px-6 lg:px-8 xl:px-0 xl:pt-13">
 			<div className="w-full xl:pl-[280px]">
 				<div className="mb-4 flex items-center justify-between rounded-2xl border border-[color:var(--surface-border)] bg-[color:var(--surface-background)]/92 px-4 py-3 shadow-[var(--surface-shadow)] backdrop-blur-sm xl:hidden">
 					<div>
@@ -324,8 +324,9 @@ function LogsRoute() {
 					className={`fixed top-13 bottom-0 z-20 hidden w-[280px] border-[color:var(--surface-border)] border-r bg-[color:var(--surface-background)] shadow-[12px_0_32px_rgba(0,0,0,0.08)] xl:flex dark:shadow-[12px_0_32px_rgba(0,0,0,0.24)] ${isAppSidebarExpanded ? "left-48" : "left-12"}`}
 				/>
 
-				<div className="mx-auto flex min-h-0 w-full max-w-[1400px] flex-col gap-5 xl:pl-5">
+				<div className="flex min-h-0 w-full flex-col gap-5">
 					<QueryComposer
+						className="w-full"
 						mode={queryMode}
 						timeRange={timeRange}
 						selectQuery={selectQuery}
@@ -343,99 +344,101 @@ function LogsRoute() {
 						isRunning={isRunning}
 					/>
 
-					<section className="logs-surface min-h-0 flex-1 overflow-hidden backdrop-blur-sm">
-						<div className="space-y-5 p-5 lg:p-6">
-							<div className="flex flex-wrap items-start justify-between gap-3">
-								<div className="space-y-2">
-									<Badge
-										variant="outline"
-										className="w-fit border-primary/30 bg-primary/5 text-primary"
-									>
-										Log explorer
-									</Badge>
-									<h1 className="max-w-3xl text-3xl tracking-tight sm:text-4xl">
-										Query logs, inspect volume, and read rows directly from
-										ClickHouse.
-									</h1>
-								</div>
-								<div className="flex min-w-0 flex-wrap items-center gap-3 text-sm">
-									{summaryBadges.map((item) => {
-										const Icon = item.icon;
-										return (
-											<div
-												key={item.label}
-												className="flex items-center gap-2 text-muted-foreground"
-											>
-												<Icon className="size-4" />
-												<div className="leading-tight">
-													<div className="text-xs uppercase tracking-[0.18em]">
-														{item.label}
-													</div>
-													<div className="font-medium text-foreground">
-														{item.value}
+					<div className="px-0 xl:px-5">
+						<section className="logs-surface mx-auto min-h-0 w-full max-w-[1400px] flex-1 overflow-hidden backdrop-blur-sm">
+							<div className="space-y-5 p-5 lg:p-6">
+								<div className="flex flex-wrap items-start justify-between gap-3">
+									<div className="space-y-2">
+										<Badge
+											variant="outline"
+											className="w-fit border-primary/30 bg-primary/5 text-primary"
+										>
+											Log explorer
+										</Badge>
+										<h1 className="max-w-3xl text-3xl tracking-tight sm:text-4xl">
+											Query logs, inspect volume, and read rows directly from
+											ClickHouse.
+										</h1>
+									</div>
+									<div className="flex min-w-0 flex-wrap items-center gap-3 text-sm">
+										{summaryBadges.map((item) => {
+											const Icon = item.icon;
+											return (
+												<div
+													key={item.label}
+													className="flex items-center gap-2 text-muted-foreground"
+												>
+													<Icon className="size-4" />
+													<div className="leading-tight">
+														<div className="text-xs uppercase tracking-[0.18em]">
+															{item.label}
+														</div>
+														<div className="font-medium text-foreground">
+															{item.value}
+														</div>
 													</div>
 												</div>
-											</div>
-										);
-									})}
-								</div>
-							</div>
-
-							{runError ? (
-								<div className="rounded-md border border-stone-200 bg-destructive/5 p-4 text-destructive text-sm shadow-sm dark:border-stone-800">
-									<div className="mb-1 flex items-center gap-2 font-medium">
-										<AlertTriangle className="size-4" />
-										ClickHouse error
+											);
+										})}
 									</div>
-									<p className="leading-6">{runError}</p>
 								</div>
-							) : (
-								<div className="logs-surface-divider pt-4 text-muted-foreground text-sm leading-7">
-									`SELECT` and `ORDER BY` are reset when you switch sources in
-									the header. Use `WHERE` to narrow the active time window.
-								</div>
-							)}
-						</div>
 
-						<div className="logs-surface-divider px-5 py-5 lg:px-6">
-							<AnalysisModeNav />
-							<div className="mt-5 space-y-5">
-								<LogsVolumeChart points={execution.volumePoints} />
-
-								<DynamicResultsTable
-									rows={execution.rows}
-									columns={resultColumns}
-									emptyState={
-										<div className="text-center">
-											<p className="font-medium text-sm">
-												{logSources.length === 0
-													? "No log sources configured yet."
-													: isRunning
-														? "Running query..."
-														: "No rows to show yet."}
-											</p>
-											<p className="mt-2 text-muted-foreground text-sm leading-6">
-												{logSources.length === 0 ? (
-													<>
-														Create a log source first and then come back to{" "}
-														<Link
-															to="/integrations/sources"
-															className="text-primary underline-offset-4 hover:underline"
-														>
-															Integrations / Sources
-														</Link>
-														.
-													</>
-												) : (
-													"Click Run to execute the active query against ClickHouse."
-												)}
-											</p>
+								{runError ? (
+									<div className="rounded-md border border-stone-200 bg-destructive/5 p-4 text-destructive text-sm shadow-sm dark:border-stone-800">
+										<div className="mb-1 flex items-center gap-2 font-medium">
+											<AlertTriangle className="size-4" />
+											ClickHouse error
 										</div>
-									}
-								/>
+										<p className="leading-6">{runError}</p>
+									</div>
+								) : (
+									<div className="logs-surface-divider pt-4 text-muted-foreground text-sm leading-7">
+										`SELECT` and `ORDER BY` are reset when you switch sources in
+										the header. Use `WHERE` to narrow the active time window.
+									</div>
+								)}
 							</div>
-						</div>
-					</section>
+
+							<div className="logs-surface-divider px-5 py-5 lg:px-6">
+								<AnalysisModeNav />
+								<div className="mt-5 space-y-5">
+									<LogsVolumeChart points={execution.volumePoints} />
+
+									<DynamicResultsTable
+										rows={execution.rows}
+										columns={resultColumns}
+										emptyState={
+											<div className="text-center">
+												<p className="font-medium text-sm">
+													{logSources.length === 0
+														? "No log sources configured yet."
+														: isRunning
+															? "Running query..."
+															: "No rows to show yet."}
+												</p>
+												<p className="mt-2 text-muted-foreground text-sm leading-6">
+													{logSources.length === 0 ? (
+														<>
+															Create a log source first and then come back to{" "}
+															<Link
+																to="/integrations/sources"
+																className="text-primary underline-offset-4 hover:underline"
+															>
+																Integrations / Sources
+															</Link>
+															.
+														</>
+													) : (
+														"Click Run to execute the active query against ClickHouse."
+													)}
+												</p>
+											</div>
+										}
+									/>
+								</div>
+							</div>
+						</section>
+					</div>
 				</div>
 			</div>
 		</div>
