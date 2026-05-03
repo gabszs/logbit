@@ -34,7 +34,7 @@ export function LogsSkeleton() {
 					</div>
 				</div>
 
-				<div className="flex min-h-0 w-full flex-col gap-5">
+				<div className="flex min-h-0 w-full flex-col gap-5 xl:gap-0">
 					<div className="space-y-3 border-[color:var(--surface-border)] border-b bg-[color:var(--surface-background)]/92 px-4 py-4 sm:px-5 lg:px-6">
 						<div className="grid gap-2 xl:grid-cols-[minmax(0,2.2fr)_minmax(18rem,0.9fr)]">
 							<Skeleton className="h-10 w-full rounded-lg" />
@@ -47,25 +47,7 @@ export function LogsSkeleton() {
 						</div>
 					</div>
 
-					<div className="px-0 xl:px-5">
-						<div className="logs-surface mx-auto min-h-0 w-full max-w-[1400px] flex-1 overflow-hidden backdrop-blur-sm">
-							<div className="space-y-5 p-5 lg:p-6">
-								<Skeleton className="h-4 w-28" />
-								<Skeleton className="h-12 w-3/4 rounded-xl" />
-								<div className="logs-surface-divider grid gap-2 pt-4 xl:grid-cols-[minmax(0,1.9fr)_minmax(8rem,0.75fr)_auto]">
-									<Skeleton className="h-10 w-28" />
-									<Skeleton className="h-10 w-full xl:col-span-2" />
-								</div>
-							</div>
-							<div className="logs-surface-divider px-5 py-5 lg:px-6">
-								<Skeleton className="h-8 w-48" />
-								<div className="mt-5 space-y-5">
-									<Skeleton className="h-64 rounded-2xl" />
-									<Skeleton className="h-[28rem] rounded-2xl" />
-								</div>
-							</div>
-						</div>
-					</div>
+					<div className="min-h-0 w-full flex-1 bg-background" />
 				</div>
 			</div>
 		</div>

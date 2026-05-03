@@ -1,14 +1,7 @@
 import { queryOptions, useQuery } from "@tanstack/react-query";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import {
-	AlertTriangle,
-	BarChart3,
-	PanelLeft,
-	Rows3,
-	TimerReset,
-} from "lucide-react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { PanelLeft } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Badge } from "@/web/components/ui/badge";
 import { Button } from "@/web/components/ui/button";
 import {
 	Sheet,
@@ -24,20 +17,10 @@ import { getLogSources } from "@/web/lib/sources";
 import {
 	createProxyClient,
 	executeClickhouseJsonQuery,
-	formatClickhouseQueryError,
 } from "../integrations/-lib/clickhouse-client";
-import { AnalysisModeNav } from "./-components/analysis-mode-nav";
-import {
-	type ClickhouseRow,
-	DynamicResultsTable,
-} from "./-components/dynamic-results-table";
 import { LogsError } from "./-components/logs-error";
 import { LogsSidebarPreview } from "./-components/logs-sidebar-preview";
 import { LogsSkeleton } from "./-components/logs-skeleton";
-import {
-	LogsVolumeChart,
-	type LogsVolumePoint,
-} from "./-components/logs-volume-chart";
 import type { AutoRefreshInterval } from "./-components/query-composer";
 import { QueryComposer } from "./-components/query-composer";
 import {
@@ -51,15 +34,6 @@ const logSourcesQueryOptions = queryOptions({
 	queryKey: ["sources", "logs"],
 	queryFn: getLogSources,
 });
-
-type LogsExecutionState = {
-	rows: ClickhouseRow[];
-	columns: Array<{ key: string; label: string }>;
-	volumePoints: LogsVolumePoint[];
-	rowsRead: number | null;
-	elapsed: number | null;
-	bytesRead: number | null;
-};
 
 export const Route = createFileRoute("/logs")({
 	validateSearch: (search: Record<string, unknown>) => {
@@ -97,15 +71,6 @@ function LogsRoute() {
 	const [whereQuery, setWhereQuery] = useState("");
 	const [orderByQuery, setOrderByQuery] = useState("");
 	const [isRunning, setIsRunning] = useState(false);
-	const [execution, setExecution] = useState<LogsExecutionState>({
-		rows: [],
-		columns: [],
-		volumePoints: [],
-		rowsRead: null,
-		elapsed: null,
-		bytesRead: null,
-	});
-	const [runError, setRunError] = useState<string | null>(null);
 	const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 	const previousSourceIdRef = useRef<string | null>(null);
 	const timeRangeRef = useRef(timeRange);
@@ -135,49 +100,13 @@ function LogsRoute() {
 		if (!tableQuery || !volumeQuery) return;
 
 		setIsRunning(true);
-		setRunError(null);
 
 		try {
 			const client = createProxyClient(source.connectionId);
-			const [tableResult, volumeResult] = await Promise.all([
-				executeClickhouseJsonQuery<ClickhouseRow>(client, tableQuery),
-				executeClickhouseJsonQuery<{ bucket: string; rows: number }>(
-					client,
-					volumeQuery,
-				),
+			await Promise.all([
+				executeClickhouseJsonQuery(client, tableQuery),
+				executeClickhouseJsonQuery(client, volumeQuery),
 			]);
-
-			setExecution({
-				rows: tableResult.data,
-				columns: tableResult.meta?.length
-					? tableResult.meta.map((column) => ({
-							key: column.name,
-							label: column.name,
-						}))
-					: tableResult.data[0]
-						? Object.keys(tableResult.data[0]).map((key) => ({
-								key,
-								label: key,
-							}))
-						: [],
-				volumePoints: volumeResult.data.map((row) => ({
-					bucket: row.bucket,
-					rows: Number(row.rows ?? 0),
-				})),
-				rowsRead: tableResult.statistics?.rows_read ?? null,
-				elapsed: tableResult.statistics?.elapsed ?? null,
-				bytesRead: tableResult.statistics?.bytes_read ?? null,
-			});
-		} catch (error) {
-			setRunError(formatClickhouseQueryError(error));
-			setExecution({
-				rows: [],
-				columns: [],
-				volumePoints: [],
-				rowsRead: null,
-				elapsed: null,
-				bytesRead: null,
-			});
 		} finally {
 			setIsRunning(false);
 		}
@@ -278,47 +207,6 @@ function LogsRoute() {
 		whereQuery,
 	]);
 
-	const resultColumns = useMemo(() => {
-		if (execution.columns.length > 0) {
-			return execution.columns;
-		}
-
-		const fallbackColumns =
-			execution.rows.length > 0 ? Object.keys(execution.rows[0]) : [];
-		return fallbackColumns.map((key) => ({
-			key,
-			label: key,
-		}));
-	}, [execution.columns, execution.rows]);
-
-	const summaryBadges = [
-		{
-			label: "Rows",
-			value: execution.rows.length.toString(),
-			note:
-				execution.rowsRead != null
-					? `${new Intl.NumberFormat("en-US").format(execution.rowsRead)} read`
-					: "returned rows",
-			icon: Rows3,
-		},
-		{
-			label: "Elapsed",
-			value:
-				execution.elapsed != null ? `${execution.elapsed.toFixed(3)}s` : "—",
-			icon: TimerReset,
-		},
-		{
-			label: "Bytes read",
-			value:
-				execution.bytesRead != null
-					? new Intl.NumberFormat("en-US", { notation: "compact" }).format(
-							execution.bytesRead,
-						)
-					: "—",
-			icon: BarChart3,
-		},
-	];
-
 	return (
 		<div className="flex flex-1 flex-col px-4 pt-20 pb-10 sm:px-6 lg:px-8 xl:px-0 xl:pt-13">
 			<div className="w-full xl:pl-[280px]">
@@ -359,7 +247,7 @@ function LogsRoute() {
 					className={`fixed top-13 bottom-0 z-20 hidden w-[280px] border-[color:var(--surface-border)] border-r bg-[color:var(--surface-background)] shadow-[12px_0_32px_rgba(0,0,0,0.08)] xl:flex dark:shadow-[12px_0_32px_rgba(0,0,0,0.24)] ${isAppSidebarExpanded ? "left-48" : "left-12"}`}
 				/>
 
-				<div className="flex min-h-0 w-full flex-col gap-5">
+				<div className="flex min-h-0 w-full flex-col gap-5 xl:gap-0">
 					<QueryComposer
 						className="w-full"
 						mode={queryMode}
@@ -381,101 +269,7 @@ function LogsRoute() {
 						isRunning={isRunning}
 					/>
 
-					<div className="px-0 xl:px-5">
-						<section className="logs-surface mx-auto min-h-0 w-full max-w-[1400px] flex-1 overflow-hidden backdrop-blur-sm">
-							<div className="space-y-5 p-5 lg:p-6">
-								<div className="flex flex-wrap items-start justify-between gap-3">
-									<div className="space-y-2">
-										<Badge
-											variant="outline"
-											className="w-fit border-primary/30 bg-primary/5 text-primary"
-										>
-											Log explorer
-										</Badge>
-										<h1 className="max-w-3xl text-3xl tracking-tight sm:text-4xl">
-											Query logs, inspect volume, and read rows directly from
-											ClickHouse.
-										</h1>
-									</div>
-									<div className="flex min-w-0 flex-wrap items-center gap-3 text-sm">
-										{summaryBadges.map((item) => {
-											const Icon = item.icon;
-											return (
-												<div
-													key={item.label}
-													className="flex items-center gap-2 text-muted-foreground"
-												>
-													<Icon className="size-4" />
-													<div className="leading-tight">
-														<div className="text-xs uppercase tracking-[0.18em]">
-															{item.label}
-														</div>
-														<div className="font-medium text-foreground">
-															{item.value}
-														</div>
-													</div>
-												</div>
-											);
-										})}
-									</div>
-								</div>
-
-								{runError ? (
-									<div className="rounded-md border border-stone-200 bg-destructive/5 p-4 text-destructive text-sm shadow-sm dark:border-stone-800">
-										<div className="mb-1 flex items-center gap-2 font-medium">
-											<AlertTriangle className="size-4" />
-											ClickHouse error
-										</div>
-										<p className="leading-6">{runError}</p>
-									</div>
-								) : (
-									<div className="logs-surface-divider pt-4 text-muted-foreground text-sm leading-7">
-										`SELECT` and `ORDER BY` are reset when you switch sources in
-										the header. Use `WHERE` to narrow the active time window.
-									</div>
-								)}
-							</div>
-
-							<div className="logs-surface-divider px-5 py-5 lg:px-6">
-								<AnalysisModeNav />
-								<div className="mt-5 space-y-5">
-									<LogsVolumeChart points={execution.volumePoints} />
-
-									<DynamicResultsTable
-										rows={execution.rows}
-										columns={resultColumns}
-										emptyState={
-											<div className="text-center">
-												<p className="font-medium text-sm">
-													{logSources.length === 0
-														? "No log sources configured yet."
-														: isRunning
-															? "Running query..."
-															: "No rows to show yet."}
-												</p>
-												<p className="mt-2 text-muted-foreground text-sm leading-6">
-													{logSources.length === 0 ? (
-														<>
-															Create a log source first and then come back to{" "}
-															<Link
-																to="/integrations/sources"
-																className="text-primary underline-offset-4 hover:underline"
-															>
-																Integrations / Sources
-															</Link>
-															.
-														</>
-													) : (
-														"Click refresh to execute the active query against ClickHouse."
-													)}
-												</p>
-											</div>
-										}
-									/>
-								</div>
-							</div>
-						</section>
-					</div>
+					<section className="min-h-0 w-full flex-1 bg-background" />
 				</div>
 			</div>
 		</div>
