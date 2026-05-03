@@ -316,6 +316,7 @@ function LogsRoute() {
 								className="flex-1"
 								rows={tableResult?.data ?? []}
 								columns={tableColumns}
+								statistics={tableResult?.statistics}
 								emptyState={
 									<div className="flex h-full min-h-[18rem] items-center justify-center text-muted-foreground text-sm">
 										Run a query to fill this space with log rows.
