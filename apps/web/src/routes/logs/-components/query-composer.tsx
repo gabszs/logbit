@@ -44,8 +44,8 @@ export function QueryComposer({
 	return (
 		<div className="space-y-1">
 			<div className="grid gap-1.5 xl:grid-cols-[minmax(0,1.75fr)_minmax(0,0.85fr)]">
-				<div className="flex h-8 min-w-0 overflow-hidden rounded-xl border border-border/70 bg-background/70">
-					<div className="flex h-8 items-center border-border/70 border-r bg-background/70 px-3 font-mono text-foreground text-sm leading-none">
+				<div className="flex h-8 min-w-0 overflow-hidden rounded-md border border-stone-200 bg-[#faf9f6] dark:border-stone-800 dark:bg-stone-950">
+					<div className="flex h-8 items-center border-stone-200 border-r bg-[#faf9f6] px-3 font-mono text-foreground text-sm leading-none dark:border-stone-800 dark:bg-stone-950">
 						SELECT
 					</div>
 					<Input
@@ -55,8 +55,8 @@ export function QueryComposer({
 						placeholder="Timestamp, ServiceName as service, SeverityText as level, Body"
 					/>
 				</div>
-				<div className="flex h-8 min-w-0 overflow-hidden rounded-xl border border-border/70 bg-background/70">
-					<div className="flex h-8 items-center border-border/70 border-r bg-background/70 px-3 font-mono text-foreground text-sm leading-none">
+				<div className="flex h-8 min-w-0 overflow-hidden rounded-md border border-stone-200 bg-[#faf9f6] dark:border-stone-800 dark:bg-stone-950">
+					<div className="flex h-8 items-center border-stone-200 border-r bg-[#faf9f6] px-3 font-mono text-foreground text-sm leading-none dark:border-stone-800 dark:bg-stone-950">
 						ORDER BY
 					</div>
 					<Input
@@ -69,15 +69,15 @@ export function QueryComposer({
 			</div>
 
 			<div className="grid items-stretch gap-1.5 xl:grid-cols-[minmax(0,1.9fr)_minmax(8rem,0.65fr)_auto]">
-				<div className="flex h-8 min-w-0 overflow-hidden rounded-xl border border-border/70 bg-background/70">
-					<div className="flex items-stretch border-border/70 border-r bg-background/70">
+				<div className="flex h-8 min-w-0 overflow-hidden rounded-md border border-stone-200 bg-[#faf9f6] dark:border-stone-800 dark:bg-stone-950">
+					<div className="flex items-stretch border-stone-200 border-r bg-[#faf9f6] dark:border-stone-800 dark:bg-stone-950">
 						<Select
 							value={mode}
 							onValueChange={(value) => onModeChange(value as "sql" | "lucene")}
 						>
 							<SelectTrigger
 								size="sm"
-								className="w-28 rounded-none border-0 bg-background/70 font-mono text-foreground text-sm leading-none shadow-none"
+								className="w-28 rounded-none border-0 bg-[#faf9f6] font-mono text-foreground text-sm leading-none shadow-none dark:bg-stone-950"
 							>
 								<SelectValue />
 							</SelectTrigger>

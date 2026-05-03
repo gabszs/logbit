@@ -13,7 +13,7 @@ import {
 export function LogsError({ error, reset }: ErrorComponentProps) {
 	return (
 		<div className="flex flex-1 items-start justify-center px-4 pt-20 pb-10">
-			<Card className="w-full max-w-2xl border-border/60 bg-card/90 shadow-lg backdrop-blur-sm">
+			<Card className="w-full max-w-2xl border-stone-200 bg-[#faf9f6] shadow-sm backdrop-blur-sm dark:border-stone-800 dark:bg-stone-950">
 				<CardHeader className="space-y-3">
 					<div className="flex items-center gap-2 text-destructive">
 						<AlertTriangle className="size-5" />
@@ -27,7 +27,7 @@ export function LogsError({ error, reset }: ErrorComponentProps) {
 					</CardDescription>
 				</CardHeader>
 				<CardContent className="space-y-4">
-					<div className="rounded-2xl border border-border/70 bg-muted/20 p-4 font-mono text-muted-foreground text-sm">
+					<div className="rounded-md border border-stone-200 bg-[#faf9f6] p-4 font-mono text-muted-foreground text-sm shadow-sm dark:border-stone-800 dark:bg-stone-950">
 						{error instanceof Error ? error.message : "Unknown error"}
 					</div>
 					<div className="flex flex-wrap gap-3">

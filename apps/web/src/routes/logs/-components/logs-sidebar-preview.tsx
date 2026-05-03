@@ -67,7 +67,7 @@ function DisabledRow({
 
 export function LogsSidebarPreview() {
 	return (
-		<aside className="overflow-hidden rounded-md border border-stone-200 bg-[#faf9f6] p-4 text-sm shadow-sm dark:border-stone-800 dark:bg-stone-950">
+		<aside className="logs-surface p-4 text-sm">
 			<div className="space-y-3">
 				<SectionHeader label="Canvas" />
 				<DisabledRow className="text-stone-600 hover:bg-stone-100 hover:text-stone-900 dark:text-stone-400 dark:hover:bg-stone-900 dark:hover:text-stone-100">
@@ -84,7 +84,7 @@ export function LogsSidebarPreview() {
 				</DisabledRow>
 			</div>
 
-			<div className="mt-3 border-stone-200 border-t pt-3 dark:border-stone-800">
+			<div className="logs-surface-divider mt-3 pt-3">
 				<SectionHeader label="Presets" />
 				<div className="flex flex-col gap-0.5">
 					{presetItems.map((item) => (
@@ -101,7 +101,7 @@ export function LogsSidebarPreview() {
 				</div>
 			</div>
 
-			<div className="mt-3 border-stone-200 border-t pt-3 dark:border-stone-800">
+			<div className="logs-surface-divider mt-3 pt-3">
 				<SectionHeader label="Resistance / LLM" />
 				<div className="flex flex-col gap-0.5">
 					{modelItems.map((item) => (
@@ -123,7 +123,7 @@ export function LogsSidebarPreview() {
 				</div>
 			</div>
 
-			<div className="mt-3 border-stone-200 border-t pt-3 dark:border-stone-800">
+			<div className="logs-surface-divider mt-3 pt-3">
 				<SectionHeader label="Capacitance / Memory" />
 				<div className="flex flex-col gap-0.5">
 					{memoryItems.map((item) => (
@@ -138,7 +138,7 @@ export function LogsSidebarPreview() {
 				</div>
 			</div>
 
-			<div className="mt-3 border-stone-200 border-t pt-3 dark:border-stone-800">
+			<div className="logs-surface-divider mt-3 pt-3">
 				<SectionHeader label="Inductance / Stability" />
 				<div className="flex flex-col gap-0.5">
 					<DisabledRow className="justify-start text-stone-600 hover:bg-violet-50 hover:text-violet-700 dark:text-stone-400 dark:hover:bg-stone-900 dark:hover:text-violet-400">
@@ -148,7 +148,7 @@ export function LogsSidebarPreview() {
 				</div>
 			</div>
 
-			<div className="mt-3 border-stone-200 border-t pt-3 dark:border-stone-800">
+			<div className="logs-surface-divider mt-3 pt-3">
 				<SectionHeader label="Mode" />
 				<div className="flex flex-col gap-1">
 					{modeItems.map((item) => (

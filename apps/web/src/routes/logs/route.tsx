@@ -268,7 +268,7 @@ function LogsRoute() {
 
 	return (
 		<div className="flex flex-1 flex-col px-4 pt-12 pb-10 sm:px-6 lg:px-8">
-			<div className="-mx-4 border-border/70 border-b pt-4 pb-2.5 sm:-mx-6 lg:-mx-8">
+			<div className="-mx-4 pt-4 pb-2.5 sm:-mx-6 lg:-mx-8">
 				<div className="mx-auto w-full max-w-[1600px] px-4 sm:px-6 lg:px-8">
 					<div className="min-w-0">
 						<QueryComposer
@@ -295,7 +295,7 @@ function LogsRoute() {
 			<div className="mx-auto grid w-full max-w-[1600px] gap-5 xl:grid-cols-[240px_minmax(0,1fr)]">
 				<LogsSidebarPreview />
 
-				<section className="overflow-hidden rounded-3xl border border-border/70 bg-card/80 shadow-sm backdrop-blur-sm">
+				<section className="logs-surface backdrop-blur-sm">
 					<div className="space-y-5 p-5 lg:p-6">
 						<div className="flex flex-wrap items-start justify-between gap-3">
 							<div className="space-y-2">
@@ -334,7 +334,7 @@ function LogsRoute() {
 						</div>
 
 						{runError ? (
-							<div className="rounded-2xl border border-destructive/20 bg-destructive/5 p-4 text-destructive text-sm">
+							<div className="rounded-md border border-stone-200 bg-destructive/5 p-4 text-destructive text-sm shadow-sm dark:border-stone-800">
 								<div className="mb-1 flex items-center gap-2 font-medium">
 									<AlertTriangle className="size-4" />
 									ClickHouse error
@@ -342,14 +342,14 @@ function LogsRoute() {
 								<p className="leading-6">{runError}</p>
 							</div>
 						) : (
-							<div className="border-border/70 border-t pt-4 text-muted-foreground text-sm leading-7">
+							<div className="logs-surface-divider pt-4 text-muted-foreground text-sm leading-7">
 								`SELECT` and `ORDER BY` are reset when you switch sources in the
 								header. Use `WHERE` to narrow the active time window.
 							</div>
 						)}
 					</div>
 
-					<div className="border-border/70 border-t px-5 py-5 lg:px-6">
+					<div className="logs-surface-divider px-5 py-5 lg:px-6">
 						<AnalysisModeNav />
 						<div className="mt-5 space-y-5">
 							<LogsVolumeChart points={execution.volumePoints} />

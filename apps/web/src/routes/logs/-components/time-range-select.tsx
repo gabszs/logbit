@@ -24,7 +24,7 @@ export function TimeRangeSelect({
 		>
 			<SelectTrigger
 				style={{ height: 32, paddingTop: 0, paddingBottom: 0 }}
-				className="w-full min-w-32 rounded-xl border-border/70 bg-background/70 font-mono text-sm leading-none"
+				className="w-full min-w-32 rounded-md border-stone-200 bg-[#faf9f6] font-mono text-sm leading-none dark:border-stone-800 dark:bg-stone-950"
 			>
 				<SelectValue />
 			</SelectTrigger>

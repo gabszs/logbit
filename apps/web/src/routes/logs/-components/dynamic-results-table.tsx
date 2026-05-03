@@ -77,22 +77,22 @@ export function DynamicResultsTable({
 				<div className="h-px flex-1 bg-border/70" />
 			</div>
 			{rowModel.length === 0 ? (
-				<div className="rounded-2xl border border-border/70 border-dashed bg-muted/20 p-6">
+				<div className="rounded-md border border-stone-200 border-dashed bg-[#faf9f6] p-6 dark:border-stone-800 dark:bg-stone-950">
 					{emptyState}
 				</div>
 			) : (
 				<div
 					ref={scrollRef}
-					className="max-h-[38rem] overflow-auto rounded-2xl border border-border/70 bg-card/70"
+					className="max-h-[38rem] overflow-auto rounded-md border border-stone-200 bg-[#faf9f6] dark:border-stone-800 dark:bg-stone-950"
 				>
 					<table className="min-w-full border-separate border-spacing-0 text-left">
-						<thead className="sticky top-0 z-10 bg-card/95 backdrop-blur-sm">
+						<thead className="sticky top-0 z-10 bg-[#faf9f6]/95 backdrop-blur-sm dark:bg-stone-950/95">
 							{headerGroups.map((headerGroup) => (
 								<tr key={headerGroup.id}>
 									{headerGroup.headers.map((header) => (
 										<th
 											key={header.id}
-											className="border-border/70 border-b px-4 py-3 font-medium text-muted-foreground text-xs uppercase tracking-[0.16em]"
+											className="border-stone-200 border-b px-4 py-3 font-medium text-muted-foreground text-xs uppercase tracking-[0.16em] dark:border-stone-800"
 										>
 											{header.isPlaceholder
 												? null
@@ -118,12 +118,12 @@ export function DynamicResultsTable({
 											transform: `translateY(${virtualRow.start}px)`,
 											width: "100%",
 										}}
-										className="border-border/40 border-b transition-colors hover:bg-muted/30"
+										className="border-stone-200 border-b transition-colors hover:bg-muted/30 dark:border-stone-800"
 									>
 										{row.getVisibleCells().map((cell) => (
 											<td
 												key={cell.id}
-												className="max-w-0 border-border/40 border-b px-4 py-2 align-top text-sm"
+												className="max-w-0 border-stone-200 border-b px-4 py-2 align-top text-sm dark:border-stone-800"
 											>
 												{flexRender(
 													cell.column.columnDef.cell,
@@ -137,7 +137,7 @@ export function DynamicResultsTable({
 						</tbody>
 					</table>
 					{columnCount === 0 && (
-						<div className="border-border/70 border-t px-4 py-3 text-muted-foreground text-xs">
+						<div className="border-stone-200 border-t px-4 py-3 text-muted-foreground text-xs dark:border-stone-800">
 							The query returned rows, but no columns were detected.
 						</div>
 					)}

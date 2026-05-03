@@ -25,7 +25,7 @@ export function LogsVolumeChart({ points }: { points: LogsVolumePoint[] }) {
 			</div>
 			<div className="h-64">
 				{points.length === 0 ? (
-					<div className="flex h-full items-center justify-center rounded-2xl border border-border/70 border-dashed bg-muted/20 text-muted-foreground text-sm">
+					<div className="flex h-full items-center justify-center rounded-md border border-stone-200 border-dashed bg-[#faf9f6] text-muted-foreground text-sm dark:border-stone-800 dark:bg-stone-950">
 						Run a query to see log volume over time.
 					</div>
 				) : (
