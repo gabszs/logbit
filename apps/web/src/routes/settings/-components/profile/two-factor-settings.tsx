@@ -514,7 +514,7 @@ export function TwoFactorSettings() {
 										/>
 									</div>
 								) : (
-									<div className="rounded-lg border border-border/70 bg-white p-3">
+									<div className="app-surface p-3">
 										<QRCode value={setupData.totpURI} size={156} />
 									</div>
 								)}

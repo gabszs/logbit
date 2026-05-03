@@ -207,7 +207,7 @@ function ProxyTestPage() {
 
 				<CardContent className="space-y-6 pt-6">
 					{/* Mode toggle */}
-					<div className="flex w-fit items-center gap-1 rounded-lg border border-border/70 bg-muted/40 p-1">
+					<div className="app-surface flex w-fit items-center gap-1 p-1">
 						{(["saved", "manual"] as Mode[]).map((m) => (
 							<button
 								key={m}
@@ -425,10 +425,10 @@ function ProxyTestPage() {
 								</p>
 							</div>
 						) : result && (result.meta?.length ?? 0) > 0 ? (
-							<div className="overflow-auto rounded-lg border border-border/70">
+							<div className="app-surface overflow-auto">
 								<table className="w-full min-w-max text-sm">
 									<thead>
-										<tr className="border-border/70 border-b bg-muted/50">
+										<tr className="app-surface-divider bg-muted/50">
 											{(result.meta ?? []).map((col) => (
 												<th
 													key={col.name}
@@ -449,7 +449,7 @@ function ProxyTestPage() {
 											<tr
 												// biome-ignore lint/suspicious/noArrayIndexKey: result rows have no stable id
 												key={i}
-												className="border-border/70 border-b last:border-0 hover:bg-muted/30"
+												className="app-surface-divider last:border-0 hover:bg-muted/30"
 											>
 												{(result.meta ?? []).map((col) => (
 													<td

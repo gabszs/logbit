@@ -274,7 +274,7 @@ function ManagementInvitationsSection({
 }) {
 	if (!activeOrganizationId) {
 		return (
-			<div className="rounded-xl border border-border/70 border-dashed bg-background/40 px-4 py-8 text-center">
+			<div className="app-surface border-dashed px-4 py-8 text-center">
 				<p className="font-medium text-sm">
 					Select an active organization first.
 				</p>
@@ -305,7 +305,7 @@ function ManagementInvitationsSection({
 
 	if (invitations.length === 0) {
 		return (
-			<div className="rounded-xl border border-border/70 border-dashed bg-background/40 px-4 py-8 text-center">
+			<div className="app-surface border-dashed px-4 py-8 text-center">
 				<p className="font-medium text-sm">No invitations found.</p>
 				<p className="mt-2 text-muted-foreground text-sm">
 					Sent invitations for the active organization will appear here.
@@ -315,7 +315,7 @@ function ManagementInvitationsSection({
 	}
 
 	return (
-		<div className="overflow-hidden rounded-xl border border-border/70 bg-card/70">
+		<div className="app-surface">
 			{invitations.map((invitation, index) => (
 				<div key={invitation.id}>
 					<ManagementInvitationRow
@@ -371,7 +371,7 @@ function UserInvitationsSection({
 
 	if (invitations.length === 0) {
 		return (
-			<div className="rounded-xl border border-border/70 border-dashed bg-background/40 px-4 py-8 text-center">
+			<div className="app-surface border-dashed px-4 py-8 text-center">
 				<p className="font-medium text-sm">No invitations found.</p>
 				<p className="mt-2 text-muted-foreground text-sm">
 					Invitations addressed to you will appear here.
@@ -381,7 +381,7 @@ function UserInvitationsSection({
 	}
 
 	return (
-		<div className="overflow-hidden rounded-xl border border-border/70 bg-card/70">
+		<div className="app-surface">
 			{invitations.map((invitation, index) => (
 				<div key={invitation.id}>
 					<UserInvitationRow
@@ -671,7 +671,7 @@ function UserInvitationRow({
 
 function InvitationDetail({ label, value }: { label: string; value: string }) {
 	return (
-		<div className="group relative rounded-lg border border-border/55 bg-muted/35 px-3 py-2.5">
+		<div className="app-surface group relative px-3 py-2.5">
 			<p className="pr-8 text-[10px] text-muted-foreground uppercase tracking-[0.16em]">
 				{label}
 			</p>

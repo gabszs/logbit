@@ -98,7 +98,7 @@ function MemberRow({
 	const email = member.user?.email?.trim() || "No email";
 
 	return (
-		<div className="grid gap-3 rounded-lg border border-border/60 bg-background/50 px-3 py-3 md:grid-cols-[minmax(0,1fr)_auto_auto] md:items-center">
+		<div className="app-surface grid gap-3 px-3 py-3 md:grid-cols-[minmax(0,1fr)_auto_auto] md:items-center">
 			<div className="min-w-0">
 				<p className="truncate text-sm">{email}</p>
 			</div>
@@ -596,7 +596,7 @@ export function OrganizationRow({
 										/>
 									</div>
 								</div>
-								<div className="rounded-xl border border-border/70 bg-muted/20">
+								<div className="app-surface">
 									<button
 										type="button"
 										onClick={(event) => {
@@ -622,9 +622,9 @@ export function OrganizationRow({
 									</button>
 
 									{isMembersExpanded ? (
-										<div className="space-y-2 border-border/60 border-t px-4 py-3">
+										<div className="app-surface-divider space-y-2 px-4 py-3">
 											{membersCount === 0 ? (
-												<div className="rounded-lg border border-border/60 border-dashed bg-background/50 px-3 py-4 text-center text-muted-foreground text-sm">
+												<div className="app-surface border-dashed px-3 py-4 text-center text-muted-foreground text-sm">
 													No members found.
 												</div>
 											) : (

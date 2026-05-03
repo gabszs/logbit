@@ -8,7 +8,7 @@ export function ErrorBoundary({ error, reset }: ErrorComponentProps) {
 
 	return (
 		<div className="flex min-h-screen items-center justify-center p-4">
-			<div className="w-full max-w-md space-y-6 rounded-lg border border-border bg-card p-6 text-center shadow-lg">
+			<div className="app-surface w-full max-w-md space-y-6 p-6 text-center">
 				{/* Error Icon */}
 				<div className="flex justify-center">
 					<div className="rounded-full bg-destructive/10 p-3">
@@ -26,7 +26,7 @@ export function ErrorBoundary({ error, reset }: ErrorComponentProps) {
 
 				{/* Error Details (in development) */}
 				{import.meta.env.DEV && error && (
-					<div className="rounded-md bg-muted p-3 text-left">
+					<div className="app-surface-border rounded-md bg-muted p-3 text-left">
 						<p className="break-all font-mono text-destructive text-xs">
 							{error.message || String(error)}
 						</p>

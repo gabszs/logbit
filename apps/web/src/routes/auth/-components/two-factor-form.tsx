@@ -157,12 +157,12 @@ export function TwoFactorForm({ redirectPath, username }: TwoFactorFormProps) {
 				onKeyDown={handleFormKeyDown}
 				className="space-y-5"
 			>
-				<div className="space-y-4 rounded-lg border border-border bg-card p-5">
+				<div className="app-surface space-y-4 p-5">
 					<p className="text-center text-muted-foreground text-sm">
 						Enter the 6-digit code from your authenticator app.
 					</p>
 
-					<div className="h-px w-full bg-border/70" />
+					<div className="app-surface-divider w-full" />
 
 					<div className="space-y-1 text-left">
 						<p className="font-medium text-sm">Username:</p>
@@ -183,7 +183,7 @@ export function TwoFactorForm({ redirectPath, username }: TwoFactorFormProps) {
 						</div>
 					</div>
 
-					<div className="h-px w-full bg-border/70" />
+					<div className="app-surface-divider w-full" />
 
 					<div className="space-y-2">
 						<Label

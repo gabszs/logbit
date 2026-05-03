@@ -40,7 +40,7 @@ function HomeRoute() {
 		<div className="flex flex-1 items-start px-4 pt-20 pb-10 sm:px-6 lg:px-10">
 			<div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
 				<section className="grid gap-4 lg:grid-cols-[minmax(0,1.3fr)_minmax(20rem,0.7fr)]">
-					<Card className="border-border/60 bg-card/85 shadow-sm backdrop-blur-sm">
+					<Card>
 						<CardHeader className="space-y-4">
 							<Badge
 								variant="outline"
@@ -75,7 +75,7 @@ function HomeRoute() {
 						</CardContent>
 					</Card>
 
-					<Card className="border-border/60 bg-card/80 shadow-sm backdrop-blur-sm">
+					<Card>
 						<CardHeader>
 							<CardTitle className="text-lg">Session summary</CardTitle>
 							<CardDescription>
@@ -135,7 +135,7 @@ function QuickActionCard({
 	description: string;
 }) {
 	return (
-		<Card className="border-border/50 bg-card/70 shadow-sm backdrop-blur-sm">
+		<Card>
 			<CardHeader className="space-y-3">
 				<div className="flex size-10 items-center justify-center rounded-full border border-primary/30 bg-primary/10 text-primary">
 					<Icon className="size-4" />
@@ -156,7 +156,7 @@ function HomeSkeleton() {
 		<div className="flex flex-1 items-start px-4 pt-20 pb-10 sm:px-6 lg:px-10">
 			<div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
 				<div className="grid gap-4 lg:grid-cols-[minmax(0,1.3fr)_minmax(20rem,0.7fr)]">
-					<Card className="border-border/60 bg-card/85 shadow-sm backdrop-blur-sm">
+					<Card>
 						<CardHeader className="space-y-4">
 							<Skeleton className="h-6 w-36" />
 							<div className="space-y-3">
@@ -170,7 +170,7 @@ function HomeSkeleton() {
 							<Skeleton className="h-10 w-32" />
 						</CardContent>
 					</Card>
-					<Card className="border-border/60 bg-card/80 shadow-sm backdrop-blur-sm">
+					<Card>
 						<CardHeader className="space-y-3">
 							<Skeleton className="h-6 w-40" />
 							<Skeleton className="h-4 w-56 max-w-full" />
@@ -183,10 +183,7 @@ function HomeSkeleton() {
 				</div>
 				<div className="grid gap-4 md:grid-cols-3">
 					{["stable", "session", "requests"].map((section) => (
-						<Card
-							key={section}
-							className="border-border/50 bg-card/70 shadow-sm backdrop-blur-sm"
-						>
+						<Card key={section}>
 							<CardHeader className="space-y-4">
 								<Skeleton className="size-10 rounded-full" />
 								<div className="space-y-3">
@@ -206,7 +203,7 @@ function HomeSkeleton() {
 function HomeError({ error, reset }: ErrorComponentProps) {
 	return (
 		<div className="flex flex-1 items-center justify-center px-4 pt-20">
-			<Card className="w-full max-w-lg border-border/60 bg-card/90 shadow-lg backdrop-blur-sm">
+			<Card className="w-full max-w-lg">
 				<CardHeader className="space-y-3 text-center">
 					<Badge
 						variant="outline"

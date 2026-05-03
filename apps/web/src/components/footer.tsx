@@ -3,7 +3,7 @@ import { PORTFOLIO_SITE, SITE_GITHUB } from "@/web/lib/constants";
 
 export function Footer() {
 	return (
-		<footer className="border-border/40 border-t bg-background/80 backdrop-blur-sm">
+		<footer className="app-surface-divider bg-background/80 backdrop-blur-sm">
 			<div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
 				<div className="grid grid-cols-1 gap-8 lg:grid-cols-5">
 					{/* Logo Section */}
@@ -91,7 +91,7 @@ export function Footer() {
 				</div>
 
 				{/* Bottom Bar */}
-				<div className="mt-12 border-border/40 border-t pt-8">
+				<div className="app-surface-divider mt-12 pt-8">
 					<p className="text-muted-foreground text-sm">© 2025 Oscar Gabriel</p>
 				</div>
 			</div>

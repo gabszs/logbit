@@ -18,7 +18,7 @@ export function DetailCard({
 	return (
 		<div
 			className={cn(
-				"group relative rounded-lg border border-border/60 bg-muted/20 px-3 py-2.5",
+				"app-surface-border app-surface group relative px-3 py-2.5",
 				className,
 			)}
 		>

@@ -37,8 +37,8 @@ function FeatureCard({
 	description: string;
 }) {
 	return (
-		<div className="group relative overflow-hidden border-2 border-border/50 bg-linear-to-br from-white/60 to-white/40 p-6 backdrop-blur-sm transition-all hover:border-orange-500/50 dark:from-black/30 dark:to-black/20">
-			<div className="mb-6 flex h-64 items-center justify-center border border-border/30 bg-black/5 dark:bg-white/5">
+		<div className="app-surface group relative bg-linear-to-br from-white/60 to-white/40 p-6 transition-all hover:border-orange-500/50 dark:from-black/30 dark:to-black/20">
+			<div className="app-surface-border mb-6 flex h-64 items-center justify-center bg-black/5 dark:bg-white/5">
 				{icon}
 			</div>
 			<h3 className="mb-3 font-bold font-mono text-base uppercase tracking-widest">

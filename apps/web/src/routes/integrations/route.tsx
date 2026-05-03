@@ -43,7 +43,7 @@ function IntegrationsLayout() {
 				<div className="scrollbar-hide overflow-x-auto">
 					<nav
 						aria-label="Integrations sections"
-						className="flex min-w-max items-end gap-2 border-border/80 border-b"
+						className="app-surface-divider flex min-w-max items-end gap-2"
 					>
 						{navigationItems.map((item) => (
 							<Link
@@ -53,8 +53,8 @@ function IntegrationsLayout() {
 								className={cn(
 									"relative -mb-px overflow-hidden rounded-t-lg px-4 py-3 transition-all duration-150",
 									item.isActive
-										? "bg-card text-foreground shadow-[inset_0_-2px_0_0_var(--color-primary)]"
-										: "text-muted-foreground hover:bg-card/70 hover:text-foreground hover:shadow-[0_8px_24px_rgba(0,0,0,0.16)]",
+										? "bg-[color:var(--surface-background)] text-foreground shadow-[inset_0_-2px_0_0_var(--color-primary)]"
+										: "text-muted-foreground hover:bg-[color:var(--surface-background)]/60 hover:text-foreground hover:shadow-[0_8px_24px_rgba(0,0,0,0.16)]",
 								)}
 							>
 								<div className="font-semibold text-sm">{item.label}</div>

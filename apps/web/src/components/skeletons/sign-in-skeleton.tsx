@@ -10,7 +10,7 @@ export function SignInShellSkeleton() {
 					Login to <span className="text-primary">LogBit</span>
 				</h1>
 				<p className="mb-8 text-center text-muted-foreground">Welcome back!</p>
-				<div className="space-y-4 rounded-lg border border-border bg-card p-5">
+				<div className="app-surface space-y-4 p-5">
 					<div className="space-y-2">
 						<label
 							htmlFor="sign-in-skeleton-email"

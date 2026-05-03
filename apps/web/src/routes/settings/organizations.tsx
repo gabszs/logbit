@@ -134,7 +134,7 @@ function OrganizationsSettingsPage() {
 							</AlertDescription>
 						</Alert>
 					) : organizations.length === 0 ? (
-						<div className="rounded-xl border border-border/70 border-dashed bg-background/40 px-4 py-8 text-center">
+						<div className="app-surface border-dashed px-4 py-8 text-center">
 							<p className="font-medium text-sm">No organizations found.</p>
 							<p className="mt-2 text-muted-foreground text-sm">
 								Create your first organization to start managing tenant-level
@@ -142,7 +142,7 @@ function OrganizationsSettingsPage() {
 							</p>
 						</div>
 					) : (
-						<div className="overflow-hidden rounded-xl border border-border/70 bg-card/70">
+						<div className="app-surface">
 							{organizations.map((organization, index) => (
 								<div key={organization.id}>
 									<OrganizationRow

@@ -106,7 +106,7 @@ export function ProfileInfo() {
 
 	if (!user.data) {
 		return (
-			<div className="rounded-lg border border-border/70 border-dashed bg-background/40 p-4 text-muted-foreground text-sm">
+			<div className="app-surface border-dashed p-4 text-muted-foreground text-sm">
 				Profile details are temporarily unavailable.
 			</div>
 		);

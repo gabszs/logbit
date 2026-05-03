@@ -11,7 +11,7 @@ export function GuestShellSkeleton() {
 					<Input
 						value=""
 						placeholder="Type 'Get Started'"
-						className="h-11 min-w-0 flex-1 rounded-md border border-border/70 bg-black/25 px-3 text-base tracking-wide placeholder:text-muted-foreground sm:h-12 sm:px-4 md:h-14 md:text-lg"
+						className="h-11 min-w-0 flex-1 rounded-md border border-stone-200 bg-[#faf9f6] px-3 text-base tracking-wide placeholder:text-muted-foreground sm:h-12 sm:px-4 md:h-14 md:text-lg dark:border-stone-800 dark:bg-stone-950"
 					/>
 					<Button
 						type="submit"

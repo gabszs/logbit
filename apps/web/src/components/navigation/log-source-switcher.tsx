@@ -81,7 +81,7 @@ export function LogSourceSwitcher() {
 			<DropdownMenuTrigger asChild>
 				<Button
 					variant="ghost"
-					className="h-8 w-[min(16rem,44vw)] min-w-0 max-w-full justify-start gap-2 rounded-lg border border-border/70 bg-card/60 px-3 text-xs shadow-none hover:bg-accent/60 sm:w-56 sm:text-sm"
+					className="h-8 w-[min(16rem,44vw)] min-w-0 max-w-full justify-start gap-2 rounded-md border border-stone-200 bg-[#faf9f6] px-3 text-xs shadow-none hover:bg-accent/60 sm:w-56 sm:text-sm dark:border-stone-800 dark:bg-stone-950"
 					disabled={isPending || isSwitching || Boolean(error)}
 				>
 					<Database className="size-4 shrink-0 text-muted-foreground" />
@@ -94,9 +94,9 @@ export function LogSourceSwitcher() {
 			<DropdownMenuContent
 				align="start"
 				sideOffset={4}
-				className="w-[min(21rem,calc(100vw-2rem))] overflow-hidden rounded-xl border-border bg-popover p-0"
+				className="w-[min(21rem,calc(100vw-2rem))] overflow-hidden rounded-md border-stone-200 bg-[color:var(--surface-background)] p-0 shadow-sm dark:border-stone-800 dark:bg-stone-950"
 			>
-				<div className="border-border border-b px-2 py-2">
+				<div className="app-surface-divider px-2 py-2">
 					<div className="relative">
 						<Search className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
 						<Input

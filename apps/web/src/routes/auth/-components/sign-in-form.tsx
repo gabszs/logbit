@@ -99,7 +99,7 @@ export function SignInForm({ redirectPath }: SignInFormProps) {
 					}}
 					className="space-y-5"
 				>
-					<div className="space-y-4 rounded-lg border border-border bg-card p-5">
+					<div className="app-surface space-y-4 p-5">
 						<form.AppField name="email">
 							{(field) => (
 								<field.FormItem>

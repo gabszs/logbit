@@ -155,8 +155,8 @@ export function InvitationDecisionForm({
 				aria-labelledby="invitation-decision-title"
 				className="w-full max-w-xl"
 			>
-				<Card className="overflow-hidden border-border/60 bg-background/96 shadow-[0_24px_80px_rgba(0,0,0,0.18)]">
-					<CardHeader className="space-y-5 border-border/50 border-b bg-background/90 px-6 py-5">
+				<Card className="overflow-hidden">
+					<CardHeader className="app-surface-divider space-y-5 px-6 py-5">
 						<div className="flex items-start justify-between gap-4">
 							<div className="space-y-2">
 								<p className="text-[11px] text-muted-foreground uppercase tracking-[0.22em]">
@@ -269,7 +269,7 @@ export function InvitationDecisionForm({
 											variant="ghost"
 											disabled={isBusy}
 											className={cn(
-												"min-w-32 justify-center rounded-lg border border-border/55 bg-muted/45 text-foreground hover:bg-muted/70 hover:text-foreground",
+												"min-w-32 justify-center rounded-lg border border-stone-200 bg-[color:var(--surface-background)]/80 text-foreground hover:bg-muted/70 hover:text-foreground dark:border-stone-800 dark:bg-stone-950/80",
 											)}
 											onClick={() => {
 												setNotice(null);
@@ -292,7 +292,7 @@ export function InvitationDecisionForm({
 											disabled={isBusy}
 											variant="ghost"
 											className={cn(
-												"min-w-32 justify-center rounded-lg border border-border/55 bg-muted/45 text-foreground hover:bg-muted/70",
+												"min-w-32 justify-center rounded-lg border border-stone-200 bg-[color:var(--surface-background)]/80 text-foreground hover:bg-muted/70 dark:border-stone-800 dark:bg-stone-950/80",
 											)}
 											onClick={() => {
 												setNotice(null);
@@ -348,10 +348,7 @@ function InvitationInfoCard({
 }: InvitationInfoCardProps) {
 	return (
 		<div
-			className={cn(
-				"flex items-start gap-3 rounded-lg border border-border/55 bg-muted/45 px-3 py-3",
-				className,
-			)}
+			className={cn("app-surface flex items-start gap-3 px-3 py-3", className)}
 		>
 			<div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-md bg-background/80 text-muted-foreground">
 				<Icon className="size-3.5" />

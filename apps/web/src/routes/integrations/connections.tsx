@@ -120,7 +120,7 @@ function ConnectionsPage() {
 					</div>
 
 					{connections.length === 0 && !hasPrevPage ? (
-						<div className="rounded-xl border border-border/70 border-dashed bg-background/40 px-4 py-8 text-center">
+						<div className="app-surface border-dashed px-4 py-8 text-center">
 							<p className="font-medium text-sm">
 								No connections configured yet.
 							</p>
@@ -130,7 +130,7 @@ function ConnectionsPage() {
 							</p>
 						</div>
 					) : (
-						<div className="overflow-hidden rounded-xl border border-border/70 bg-card/70">
+						<div className="app-surface">
 							{connections.map((connection, index) => (
 								<div key={connection.id}>
 									<ConnectionRow

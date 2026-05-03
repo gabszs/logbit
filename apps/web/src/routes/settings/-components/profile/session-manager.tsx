@@ -37,7 +37,7 @@ function SessionItem({
 	});
 
 	return (
-		<div className="flex items-center justify-between rounded-lg border border-border/70 bg-muted/35 px-3 py-2.5">
+		<div className="app-surface flex items-center justify-between px-3 py-2.5">
 			<div className="flex items-center gap-2">
 				{getDeviceIcon(session.userAgent)}
 				<span className="text-sm">{deviceInfo.data || "Unknown Device"}</span>

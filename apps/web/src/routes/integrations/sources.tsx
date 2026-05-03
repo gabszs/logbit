@@ -158,7 +158,7 @@ function SourcesPage() {
 					</div>
 
 					{sources.length === 0 && !hasPrevPage ? (
-						<div className="rounded-xl border border-border/70 border-dashed bg-background/40 px-4 py-8 text-center">
+						<div className="app-surface border-dashed px-4 py-8 text-center">
 							<p className="font-medium text-sm">No sources configured yet.</p>
 							<p className="mt-2 text-muted-foreground text-sm">
 								Add your first source to define how events are read from your
@@ -166,7 +166,7 @@ function SourcesPage() {
 							</p>
 						</div>
 					) : (
-						<div className="overflow-hidden rounded-xl border border-border/70 bg-card/70">
+						<div className="app-surface">
 							{sources.map((source, index) => (
 								<div key={source.id}>
 									<SourceRow

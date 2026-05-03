@@ -668,9 +668,9 @@ function AdminUsersSection({
 }) {
 	return (
 		<>
-			<div className="overflow-hidden rounded-xl border border-border/70 bg-card/70">
+			<div className="app-surface">
 				<div className="px-4 py-4">
-					<div className="flex items-center gap-3 rounded-xl border border-border/70 bg-background/30 px-4 py-3">
+					<div className="app-surface flex items-center gap-3 px-4 py-3">
 						<Search className="size-4 text-muted-foreground" />
 						<Input
 							value={usersState.searchValue}
@@ -1276,7 +1276,7 @@ function AdminUserRow({
 						</DialogDescription>
 					</DialogHeader>
 
-					<div className="rounded-xl border border-border/60 bg-background/40 px-4 py-3 text-sm">
+					<div className="app-surface px-4 py-3 text-sm">
 						<p className="font-medium">
 							Confirm impersonation for {user.email}.
 						</p>
@@ -1323,7 +1323,7 @@ function AdminUserRow({
 						</DialogDescription>
 					</DialogHeader>
 
-					<div className="rounded-xl border border-border/60 bg-background/40 px-4 py-3 text-sm">
+					<div className="app-surface px-4 py-3 text-sm">
 						<p className="font-medium">Confirm unban for {user.email}.</p>
 					</div>
 
@@ -1461,9 +1461,7 @@ function ActionCard({
 	children: ReactNode;
 }) {
 	return (
-		<div
-			className={`rounded-xl border border-border/60 bg-background/40 p-4 ${className ?? ""}`}
-		>
+		<div className={`app-surface p-4 ${className ?? ""}`}>
 			<div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
 				<div className="space-y-1">
 					<h3 className="font-medium text-sm">{title}</h3>
@@ -1486,7 +1484,7 @@ function SessionItem({
 	onRevoke: () => void;
 }) {
 	return (
-		<div className="grid gap-2 rounded-lg border border-border/60 bg-background/30 px-3 py-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
+		<div className="app-surface grid gap-2 px-3 py-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
 			<div className="min-w-0 text-sm">
 				<p className="truncate">{session.userAgent || "Unknown device"}</p>
 				<p className="truncate text-muted-foreground text-xs">

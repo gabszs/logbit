@@ -121,7 +121,7 @@ export function SourceRow({ source, connections, onRefresh }: SourceRowProps) {
 				</button>
 
 				{isExpanded && (
-					<div className="border-border/60 border-t px-4 py-4">
+					<div className="app-surface-divider px-4 py-4">
 						<div className="grid gap-3 sm:grid-cols-2">
 							<DetailCard
 								label="Source ID"

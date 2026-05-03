@@ -88,7 +88,7 @@ export function SignUpForm({ redirectPath }: SignUpFormProps) {
 					}}
 					className="space-y-5"
 				>
-					<div className="space-y-4 rounded-lg border border-border bg-card p-5">
+					<div className="app-surface space-y-4 p-5">
 						<form.AppField name="name">
 							{(field) => (
 								<field.FormItem>
