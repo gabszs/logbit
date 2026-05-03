@@ -67,8 +67,8 @@ function DisabledRow({
 
 export function LogsSidebarPreview() {
 	return (
-		<aside className="logs-surface p-4 text-sm">
-			<div className="space-y-3">
+		<aside className="logs-surface p-3.5 text-sm">
+			<div className="space-y-2.5">
 				<SectionHeader label="Canvas" />
 				<DisabledRow className="text-stone-600 hover:bg-stone-100 hover:text-stone-900 dark:text-stone-400 dark:hover:bg-stone-900 dark:hover:text-stone-100">
 					<Plus className="mr-1.5 size-3.5 shrink-0 text-stone-300 dark:text-stone-700" />
@@ -84,7 +84,7 @@ export function LogsSidebarPreview() {
 				</DisabledRow>
 			</div>
 
-			<div className="logs-surface-divider mt-3 pt-3">
+			<div className="logs-surface-divider mt-2.5 pt-2.5">
 				<SectionHeader label="Presets" />
 				<div className="flex flex-col gap-0.5">
 					{presetItems.map((item) => (
@@ -101,7 +101,7 @@ export function LogsSidebarPreview() {
 				</div>
 			</div>
 
-			<div className="logs-surface-divider mt-3 pt-3">
+			<div className="logs-surface-divider mt-2.5 pt-2.5">
 				<SectionHeader label="Resistance / LLM" />
 				<div className="flex flex-col gap-0.5">
 					{modelItems.map((item) => (
@@ -123,7 +123,7 @@ export function LogsSidebarPreview() {
 				</div>
 			</div>
 
-			<div className="logs-surface-divider mt-3 pt-3">
+			<div className="logs-surface-divider mt-2.5 pt-2.5">
 				<SectionHeader label="Capacitance / Memory" />
 				<div className="flex flex-col gap-0.5">
 					{memoryItems.map((item) => (
@@ -138,7 +138,7 @@ export function LogsSidebarPreview() {
 				</div>
 			</div>
 
-			<div className="logs-surface-divider mt-3 pt-3">
+			<div className="logs-surface-divider mt-2.5 pt-2.5">
 				<SectionHeader label="Inductance / Stability" />
 				<div className="flex flex-col gap-0.5">
 					<DisabledRow className="justify-start text-stone-600 hover:bg-violet-50 hover:text-violet-700 dark:text-stone-400 dark:hover:bg-stone-900 dark:hover:text-violet-400">
@@ -148,7 +148,7 @@ export function LogsSidebarPreview() {
 				</div>
 			</div>
 
-			<div className="logs-surface-divider mt-3 pt-3">
+			<div className="logs-surface-divider mt-2.5 pt-2.5">
 				<SectionHeader label="Mode" />
 				<div className="flex flex-col gap-1">
 					{modeItems.map((item) => (

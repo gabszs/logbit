@@ -23,8 +23,8 @@ export function TimeRangeSelect({
 			onValueChange={(next) => onValueChange(next as LogTimeRange)}
 		>
 			<SelectTrigger
-				style={{ height: 32, paddingTop: 0, paddingBottom: 0 }}
-				className="w-full min-w-32 rounded-md border-stone-200 bg-[#faf9f6] font-mono text-sm leading-none dark:border-stone-800 dark:bg-stone-950"
+				size="sm"
+				className="w-full min-w-32 rounded-md border-stone-200 bg-[#faf9f6] px-3 py-0 font-mono text-sm leading-none shadow-none dark:border-stone-800 dark:bg-stone-950"
 			>
 				<SelectValue />
 			</SelectTrigger>

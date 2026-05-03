@@ -268,27 +268,25 @@ function LogsRoute() {
 
 	return (
 		<div className="flex flex-1 flex-col px-4 pt-12 pb-10 sm:px-6 lg:px-8">
-			<div className="-mx-4 pt-4 pb-2.5 sm:-mx-6 lg:-mx-8">
-				<div className="mx-auto w-full max-w-[1600px] px-4 sm:px-6 lg:px-8">
-					<div className="min-w-0">
-						<QueryComposer
-							mode={queryMode}
-							timeRange={timeRange}
-							selectQuery={selectQuery}
-							whereQuery={whereQuery}
-							orderByQuery={orderByQuery}
-							onModeChange={setQueryMode}
-							onSelectQueryChange={setSelectQuery}
-							onWhereQueryChange={setWhereQuery}
-							onOrderByQueryChange={setOrderByQuery}
-							onTimeRangeChange={setTimeRange}
-							onRun={() => {
-								runQuery();
-							}}
-							disabled={!canRun}
-							isRunning={isRunning}
-						/>
-					</div>
+			<div className="pt-4 pb-2.5">
+				<div className="mx-auto w-full min-w-0 max-w-[1600px]">
+					<QueryComposer
+						mode={queryMode}
+						timeRange={timeRange}
+						selectQuery={selectQuery}
+						whereQuery={whereQuery}
+						orderByQuery={orderByQuery}
+						onModeChange={setQueryMode}
+						onSelectQueryChange={setSelectQuery}
+						onWhereQueryChange={setWhereQuery}
+						onOrderByQueryChange={setOrderByQuery}
+						onTimeRangeChange={setTimeRange}
+						onRun={() => {
+							runQuery();
+						}}
+						disabled={!canRun}
+						isRunning={isRunning}
+					/>
 				</div>
 			</div>
 

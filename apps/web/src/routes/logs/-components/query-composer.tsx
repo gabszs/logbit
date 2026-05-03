@@ -42,8 +42,8 @@ export function QueryComposer({
 	isRunning: boolean;
 }) {
 	return (
-		<div className="space-y-1">
-			<div className="grid gap-1.5 xl:grid-cols-[minmax(0,1.75fr)_minmax(0,0.85fr)]">
+		<div className="space-y-2">
+			<div className="grid gap-2 xl:grid-cols-[minmax(0,1.9fr)_minmax(8rem,0.75fr)_auto]">
 				<div className="flex h-8 min-w-0 overflow-hidden rounded-md border border-stone-200 bg-[#faf9f6] dark:border-stone-800 dark:bg-stone-950">
 					<div className="flex h-8 items-center border-stone-200 border-r bg-[#faf9f6] px-3 font-mono text-foreground text-sm leading-none dark:border-stone-800 dark:bg-stone-950">
 						SELECT
@@ -55,7 +55,7 @@ export function QueryComposer({
 						placeholder="Timestamp, ServiceName as service, SeverityText as level, Body"
 					/>
 				</div>
-				<div className="flex h-8 min-w-0 overflow-hidden rounded-md border border-stone-200 bg-[#faf9f6] dark:border-stone-800 dark:bg-stone-950">
+				<div className="flex h-8 min-w-0 overflow-hidden rounded-md border border-stone-200 bg-[#faf9f6] xl:col-span-2 dark:border-stone-800 dark:bg-stone-950">
 					<div className="flex h-8 items-center border-stone-200 border-r bg-[#faf9f6] px-3 font-mono text-foreground text-sm leading-none dark:border-stone-800 dark:bg-stone-950">
 						ORDER BY
 					</div>
@@ -68,7 +68,7 @@ export function QueryComposer({
 				</div>
 			</div>
 
-			<div className="grid items-stretch gap-1.5 xl:grid-cols-[minmax(0,1.9fr)_minmax(8rem,0.65fr)_auto]">
+			<div className="grid items-stretch gap-2 xl:grid-cols-[minmax(0,1.9fr)_minmax(8rem,0.75fr)_auto]">
 				<div className="flex h-8 min-w-0 overflow-hidden rounded-md border border-stone-200 bg-[#faf9f6] dark:border-stone-800 dark:bg-stone-950">
 					<div className="flex items-stretch border-stone-200 border-r bg-[#faf9f6] dark:border-stone-800 dark:bg-stone-950">
 						<Select
@@ -107,7 +107,8 @@ export function QueryComposer({
 						type="button"
 						onClick={onRun}
 						disabled={disabled || isRunning}
-						className="h-8 min-w-24"
+						size="sm"
+						className="min-w-24"
 					>
 						<Play className="size-4" />
 						{isRunning ? "Running…" : "Run"}
