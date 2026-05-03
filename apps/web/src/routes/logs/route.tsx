@@ -1,7 +1,7 @@
 import { queryOptions, useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { AlertTriangle, PanelLeft } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/web/components/ui/button";
 import {
 	Sheet,
@@ -25,13 +25,22 @@ import { DynamicResultsTable } from "./-components/dynamic-results-table";
 import { LogsError } from "./-components/logs-error";
 import { LogsSidebarPreview } from "./-components/logs-sidebar-preview";
 import { LogsSkeleton } from "./-components/logs-skeleton";
+import {
+	type LogsVolumeActivePopover,
+	LogsVolumeChart,
+} from "./-components/logs-volume-chart";
 import type { AutoRefreshInterval } from "./-components/query-composer";
 import { QueryComposer } from "./-components/query-composer";
 import {
+	buildLogsChartDrilldownClauses,
 	buildLogsTableQuery,
 	buildLogsVolumeQuery,
 	getLogsQueryDefaults,
 	type LogTimeRange,
+	type LogsChartDrilldown,
+	type LogsQueryAbsoluteTimeRange,
+	type LogsVolumeRow,
+	normalizeLogsVolumeRows,
 } from "./-lib/logs-queries";
 
 const logSourcesQueryOptions = queryOptions({
@@ -80,7 +89,15 @@ function LogsRoute() {
 	const [tableResult, setTableResult] = useState<ClickhouseJsonResult | null>(
 		null,
 	);
+	const [volumeResult, setVolumeResult] = useState<
+		ClickhouseJsonResult<LogsVolumeRow> | null
+	>(null);
 	const [queryError, setQueryError] = useState<string | null>(null);
+	const [volumeError, setVolumeError] = useState<string | null>(null);
+	const [chartDrilldown, setChartDrilldown] =
+		useState<LogsChartDrilldown | null>(null);
+	const [activeChartPopover, setActiveChartPopover] =
+		useState<LogsVolumeActivePopover | null>(null);
 	const previousSourceIdRef = useRef<string | null>(null);
 	const timeRangeRef = useRef(timeRange);
 
@@ -93,38 +110,93 @@ function LogsRoute() {
 		timeRangeRef.current = timeRange;
 	}, [timeRange]);
 
-	const runQueryForSource = async (
-		source: typeof selectedSource,
-		queryState: {
-			selectQuery: string;
-			whereQuery: string;
-			orderByQuery: string;
-			timeRange: LogTimeRange;
-		},
-	) => {
-		if (!source) return;
-
-		const tableQuery = buildLogsTableQuery(source, queryState);
-		const volumeQuery = buildLogsVolumeQuery(source, queryState);
-		if (!tableQuery || !volumeQuery) return;
-
-		setIsRunning(true);
-		setQueryError(null);
-
-		try {
-			const client = createProxyClient(source.connectionId);
-			const [nextTableResult] = await Promise.all([
-				executeClickhouseJsonQuery(client, tableQuery),
-				executeClickhouseJsonQuery(client, volumeQuery),
-			]);
-			setTableResult(nextTableResult);
-		} catch (error) {
-			setTableResult(null);
-			setQueryError(formatClickhouseQueryError(error));
-		} finally {
-			setIsRunning(false);
-		}
+	type ActiveLogsQueryState = {
+		selectQuery: string;
+		whereQuery: string;
+		orderByQuery: string;
+		timeRange: LogTimeRange;
 	};
+
+	const buildDrilldownOptions = useCallback(
+		(source: NonNullable<typeof selectedSource>, drilldown: LogsChartDrilldown | null) => {
+			const additionalWhereClauses = buildLogsChartDrilldownClauses(
+				source,
+				drilldown,
+			);
+			const absoluteTimeRange: LogsQueryAbsoluteTimeRange | undefined =
+				drilldown
+					? {
+							startIso: drilldown.bucketStart,
+							endIso: drilldown.bucketEnd,
+						}
+					: undefined;
+
+			return {
+				additionalWhereClauses,
+				absoluteTimeRange,
+			};
+		},
+		[],
+	);
+
+	const runQueryForSource = useCallback(
+		async (
+			source: typeof selectedSource,
+			queryState: ActiveLogsQueryState,
+			drilldown: LogsChartDrilldown | null,
+		) => {
+			if (!source) return;
+
+			const drilldownOptions = buildDrilldownOptions(source, drilldown);
+			const tableQuery = buildLogsTableQuery(source, {
+				...queryState,
+				...drilldownOptions,
+			});
+			if (!tableQuery) {
+				return;
+			}
+
+			const volumeQuery = buildLogsVolumeQuery(source, {
+				whereQuery: queryState.whereQuery,
+				timeRange: queryState.timeRange,
+				...drilldownOptions,
+			});
+
+			setIsRunning(true);
+			setQueryError(null);
+			setVolumeError(null);
+			setActiveChartPopover(null);
+
+			try {
+				const client = createProxyClient(source.connectionId);
+				const [tableOutcome, volumeOutcome] = await Promise.allSettled([
+					executeClickhouseJsonQuery(client, tableQuery),
+					volumeQuery
+						? executeClickhouseJsonQuery<LogsVolumeRow>(client, volumeQuery)
+						: Promise.resolve(null),
+				]);
+
+				if (tableOutcome.status === "fulfilled") {
+					setTableResult(tableOutcome.value);
+					setQueryError(null);
+				} else {
+					setTableResult(null);
+					setQueryError(formatClickhouseQueryError(tableOutcome.reason));
+				}
+
+				if (volumeOutcome.status === "fulfilled") {
+					setVolumeResult(volumeOutcome.value);
+					setVolumeError(null);
+				} else {
+					setVolumeResult(null);
+					setVolumeError(formatClickhouseQueryError(volumeOutcome.reason));
+				}
+			} finally {
+				setIsRunning(false);
+			}
+		},
+		[buildDrilldownOptions],
+	);
 
 	useEffect(() => {
 		if (logSources.length === 0) return;
@@ -154,6 +226,12 @@ function LogsRoute() {
 		previousSourceIdRef.current = nextSource.id;
 
 		const defaults = getLogsQueryDefaults(nextSource);
+		setChartDrilldown(null);
+		setActiveChartPopover(null);
+		setTableResult(null);
+		setVolumeResult(null);
+		setQueryError(null);
+		setVolumeError(null);
 		setSelectQuery(defaults.selectQuery);
 		setOrderByQuery(defaults.orderByQuery);
 		setWhereQuery("");
@@ -162,8 +240,8 @@ function LogsRoute() {
 			whereQuery: "",
 			orderByQuery: defaults.orderByQuery,
 			timeRange: timeRangeRef.current,
-		});
-	}, [logSources, search.sourceId]);
+		}, null);
+	}, [logSources, runQueryForSource, search.sourceId]);
 
 	const canRun =
 		Boolean(
@@ -182,6 +260,17 @@ function LogsRoute() {
 			timeRange,
 		}),
 		[orderByQuery, selectQuery, timeRange, whereQuery],
+	);
+
+	const hasSeverityField = Boolean(selectedSource?.config.severityField?.trim());
+	const volumeData = useMemo(
+		() =>
+			normalizeLogsVolumeRows(
+				volumeResult?.data ?? [],
+				timeRange,
+				hasSeverityField,
+			),
+		[hasSeverityField, timeRange, volumeResult?.data],
 	);
 
 	const tableColumns = useMemo(() => {
@@ -203,8 +292,24 @@ function LogsRoute() {
 
 	const runQuery = () => {
 		if (!selectedSource || !canRun) return;
-		void runQueryForSource(selectedSource, activeQueryState);
+		void runQueryForSource(selectedSource, activeQueryState, chartDrilldown);
 	};
+
+	const clearChartDrilldown = useCallback(() => {
+		if (!selectedSource) return;
+		setChartDrilldown(null);
+		setActiveChartPopover(null);
+		void runQueryForSource(selectedSource, activeQueryState, null);
+	}, [activeQueryState, runQueryForSource, selectedSource]);
+
+	const applyChartDrilldown = useCallback(
+		(drilldown: LogsChartDrilldown) => {
+			if (!selectedSource) return;
+			setChartDrilldown(drilldown);
+			void runQueryForSource(selectedSource, activeQueryState, drilldown);
+		},
+		[activeQueryState, runQueryForSource, selectedSource],
+	);
 
 	useEffect(() => {
 		if (autoRefreshInterval === "off" || !selectedSource || !canRun) return;
@@ -222,7 +327,7 @@ function LogsRoute() {
 				whereQuery,
 				orderByQuery,
 				timeRange,
-			});
+			}, chartDrilldown);
 		}, intervalMs);
 
 		return () => {
@@ -236,6 +341,8 @@ function LogsRoute() {
 		selectedSource,
 		timeRange,
 		whereQuery,
+		chartDrilldown,
+		runQueryForSource,
 	]);
 
 	return (
@@ -318,17 +425,33 @@ function LogsRoute() {
 								</div>
 							</div>
 						) : (
-							<DynamicResultsTable
-								className="flex-1"
-								rows={tableResult?.data ?? []}
-								columns={tableColumns}
-								statistics={tableResult?.statistics}
-								emptyState={
-									<div className="flex h-full min-h-[18rem] items-center justify-center text-muted-foreground text-sm">
-										Run a query to fill this space with log rows.
-									</div>
-								}
-							/>
+							<>
+								<div className="border-[color:var(--surface-border)] border-b px-4 py-4 sm:px-6">
+									<LogsVolumeChart
+										points={volumeData.points}
+										groups={volumeData.groups}
+										isLoading={isRunning && volumeResult == null}
+										error={volumeError}
+										activeDrilldown={chartDrilldown}
+										activePopover={activeChartPopover}
+										onOpenPopover={setActiveChartPopover}
+										onClosePopover={() => setActiveChartPopover(null)}
+										onApplyDrilldown={applyChartDrilldown}
+										onClearDrilldown={clearChartDrilldown}
+									/>
+								</div>
+								<DynamicResultsTable
+									className="flex-1"
+									rows={tableResult?.data ?? []}
+									columns={tableColumns}
+									statistics={tableResult?.statistics}
+									emptyState={
+										<div className="flex h-full min-h-[18rem] items-center justify-center text-muted-foreground text-sm">
+											Run a query to fill this space with log rows.
+										</div>
+									}
+								/>
+							</>
 						)}
 					</section>
 				</div>

@@ -54,6 +54,30 @@ export function LogsSkeleton() {
 					</div>
 
 					<div className="flex min-h-0 w-full flex-1 flex-col bg-[color:var(--surface-background)]">
+						<div className="border-[color:var(--surface-border)] border-b px-4 py-4 sm:px-6">
+							<div className="flex items-center justify-between gap-3">
+								<div className="flex items-center gap-3">
+									<Skeleton className="h-5 w-16 rounded-full" />
+									<Skeleton className="h-3 w-24" />
+									<Skeleton className="hidden h-3 w-24 rounded-md sm:block" />
+								</div>
+								<Skeleton className="h-8 w-24 rounded-lg" />
+							</div>
+							<div className="mt-3 rounded-2xl border border-[color:var(--surface-border)] px-3 py-3">
+								<div className="flex h-40 items-end gap-2">
+									{Array.from({ length: 24 }).map((_, index) => (
+										<Skeleton
+											// biome-ignore lint/suspicious/noArrayIndexKey: fixed skeleton bars
+											key={index}
+											className="flex-1 rounded-t-md"
+											style={{
+												height: `${24 + ((index % 8) + 1) * 12}px`,
+											}}
+										/>
+									))}
+								</div>
+							</div>
+						</div>
 						<div className="flex items-center gap-2 border-[color:var(--surface-border)] border-b px-4 py-3 sm:px-6">
 							<Skeleton className="h-3 w-24" />
 							<div className="h-px flex-1 bg-[color:var(--surface-border)]" />

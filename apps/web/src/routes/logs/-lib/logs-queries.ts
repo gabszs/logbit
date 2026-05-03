@@ -15,9 +15,55 @@ export type LogTimeRange = (typeof TIME_RANGE_OPTIONS)[number]["value"];
 
 export const LOG_TIME_RANGE_OPTIONS = TIME_RANGE_OPTIONS;
 
+export type LogsQueryAbsoluteTimeRange = {
+	startIso: string;
+	endIso: string;
+};
+
+export type LogsChartDrilldown = {
+	bucketStart: string;
+	bucketEnd: string;
+	groupValue: string | null;
+	label: string;
+};
+
+export type LogsVolumeRow = {
+	bucket: string;
+	rows: number | string;
+	group_value?: string | null;
+};
+
+export type LogsVolumeGroup = {
+	key: string;
+	label: string;
+	canFilter: boolean;
+};
+
+export type LogsVolumePoint = {
+	bucketLabel: string;
+	bucketStart: string;
+	bucketEnd: string;
+	total: number;
+	values: Record<string, number>;
+	groups: Array<LogsVolumeGroup & { count: number }>;
+};
+
 const DEFAULT_SELECT_QUERY =
 	"Timestamp, ServiceName as service, SeverityText as level, Body";
 const DEFAULT_ORDER_BY_QUERY = "Timestamp DESC";
+const UNKNOWN_GROUP_KEY = "unknown";
+const ALL_LOGS_GROUP_KEY = "__all__";
+const ALL_LOGS_GROUP_LABEL = "All logs";
+const SEVERITY_GROUP_ORDER = [
+	"FATAL",
+	"ERROR",
+	"WARN",
+	"INFO",
+	"DEBUG",
+	"TRACE",
+	UNKNOWN_GROUP_KEY,
+] as const;
+const SEVERITY_GROUP_SET = new Set<string>(SEVERITY_GROUP_ORDER);
 
 const RANGE_WINDOW_MS: Record<LogTimeRange, number> = {
 	"5m": 5 * 60 * 1000,
@@ -44,8 +90,20 @@ const RANGE_BUCKET = {
 	{ amount: number; unit: "SECOND" | "MINUTE" }
 >;
 
+type LogsQueryBaseOptions = {
+	whereQuery?: string;
+	timeRange: LogTimeRange;
+	now?: Date;
+	absoluteTimeRange?: LogsQueryAbsoluteTimeRange;
+	additionalWhereClauses?: string[];
+};
+
 function quoteIdentifier(identifier: string) {
 	return `\`${identifier.replaceAll("`", "``")}\``;
+}
+
+function escapeSqlString(value: string) {
+	return value.replaceAll("\\", "\\\\").replaceAll("'", "\\'");
 }
 
 function normalizeSqlExpression(value: string | null | undefined) {
@@ -67,6 +125,21 @@ function buildTimeBounds(range: LogTimeRange, now = new Date()) {
 	};
 }
 
+function resolveTimeBounds(
+	range: LogTimeRange,
+	now: Date | undefined,
+	absoluteTimeRange?: LogsQueryAbsoluteTimeRange,
+) {
+	if (absoluteTimeRange) {
+		return {
+			start: absoluteTimeRange.startIso,
+			end: absoluteTimeRange.endIso,
+		};
+	}
+
+	return buildTimeBounds(range, now);
+}
+
 function buildTimePredicate(
 	timestampField: string,
 	startIso: string,
@@ -84,11 +157,18 @@ function buildWhereClauses(
 	startIso: string,
 	endIso: string,
 	whereClause?: string,
+	additionalWhereClauses: string[] = [],
 ) {
 	const clauses = buildTimePredicate(timestampField, startIso, endIso);
 	const normalizedWhere = normalizeSqlExpression(whereClause);
 	if (normalizedWhere) {
 		clauses.push(`(${normalizedWhere})`);
+	}
+	for (const clause of additionalWhereClauses) {
+		const normalizedClause = normalizeSqlExpression(clause);
+		if (normalizedClause) {
+			clauses.push(`(${normalizedClause})`);
+		}
 	}
 	return clauses;
 }
@@ -97,14 +177,105 @@ function buildFromClause(source: LogSourceEntity) {
 	return `FROM ${quoteIdentifier(source.config.database ?? "")}.${quoteIdentifier(source.config.table ?? "")}`;
 }
 
+function getTimeBucket(range: LogTimeRange) {
+	return RANGE_BUCKET[range];
+}
+
+function addBucketDuration(date: Date, range: LogTimeRange) {
+	const { amount, unit } = getTimeBucket(range);
+	const nextDate = new Date(date);
+	if (unit === "SECOND") {
+		nextDate.setUTCSeconds(nextDate.getUTCSeconds() + amount);
+		return nextDate;
+	}
+
+	nextDate.setUTCMinutes(nextDate.getUTCMinutes() + amount);
+	return nextDate;
+}
+
+function formatBucketLabel(date: Date, range: LogTimeRange) {
+	const { unit } = getTimeBucket(range);
+	const options: Intl.DateTimeFormatOptions =
+		range === "1d"
+			? {
+					month: "short",
+					day: "numeric",
+					hour: "numeric",
+					minute: "2-digit",
+				}
+			: {
+					hour: "numeric",
+					minute: "2-digit",
+					...(unit === "SECOND" ? { second: "2-digit" } : {}),
+				};
+
+	return new Intl.DateTimeFormat(undefined, options).format(date);
+}
+
+function sortGroupKeys(a: string, b: string) {
+	const aIndex = SEVERITY_GROUP_ORDER.findIndex((group) => group === a);
+	const bIndex = SEVERITY_GROUP_ORDER.findIndex((group) => group === b);
+
+	if (aIndex !== -1 || bIndex !== -1) {
+		if (aIndex === -1) return 1;
+		if (bIndex === -1) return -1;
+		return aIndex - bIndex;
+	}
+
+	return a.localeCompare(b);
+}
+
+function normalizeSeverityGroupValue(value: string | null | undefined) {
+	const trimmed = value?.trim() ?? "";
+	if (!trimmed) return UNKNOWN_GROUP_KEY;
+
+	const upperValue = trimmed.toUpperCase();
+	if (SEVERITY_GROUP_SET.has(upperValue)) {
+		return upperValue;
+	}
+
+	return trimmed;
+}
+
+function buildSeverityGroupExpression(source: LogSourceEntity) {
+	const severityField = normalizeSqlExpression(source.config.severityField);
+	if (!severityField) return null;
+
+	const fieldExpression = quoteIdentifier(severityField);
+	return `coalesce(nullIf(toString(${fieldExpression}), ''), '${UNKNOWN_GROUP_KEY}')`;
+}
+
+function buildLogsQueryConfig(
+	source: LogSourceEntity,
+	options: LogsQueryBaseOptions,
+) {
+	const timestampField = source.config.timestampField ?? "Timestamp";
+	const { start, end } = resolveTimeBounds(
+		options.timeRange,
+		options.now,
+		options.absoluteTimeRange,
+	);
+	const clauses = buildWhereClauses(
+		timestampField,
+		start,
+		end,
+		options.whereQuery,
+		options.additionalWhereClauses,
+	);
+
+	return {
+		timestampField: quoteIdentifier(normalizeSqlExpression(timestampField)),
+		start,
+		end,
+		clauses,
+	};
+}
+
 export function buildLogsTableQuery(
 	source: LogSourceEntity,
-	options: {
+	options: LogsQueryBaseOptions & {
 		selectQuery: string;
-		whereQuery?: string;
 		orderByQuery: string;
-		timeRange: LogTimeRange;
-		now?: Date;
 	} = {
 		selectQuery: DEFAULT_SELECT_QUERY,
 		orderByQuery: DEFAULT_ORDER_BY_QUERY,
@@ -117,13 +288,7 @@ export function buildLogsTableQuery(
 	const orderByQuery = normalizeSqlExpression(options.orderByQuery);
 	if (!selectQuery || !orderByQuery) return null;
 
-	const { start, end } = buildTimeBounds(options.timeRange, options.now);
-	const clauses = buildWhereClauses(
-		source.config.timestampField ?? "Timestamp",
-		start,
-		end,
-		options.whereQuery,
-	);
+	const { clauses } = buildLogsQueryConfig(source, options);
 
 	return [
 		`SELECT ${selectQuery}`,
@@ -136,35 +301,136 @@ export function buildLogsTableQuery(
 
 export function buildLogsVolumeQuery(
 	source: LogSourceEntity,
-	options: {
-		whereQuery?: string;
-		timeRange: LogTimeRange;
-		now?: Date;
-	} = {
+	options: LogsQueryBaseOptions = {
 		timeRange: "15m",
 	},
 ) {
 	if (!isConfiguredLogSource(source)) return null;
 
 	const { amount, unit } = RANGE_BUCKET[options.timeRange];
-	const { start, end } = buildTimeBounds(options.timeRange, options.now);
-	const clauses = buildWhereClauses(
-		source.config.timestampField ?? "Timestamp",
-		start,
-		end,
-		options.whereQuery,
-	);
-	const timestampField = quoteIdentifier(
-		normalizeSqlExpression(source.config.timestampField),
-	);
+	const { timestampField, clauses } = buildLogsQueryConfig(source, options);
+	const severityGroupExpression = buildSeverityGroupExpression(source);
+	const selectClauses = [
+		`toStartOfInterval(${timestampField}, INTERVAL ${amount} ${unit}) AS bucket`,
+	];
+	const groupByClauses = ["bucket"];
+
+	if (severityGroupExpression) {
+		selectClauses.push(`${severityGroupExpression} AS group_value`);
+		groupByClauses.push("group_value");
+	}
+	selectClauses.push("count() AS rows");
 
 	return [
-		`SELECT toStartOfInterval(${timestampField}, INTERVAL ${amount} ${unit}) AS bucket, count() AS rows`,
+		`SELECT ${selectClauses.join(", ")}`,
 		buildFromClause(source),
 		`WHERE ${clauses.join(" AND ")}`,
-		"GROUP BY bucket",
-		"ORDER BY bucket ASC",
+		`GROUP BY ${groupByClauses.join(", ")}`,
+		"ORDER BY bucket ASC, rows DESC",
 	].join("\n");
+}
+
+export function buildLogsChartDrilldownClauses(
+	source: LogSourceEntity,
+	drilldown: LogsChartDrilldown | null,
+) {
+	if (!drilldown) return [];
+
+	const severityGroupExpression = buildSeverityGroupExpression(source);
+	if (!severityGroupExpression || drilldown.groupValue == null) {
+		return [];
+	}
+
+	const groupValue = normalizeSeverityGroupValue(drilldown.groupValue);
+	return [
+		`${severityGroupExpression} = '${escapeSqlString(groupValue)}'`,
+	];
+}
+
+export function normalizeLogsVolumeRows(
+	rows: LogsVolumeRow[],
+	timeRange: LogTimeRange,
+	hasSeverityField: boolean,
+) {
+	const groupDefinitions = new Map<string, LogsVolumeGroup>();
+	const bucketMap = new Map<
+		string,
+		{
+			bucketStart: string;
+			bucketEnd: string;
+			bucketLabel: string;
+			values: Record<string, number>;
+		}
+	>();
+
+	for (const row of rows) {
+		const bucketDate = new Date(row.bucket);
+		if (Number.isNaN(bucketDate.getTime())) {
+			continue;
+		}
+
+		const groupKey = hasSeverityField
+			? normalizeSeverityGroupValue(row.group_value)
+			: ALL_LOGS_GROUP_KEY;
+		const groupDefinition: LogsVolumeGroup = hasSeverityField
+			? {
+					key: groupKey,
+					label: groupKey,
+					canFilter: true,
+				}
+			: {
+					key: ALL_LOGS_GROUP_KEY,
+					label: ALL_LOGS_GROUP_LABEL,
+					canFilter: false,
+				};
+		groupDefinitions.set(groupKey, groupDefinition);
+
+		const bucketStart = bucketDate.toISOString();
+		const bucketEnd = addBucketDuration(bucketDate, timeRange).toISOString();
+		const currentBucket = bucketMap.get(bucketStart) ?? {
+			bucketStart,
+			bucketEnd,
+			bucketLabel: formatBucketLabel(bucketDate, timeRange),
+			values: {},
+		};
+		currentBucket.values[groupKey] =
+			(currentBucket.values[groupKey] ?? 0) + Number(row.rows);
+		bucketMap.set(bucketStart, currentBucket);
+	}
+
+	const groups = Array.from(groupDefinitions.values()).sort((a, b) =>
+		sortGroupKeys(a.key, b.key),
+	);
+
+	const points: LogsVolumePoint[] = Array.from(bucketMap.values())
+		.sort(
+			(a, b) =>
+				new Date(a.bucketStart).getTime() - new Date(b.bucketStart).getTime(),
+		)
+		.map((bucket) => {
+			const pointGroups = groups
+				.map((group) => ({
+					...group,
+					count: bucket.values[group.key] ?? 0,
+				}))
+				.filter((group) => group.count > 0);
+
+			const total = pointGroups.reduce((sum, group) => sum + group.count, 0);
+
+			return {
+				bucketLabel: bucket.bucketLabel,
+				bucketStart: bucket.bucketStart,
+				bucketEnd: bucket.bucketEnd,
+				total,
+				values: bucket.values,
+				groups: pointGroups,
+			};
+		});
+
+	return {
+		points,
+		groups,
+	};
 }
 
 export function getLogsQueryDefaults(source: LogSourceEntity) {
