@@ -38,6 +38,7 @@ import {
 	LogsVolumeChart,
 	type LogsVolumePoint,
 } from "./-components/logs-volume-chart";
+import type { AutoRefreshInterval } from "./-components/query-composer";
 import { QueryComposer } from "./-components/query-composer";
 import {
 	buildLogsTableQuery,
@@ -90,6 +91,8 @@ function LogsRoute() {
 	const search = Route.useSearch();
 	const [queryMode, setQueryMode] = useState<"sql" | "lucene">("sql");
 	const [timeRange, setTimeRange] = useState<LogTimeRange>("15m");
+	const [autoRefreshInterval, setAutoRefreshInterval] =
+		useState<AutoRefreshInterval>("off");
 	const [selectQuery, setSelectQuery] = useState("");
 	const [whereQuery, setWhereQuery] = useState("");
 	const [orderByQuery, setOrderByQuery] = useState("");
@@ -243,6 +246,38 @@ function LogsRoute() {
 		void runQueryForSource(selectedSource, activeQueryState);
 	};
 
+	useEffect(() => {
+		if (autoRefreshInterval === "off" || !selectedSource || !canRun) return;
+
+		const intervalMs =
+			autoRefreshInterval === "10s"
+				? 10_000
+				: autoRefreshInterval === "30s"
+					? 30_000
+					: 60_000;
+
+		const intervalId = window.setInterval(() => {
+			void runQueryForSource(selectedSource, {
+				selectQuery,
+				whereQuery,
+				orderByQuery,
+				timeRange,
+			});
+		}, intervalMs);
+
+		return () => {
+			window.clearInterval(intervalId);
+		};
+	}, [
+		autoRefreshInterval,
+		canRun,
+		orderByQuery,
+		selectQuery,
+		selectedSource,
+		timeRange,
+		whereQuery,
+	]);
+
 	const resultColumns = useMemo(() => {
 		if (execution.columns.length > 0) {
 			return execution.columns;
@@ -329,6 +364,7 @@ function LogsRoute() {
 						className="w-full"
 						mode={queryMode}
 						timeRange={timeRange}
+						autoRefreshInterval={autoRefreshInterval}
 						selectQuery={selectQuery}
 						whereQuery={whereQuery}
 						orderByQuery={orderByQuery}
@@ -337,6 +373,7 @@ function LogsRoute() {
 						onWhereQueryChange={setWhereQuery}
 						onOrderByQueryChange={setOrderByQuery}
 						onTimeRangeChange={setTimeRange}
+						onAutoRefreshIntervalChange={setAutoRefreshInterval}
 						onRun={() => {
 							runQuery();
 						}}
@@ -429,7 +466,7 @@ function LogsRoute() {
 															.
 														</>
 													) : (
-														"Click Run to execute the active query against ClickHouse."
+														"Click refresh to execute the active query against ClickHouse."
 													)}
 												</p>
 											</div>

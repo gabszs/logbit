@@ -43,7 +43,7 @@ export function LogsSkeleton() {
 						<div className="grid gap-2 xl:grid-cols-[minmax(0,1fr)_minmax(18rem,0.42fr)_auto]">
 							<Skeleton className="h-10 w-full rounded-lg" />
 							<Skeleton className="h-10 w-full rounded-lg" />
-							<Skeleton className="h-10 w-28 rounded-lg xl:justify-self-end" />
+							<Skeleton className="h-10 w-20 rounded-lg xl:justify-self-end" />
 						</div>
 					</div>
 
