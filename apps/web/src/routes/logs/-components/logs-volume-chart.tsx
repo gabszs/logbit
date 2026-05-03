@@ -105,7 +105,7 @@ function LogsVolumeState({
 	return (
 		<div
 			className={cn(
-				"flex h-full min-h-[7.5rem] items-center justify-center rounded-md border border-dashed px-5 text-center",
+				"flex h-full min-h-[6rem] items-center justify-center rounded-md border border-dashed px-4 text-center",
 				tone === "error"
 					? "border-destructive/30 bg-destructive/5 text-destructive"
 					: "border-stone-200 bg-[#faf9f6]/80 text-muted-foreground dark:border-stone-800 dark:bg-stone-950/80",
@@ -121,7 +121,7 @@ function LogsVolumeState({
 
 function LogsVolumeLoading() {
 	return (
-		<div className="space-y-3 rounded-md border border-stone-200 bg-[#faf9f6]/80 px-3 py-3 shadow-none dark:border-stone-800 dark:bg-stone-950/80">
+		<div className="space-y-2.5 rounded-md border border-stone-200 bg-[#faf9f6]/80 px-3 py-2.5 shadow-none dark:border-stone-800 dark:bg-stone-950/80">
 			<div className="flex items-center justify-between gap-2.5">
 				<div className="flex items-center gap-3">
 					<Skeleton className="h-5 w-16 rounded-full" />
@@ -129,14 +129,14 @@ function LogsVolumeLoading() {
 				</div>
 				<Skeleton className="h-8 w-28 rounded-lg" />
 			</div>
-			<div className="flex h-[7.5rem] items-end gap-1.5">
+			<div className="flex h-[5.5rem] items-end gap-1.5">
 				{Array.from({ length: 24 }).map((_, index) => (
 					<Skeleton
 						// biome-ignore lint/suspicious/noArrayIndexKey: deterministic loading bars
 						key={index}
 						className="flex-1 rounded-t-md"
 						style={{
-							height: `${18 + ((index % 7) + 1) * 9}px`,
+							height: `${12 + ((index % 7) + 1) * 6}px`,
 						}}
 					/>
 				))}
@@ -282,7 +282,7 @@ export function LogsVolumeChart({
 	}
 
 	return (
-		<section className="space-y-2.5">
+		<section className="space-y-2">
 			<div className="flex flex-wrap items-center justify-between gap-3">
 				<div className="flex flex-wrap items-center gap-2.5">
 					<Badge
@@ -327,7 +327,7 @@ export function LogsVolumeChart({
 
 			<div
 				ref={containerRef}
-				className="relative overflow-visible rounded-md border border-stone-200 bg-[#faf9f6]/85 px-2 py-1.5 shadow-none dark:border-stone-800 dark:bg-stone-950/80"
+				className="relative overflow-visible rounded-md bg-[#faf9f6]/85 px-2 py-1.5 shadow-none dark:bg-stone-950/80"
 			>
 				{points.length === 0 ? (
 					<LogsVolumeState
@@ -335,12 +335,12 @@ export function LogsVolumeChart({
 						description="Run a query to see stacked log volume by time bucket."
 					/>
 				) : (
-					<div className="h-32">
+					<div className="h-[5.5rem]">
 						<ResponsiveContainer width="100%" height="100%">
 							<BarChart
 								data={points}
 								barCategoryGap={2}
-								margin={{ top: 6, right: 8, left: -20, bottom: -2 }}
+								margin={{ top: 2, right: 8, left: -20, bottom: -10 }}
 							>
 								<CartesianGrid
 									stroke="rgba(148, 163, 184, 0.14)"

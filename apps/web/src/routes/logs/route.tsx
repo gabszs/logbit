@@ -426,7 +426,7 @@ function LogsRoute() {
 							</div>
 						) : (
 							<>
-								<div className="border-[color:var(--surface-border)] border-b px-4 py-4 sm:px-6">
+								<div className="border-[color:var(--surface-border)] border-b px-4 pt-4 pb-2 sm:px-6">
 									<LogsVolumeChart
 										points={volumeData.points}
 										groups={volumeData.groups}
