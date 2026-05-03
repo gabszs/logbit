@@ -12,6 +12,7 @@ import {
 	SheetTrigger,
 } from "@/web/components/ui/sheet";
 import { useContentSidebar } from "@/web/hooks/use-content-sidebar";
+import { useLogsCanvasSidebar } from "@/web/hooks/use-logs-canvas-sidebar";
 import { requireAuthenticated } from "@/web/lib/route-guards";
 import { getLogSources } from "@/web/lib/sources";
 import {
@@ -65,6 +66,7 @@ function LogsRoute() {
 	const navigate = useNavigate();
 	const { data: logSources = [] } = useQuery(logSourcesQueryOptions);
 	const { isExpanded: isAppSidebarExpanded } = useContentSidebar();
+	const { isExpanded: isLogsCanvasSidebarExpanded } = useLogsCanvasSidebar();
 	const search = Route.useSearch();
 	const [queryMode, setQueryMode] = useState<"sql" | "lucene">("sql");
 	const [timeRange, setTimeRange] = useState<LogTimeRange>("15m");
@@ -238,7 +240,9 @@ function LogsRoute() {
 
 	return (
 		<div className="flex min-h-0 flex-1 flex-col bg-[color:var(--surface-background)] px-4 pt-20 pb-0 sm:px-6 lg:px-8 xl:px-0 xl:pt-13">
-			<div className="flex min-h-0 w-full flex-1 flex-col xl:pl-[280px]">
+			<div
+				className={`flex min-h-0 w-full flex-1 flex-col transition-[padding-left] duration-200 ease-linear ${isLogsCanvasSidebarExpanded ? "xl:pl-[280px]" : "xl:pl-0"}`}
+			>
 				<div className="mb-4 flex items-center justify-between rounded-2xl border border-[color:var(--surface-border)] bg-[color:var(--surface-background)]/92 px-4 py-3 shadow-[var(--surface-shadow)] backdrop-blur-sm xl:hidden">
 					<div>
 						<div className="text-[10px] text-muted-foreground uppercase tracking-[0.18em]">
@@ -272,9 +276,11 @@ function LogsRoute() {
 					</Sheet>
 				</div>
 
-				<LogsSidebarPreview
-					className={`fixed top-13 bottom-0 z-20 hidden w-[280px] border-[color:var(--surface-border)] border-r bg-[color:var(--surface-background)] shadow-[12px_0_32px_rgba(0,0,0,0.08)] xl:flex dark:shadow-[12px_0_32px_rgba(0,0,0,0.24)] ${isAppSidebarExpanded ? "left-48" : "left-12"}`}
-				/>
+				{isLogsCanvasSidebarExpanded && (
+					<LogsSidebarPreview
+						className={`fixed top-13 bottom-0 z-20 hidden w-[280px] border-[color:var(--surface-border)] border-r bg-[color:var(--surface-background)] shadow-[12px_0_32px_rgba(0,0,0,0.08)] xl:flex dark:shadow-[12px_0_32px_rgba(0,0,0,0.24)] ${isAppSidebarExpanded ? "left-48" : "left-12"}`}
+					/>
+				)}
 
 				<div className="flex min-h-0 w-full flex-1 flex-col gap-0 bg-[color:var(--surface-background)]">
 					<QueryComposer

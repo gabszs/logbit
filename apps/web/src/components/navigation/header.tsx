@@ -1,8 +1,11 @@
 import { useRouterState } from "@tanstack/react-router";
+import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 
 import { useAuth } from "@/web/components/auth-provider";
 import { LogSourceSwitcher } from "@/web/components/navigation/log-source-switcher";
+import { Button } from "@/web/components/ui/button";
 import { useContentSidebar } from "@/web/hooks/use-content-sidebar";
+import { useLogsCanvasSidebar } from "@/web/hooks/use-logs-canvas-sidebar";
 import { cn } from "@/web/utils/cn";
 
 function usePageTitle() {
@@ -24,7 +27,14 @@ export default function Header() {
 	const title = usePageTitle();
 	const auth = useAuth();
 	const { isExpanded: isSidebarExpanded } = useContentSidebar();
+	const {
+		isExpanded: isLogsCanvasSidebarExpanded,
+		toggle: toggleLogsCanvasSidebar,
+	} = useLogsCanvasSidebar();
 	const showSidebar = auth.isAuthenticated;
+	const logsCanvasSidebarLabel = isLogsCanvasSidebarExpanded
+		? "Collapse canvas sidebar"
+		: "Expand canvas sidebar";
 
 	return (
 		<header
@@ -41,6 +51,21 @@ export default function Header() {
 					{auth.isAuthenticated && pathname.startsWith("/logs") && (
 						<div className="flex min-w-0 flex-wrap items-center gap-2 text-sm">
 							<div className="flex min-w-0 items-center gap-2">
+								<Button
+									type="button"
+									variant="ghost"
+									size="icon"
+									className="size-8 shrink-0"
+									aria-label={logsCanvasSidebarLabel}
+									title={logsCanvasSidebarLabel}
+									onClick={toggleLogsCanvasSidebar}
+								>
+									{isLogsCanvasSidebarExpanded ? (
+										<PanelLeftClose className="size-4" />
+									) : (
+										<PanelLeftOpen className="size-4" />
+									)}
+								</Button>
 								<span className="truncate text-muted-foreground">
 									Built-in views
 								</span>
