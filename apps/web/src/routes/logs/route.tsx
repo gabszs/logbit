@@ -267,9 +267,9 @@ function LogsRoute() {
 	];
 
 	return (
-		<div className="flex flex-1 flex-col px-4 pt-16 pb-10 sm:px-6 lg:px-8">
-			<div className="mx-auto grid w-full max-w-[1600px] gap-5 xl:grid-cols-[240px_minmax(0,1fr)] xl:items-start">
-				<LogsSidebarPreview className="h-full" />
+		<div className="flex flex-1 flex-col px-4 pt-20 pb-10 sm:px-6 lg:px-8">
+			<div className="mx-auto grid w-full max-w-[1600px] gap-5 xl:min-h-[calc(100svh-7.5rem)] xl:grid-cols-[240px_minmax(0,1fr)] xl:items-stretch">
+				<LogsSidebarPreview className="h-full self-stretch xl:sticky xl:top-20 xl:max-h-[calc(100svh-7.5rem)] xl:overflow-auto" />
 
 				<div className="flex min-h-0 flex-col gap-5">
 					<QueryComposer
@@ -290,7 +290,7 @@ function LogsRoute() {
 						isRunning={isRunning}
 					/>
 
-					<section className="logs-surface min-h-0 flex-1 backdrop-blur-sm">
+					<section className="logs-surface min-h-0 flex-1 overflow-hidden backdrop-blur-sm">
 						<div className="space-y-5 p-5 lg:p-6">
 							<div className="flex flex-wrap items-start justify-between gap-3">
 								<div className="space-y-2">

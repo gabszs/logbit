@@ -2,17 +2,17 @@ import { Skeleton } from "@/web/components/ui/skeleton";
 
 export function LogsSkeleton() {
 	return (
-		<div className="flex flex-1 flex-col px-4 pt-16 pb-10 sm:px-6 lg:px-8">
-			<div className="mx-auto grid w-full max-w-[1600px] gap-5 xl:grid-cols-[240px_minmax(0,1fr)] xl:items-start">
-				<Skeleton className="logs-surface min-h-[720px]" />
+		<div className="flex flex-1 flex-col px-4 pt-20 pb-10 sm:px-6 lg:px-8">
+			<div className="mx-auto grid w-full max-w-[1600px] gap-5 xl:min-h-[calc(100svh-7.5rem)] xl:grid-cols-[240px_minmax(0,1fr)] xl:items-stretch">
+				<Skeleton className="logs-surface min-h-[720px] xl:h-full" />
 
 				<div className="flex min-h-0 flex-col gap-5">
 					<div className="space-y-2">
 						<Skeleton className="h-4 w-28" />
-						<Skeleton className="h-[18rem] w-full rounded-2xl" />
+						<Skeleton className="h-[14rem] w-full rounded-2xl xl:h-[18rem]" />
 					</div>
 
-					<div className="logs-surface backdrop-blur-sm">
+					<div className="logs-surface min-h-0 flex-1 overflow-hidden backdrop-blur-sm">
 						<div className="space-y-5 p-5 lg:p-6">
 							<Skeleton className="h-4 w-28" />
 							<Skeleton className="h-12 w-3/4 rounded-xl" />
