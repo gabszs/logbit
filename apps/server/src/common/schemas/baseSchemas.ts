@@ -2,12 +2,7 @@ import { z } from "zod";
 import { settings } from "@/env";
 
 export const searchOptionsSchema = z.object({
-	page: z.coerce
-		.number()
-		.int()
-		.optional()
-		.default(1)
-		.describe("Page number"),
+	page: z.coerce.number().int().optional().default(1).describe("Page number"),
 	page_size: z
 		.union([
 			z.coerce

@@ -10,7 +10,9 @@ export function LogsSkeleton() {
 				</div>
 			</div>
 
-			<div className="mx-auto flex w-full max-w-[1600px] flex-col gap-5">
+			<div className="mx-auto grid w-full max-w-[1600px] gap-5 xl:grid-cols-[240px_minmax(0,1fr)]">
+				<Skeleton className="min-h-[520px] rounded-md border border-stone-200 bg-[#faf9f6] shadow-sm dark:border-stone-800 dark:bg-stone-950" />
+
 				<div className="overflow-hidden rounded-3xl border border-border/70 bg-card/80 shadow-sm backdrop-blur-sm">
 					<div className="space-y-5 p-5 lg:p-6">
 						<Skeleton className="h-4 w-28" />

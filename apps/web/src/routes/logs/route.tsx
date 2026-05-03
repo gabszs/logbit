@@ -16,6 +16,7 @@ import {
 	DynamicResultsTable,
 } from "./-components/dynamic-results-table";
 import { LogsError } from "./-components/logs-error";
+import { LogsSidebarPreview } from "./-components/logs-sidebar-preview";
 import { LogsSkeleton } from "./-components/logs-skeleton";
 import {
 	LogsVolumeChart,
@@ -291,7 +292,9 @@ function LogsRoute() {
 				</div>
 			</div>
 
-			<div className="mx-auto flex w-full max-w-[1600px] flex-col gap-5">
+			<div className="mx-auto grid w-full max-w-[1600px] gap-5 xl:grid-cols-[240px_minmax(0,1fr)]">
+				<LogsSidebarPreview />
+
 				<section className="overflow-hidden rounded-3xl border border-border/70 bg-card/80 shadow-sm backdrop-blur-sm">
 					<div className="space-y-5 p-5 lg:p-6">
 						<div className="flex flex-wrap items-start justify-between gap-3">

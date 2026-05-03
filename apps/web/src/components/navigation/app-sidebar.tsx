@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/web/components/auth-provider";
+import { OrganizationSwitcher } from "@/web/components/navigation/organization-switcher";
 import { useTheme } from "@/web/components/theme-provider";
 import {
 	Avatar,
@@ -272,6 +273,7 @@ export function AppSidebar() {
 								<Settings className="size-4" />
 								<span>Settings</span>
 							</DropdownMenuItem>
+							<OrganizationSwitcher />
 							<DropdownMenuSub>
 								<DropdownMenuSubTrigger className="gap-2">
 									<Sun className="size-4 shrink-0 dark:hidden" />

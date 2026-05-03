@@ -2,7 +2,6 @@ import { useRouterState } from "@tanstack/react-router";
 
 import { useAuth } from "@/web/components/auth-provider";
 import { LogSourceSwitcher } from "@/web/components/navigation/log-source-switcher";
-import { OrganizationSwitcher } from "@/web/components/navigation/organization-switcher";
 import { useContentSidebar } from "@/web/hooks/use-content-sidebar";
 import { cn } from "@/web/utils/cn";
 
@@ -39,25 +38,11 @@ export default function Header() {
 					{title && (
 						<span className="truncate font-medium text-sm">{title}</span>
 					)}
-					{auth.isAuthenticated &&
-						(pathname.startsWith("/logs") ? (
-							<>
-								<div className="min-w-0 shrink-0">
-									<LogSourceSwitcher />
-								</div>
-								<span className="px-1 text-muted-foreground">|</span>
-								<div className="min-w-0 shrink-0">
-									<OrganizationSwitcher />
-								</div>
-							</>
-						) : (
-							<>
-								<span className="px-1 text-muted-foreground">|</span>
-								<div className="min-w-0 shrink-0">
-									<OrganizationSwitcher />
-								</div>
-							</>
-						))}
+					{auth.isAuthenticated && pathname.startsWith("/logs") && (
+						<div className="min-w-0 shrink-0">
+							<LogSourceSwitcher />
+						</div>
+					)}
 				</div>
 				<div className="flex-1" />
 			</nav>

@@ -1,14 +1,14 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { Building2, Check, ChevronsUpDown, Plus, Search } from "lucide-react";
+import { Building2, Check, Plus, Search } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/web/components/auth-provider";
-import { Button } from "@/web/components/ui/button";
 import {
-	DropdownMenu,
-	DropdownMenuContent,
+	DropdownMenuItem,
 	DropdownMenuSeparator,
-	DropdownMenuTrigger,
+	DropdownMenuSub,
+	DropdownMenuSubContent,
+	DropdownMenuSubTrigger,
 } from "@/web/components/ui/dropdown-menu";
 import { Input } from "@/web/components/ui/input";
 import {
@@ -22,7 +22,6 @@ export function OrganizationSwitcher() {
 	const auth = useAuth();
 	const queryClient = useQueryClient();
 	const autoSyncedOrganizationIdRef = useRef<string | null>(null);
-	const [isOpen, setIsOpen] = useState(false);
 	const [search, setSearch] = useState("");
 	const [isSwitching, setIsSwitching] = useState(false);
 
@@ -37,14 +36,14 @@ export function OrganizationSwitcher() {
 
 	const selectedOrganizationId =
 		settings?.organizationId &&
-		organizations?.some((o) => o.id === settings.organizationId)
+		organizations?.some(
+			(organization) => organization.id === settings.organizationId,
+		)
 			? settings.organizationId
 			: undefined;
 
-	const activeOrg = organizations?.find((o) => o.id === selectedOrganizationId);
 	const activeOrganizationId = auth.session?.session?.activeOrganizationId;
 
-	// Sync the saved organizationId into the Better Auth session on load
 	useEffect(() => {
 		if (!settings?.organizationId) return;
 		if (activeOrganizationId) return;
@@ -65,6 +64,7 @@ export function OrganizationSwitcher() {
 	const filteredOrganizations = useMemo(() => {
 		const normalizedSearch = search.trim().toLowerCase();
 		if (!normalizedSearch) return organizations ?? [];
+
 		return (organizations ?? []).filter((organization) =>
 			organization.name.toLowerCase().includes(normalizedSearch),
 		);
@@ -97,7 +97,6 @@ export function OrganizationSwitcher() {
 			}
 
 			await queryClient.invalidateQueries();
-			setIsOpen(false);
 			toast.success(
 				nextOrganization
 					? `Switched to ${nextOrganization.name}`
@@ -111,34 +110,19 @@ export function OrganizationSwitcher() {
 		}
 	};
 
-	const triggerLabel = activeOrg?.name
-		? activeOrg.name
-		: isOrganizationsPending
-			? "Loading organization..."
-			: organizationsError
-				? "Organizations unavailable"
-				: "No organization";
-
 	return (
-		<DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
-			<DropdownMenuTrigger asChild>
-				<Button
-					variant="ghost"
-					className="h-8 w-[min(16rem,44vw)] min-w-0 max-w-full justify-start gap-2 rounded-lg border border-border/70 bg-card/60 px-3 text-xs shadow-none hover:bg-accent/60 sm:w-56 sm:text-sm"
-					disabled={
-						isOrganizationsPending || isSwitching || Boolean(organizationsError)
-					}
-				>
-					<Building2 className="size-4 shrink-0 text-muted-foreground" />
-					<span className="min-w-0 flex-1 truncate text-left">
-						{triggerLabel}
-					</span>
-					<ChevronsUpDown className="ml-auto size-4 shrink-0 text-muted-foreground" />
-				</Button>
-			</DropdownMenuTrigger>
-			<DropdownMenuContent
-				align="start"
-				sideOffset={4}
+		<DropdownMenuSub>
+			<DropdownMenuSubTrigger
+				className="gap-2"
+				disabled={
+					isOrganizationsPending || isSwitching || Boolean(organizationsError)
+				}
+			>
+				<Building2 className="size-4 shrink-0" />
+				<span>Organization</span>
+			</DropdownMenuSubTrigger>
+			<DropdownMenuSubContent
+				sideOffset={8}
 				className="w-[min(21rem,calc(100vw-2rem))] overflow-hidden rounded-xl border-border bg-popover p-0"
 			>
 				<div className="border-border border-b px-2 py-2">
@@ -157,13 +141,12 @@ export function OrganizationSwitcher() {
 						const isActive = organization.id === selectedOrganizationId;
 
 						return (
-							<button
+							<DropdownMenuItem
 								key={organization.id}
-								type="button"
-								onClick={() => handleValueChange(organization.id)}
 								disabled={isSwitching}
+								onSelect={() => handleValueChange(organization.id)}
 								className={cn(
-									"flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-accent disabled:cursor-not-allowed disabled:opacity-60",
+									"flex items-center gap-2 px-3 py-2 text-sm transition-colors",
 									isActive && "bg-accent/40",
 								)}
 							>
@@ -176,7 +159,7 @@ export function OrganizationSwitcher() {
 										!isActive && "opacity-0",
 									)}
 								/>
-							</button>
+							</DropdownMenuItem>
 						);
 					})}
 					{!filteredOrganizations.length && (
@@ -187,23 +170,21 @@ export function OrganizationSwitcher() {
 				</div>
 				<DropdownMenuSeparator className="mx-0 my-0" />
 				<div className="p-0.5">
-					<button
-						type="button"
+					<DropdownMenuItem
 						disabled
-						className="flex w-full items-center rounded-lg px-3 py-2 text-left text-foreground/70 text-xs opacity-60"
+						className="rounded-lg px-3 py-2 text-foreground/70 text-xs opacity-60"
 					>
 						All Organizations
-					</button>
-					<button
-						type="button"
+					</DropdownMenuItem>
+					<DropdownMenuItem
 						disabled
-						className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-foreground/70 text-xs opacity-60"
+						className="gap-2 rounded-lg px-3 py-2 text-foreground/70 text-xs opacity-60"
 					>
 						<Plus className="size-3.5 shrink-0" />
 						<span>New organization</span>
-					</button>
+					</DropdownMenuItem>
 				</div>
-			</DropdownMenuContent>
-		</DropdownMenu>
+			</DropdownMenuSubContent>
+		</DropdownMenuSub>
 	);
 }
