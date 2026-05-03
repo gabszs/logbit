@@ -254,10 +254,12 @@ export function AddSourceDialog({
 	const selectableSources = sourceOptions.filter(
 		(option) => option.id !== source?.id,
 	);
-	const databaseOptions = uniqueOptions([
-		selectedConnection?.type === "clickhouse"
+	const selectedConnectionDatabase =
+		selectedConnection && selectedConnection.type === "clickhouse"
 			? selectedConnection.config.database
-			: null,
+			: null;
+	const databaseOptions = uniqueOptions([
+		selectedConnectionDatabase,
 		form.database,
 		...sourceOptions.map((option) => option.config.database),
 		...DEFAULT_DATABASE_OPTIONS,

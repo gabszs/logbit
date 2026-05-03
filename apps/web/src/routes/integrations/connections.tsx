@@ -1,14 +1,3 @@
-import { Badge } from "@/web/components/ui/badge";
-import { Button } from "@/web/components/ui/button";
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-} from "@/web/components/ui/card";
-import { Separator } from "@/web/components/ui/separator";
-import { getResponseErrorMessage, honoClient } from "@/web/lib/hono-rpc";
 import { queryOptions, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import {
@@ -20,6 +9,17 @@ import {
 	RefreshCw,
 } from "lucide-react";
 import { useState } from "react";
+import { Badge } from "@/web/components/ui/badge";
+import { Button } from "@/web/components/ui/button";
+import {
+	Card,
+	CardContent,
+	CardDescription,
+	CardHeader,
+	CardTitle,
+} from "@/web/components/ui/card";
+import { Separator } from "@/web/components/ui/separator";
+import { listConnections } from "@/web/lib/sources";
 import { AddConnectionDialog } from "./-components/add-connection-dialog";
 import { ConnectionRow } from "./-components/connection-row";
 import { IntegrationsError } from "./-components/integrations-error";
@@ -28,18 +28,10 @@ import { IntegrationsSectionSkeleton } from "./-components/integrations-section-
 const PAGE_SIZE = 20;
 
 async function fetchConnections(page: number) {
-	const response = await honoClient.v1.connections.$get({
-		header: {},
-		query: {
-			page,
-			page_size: PAGE_SIZE,
-		},
+	return await listConnections({
+		page,
+		page_size: PAGE_SIZE,
 	});
-	if (!response.ok) {
-		throw new Error(await getResponseErrorMessage(response));
-	}
-
-	return await response.json();
 }
 
 function connectionsQueryOptions(page: number) {

@@ -7,6 +7,7 @@ import {
 	type ConnectionEntity,
 	getSources,
 	getSourcesForSourceSelect,
+	listConnections,
 	type SourceEntity as SharedSourceEntity,
 } from "@/web/lib/sources";
 export type ConnectionOption = ConnectionEntity;
@@ -15,20 +16,13 @@ export type SourceEntity = SharedSourceEntity;
 export { getSources, getSourcesForSourceSelect };
 
 export async function getConnectionsForSourceSelect() {
-	const response = await honoClient.v1.connections.$get({
-		header: {},
-		query: {
+	return (
+		await listConnections({
 			page: 1,
 			page_size: "all",
 			ordering: "name",
-		},
-	});
-	if (!response.ok) {
-		throw new Error(await getResponseErrorMessage(response));
-	}
-
-	const result = await response.json();
-	return result.data.filter((connection) => connection.type === "clickhouse");
+		})
+	).filter((connection) => connection.type === "clickhouse");
 }
 
 export async function createSource(payload: SourcesUpsertInput) {

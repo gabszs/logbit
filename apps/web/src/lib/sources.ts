@@ -1,4 +1,4 @@
-import type { ConnectionListSuccessType } from "@/server/features/connections/schemas";
+import type { ConnectionEntityType } from "@/server/features/connections/schemas";
 import type { SourcesListSuccessType } from "@/server/features/sources/schemas";
 import { getResponseErrorMessage, honoClient } from "@/web/lib/hono-rpc";
 
@@ -10,7 +10,41 @@ type SourceQuery = {
 
 export type SourceEntity = SourcesListSuccessType["data"][number];
 export type LogSourceEntity = Extract<SourceEntity, { type: "log" }>;
-export type ConnectionEntity = ConnectionListSuccessType["data"][number];
+export type ConnectionEntity = ConnectionEntityType;
+
+type SourceWireEntity = Omit<SourceEntity, "createdAt" | "updatedAt"> & {
+	createdAt: string;
+	updatedAt: string;
+};
+
+type ConnectionWireEntity = Omit<
+	ConnectionEntity,
+	"createdAt" | "updatedAt"
+> & {
+	createdAt: string;
+	updatedAt: string;
+};
+
+function hydrateDates<T extends { createdAt: string; updatedAt: string }>(
+	entity: T,
+): Omit<T, "createdAt" | "updatedAt"> & {
+	createdAt: Date;
+	updatedAt: Date;
+} {
+	return {
+		...entity,
+		createdAt: new Date(entity.createdAt),
+		updatedAt: new Date(entity.updatedAt),
+	};
+}
+
+function hydrateSource(source: SourceWireEntity): SourceEntity {
+	return hydrateDates(source);
+}
+
+function hydrateConnection(connection: ConnectionWireEntity): ConnectionEntity {
+	return hydrateDates(connection) as ConnectionEntity;
+}
 
 async function listSources(query: SourceQuery) {
 	const response = await honoClient.v1.sources.$get({
@@ -21,7 +55,21 @@ async function listSources(query: SourceQuery) {
 		throw new Error(await getResponseErrorMessage(response));
 	}
 
-	return (await response.json()).data;
+	const result = (await response.json()) as { data: SourceWireEntity[] };
+	return result.data.map(hydrateSource);
+}
+
+export async function listConnections(query: SourceQuery) {
+	const response = await honoClient.v1.connections.$get({
+		header: {},
+		query,
+	});
+	if (response.status !== 200) {
+		throw new Error(await getResponseErrorMessage(response));
+	}
+
+	const result = (await response.json()) as { data: ConnectionWireEntity[] };
+	return result.data.map(hydrateConnection);
 }
 
 export async function getSources(page: number, pageSize: number) {
