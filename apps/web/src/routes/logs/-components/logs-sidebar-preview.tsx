@@ -65,9 +65,9 @@ function DisabledRow({
 	);
 }
 
-export function LogsSidebarPreview() {
+export function LogsSidebarPreview({ className }: { className?: string }) {
 	return (
-		<aside className="logs-surface p-3.5 text-sm">
+		<aside className={cn("logs-surface p-3.5 text-sm", className)}>
 			<div className="space-y-2.5">
 				<SectionHeader label="Canvas" />
 				<DisabledRow className="text-stone-600 hover:bg-stone-100 hover:text-stone-900 dark:text-stone-400 dark:hover:bg-stone-900 dark:hover:text-stone-100">
