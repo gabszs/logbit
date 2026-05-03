@@ -39,8 +39,20 @@ export default function Header() {
 						<span className="truncate font-medium text-sm">{title}</span>
 					)}
 					{auth.isAuthenticated && pathname.startsWith("/logs") && (
-						<div className="min-w-0 shrink-0">
-							<LogSourceSwitcher />
+						<div className="flex min-w-0 flex-wrap items-center gap-2 text-sm">
+							<div className="flex min-w-0 items-center gap-2">
+								<span className="truncate text-muted-foreground">
+									Built-in views
+								</span>
+								<span className="shrink-0 text-muted-foreground">&gt;</span>
+								<span className="truncate font-medium text-foreground">
+									Log Events
+								</span>
+								<span className="shrink-0 text-muted-foreground">&gt;</span>
+							</div>
+							<div className="min-w-0 shrink-0">
+								<LogSourceSwitcher />
+							</div>
 						</div>
 					)}
 				</div>
