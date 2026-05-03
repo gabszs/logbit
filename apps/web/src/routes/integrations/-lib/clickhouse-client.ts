@@ -46,11 +46,7 @@ export async function executeClickhouseJsonQuery<T = Record<string, unknown>>(
 		format: "JSON",
 	});
 
-	try {
-		return await result.json<T>();
-	} finally {
-		await result.close();
-	}
+	return await result.json<T>();
 }
 
 function looksLikeHtmlError(message: string) {

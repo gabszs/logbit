@@ -4,8 +4,8 @@ import {
 	getCoreRowModel,
 	useReactTable,
 } from "@tanstack/react-table";
-import { useVirtualizer } from "@tanstack/react-virtual";
-import { type ReactNode, useMemo, useRef } from "react";
+import { type ReactNode, useMemo } from "react";
+import { cn } from "@/web/utils/cn";
 
 export type ClickhouseRow = Record<string, unknown>;
 
@@ -13,6 +13,7 @@ type DynamicResultsTableProps = {
 	rows: ClickhouseRow[];
 	columns: Array<{ key: string; label: string }>;
 	emptyState?: ReactNode;
+	className?: string;
 };
 
 function renderCellValue(value: unknown) {
@@ -31,6 +32,7 @@ export function DynamicResultsTable({
 	rows,
 	columns,
 	emptyState,
+	className,
 }: DynamicResultsTableProps) {
 	const data = rows;
 	const tableColumns = useMemo<ColumnDef<ClickhouseRow>[]>(
@@ -53,46 +55,40 @@ export function DynamicResultsTable({
 		getCoreRowModel: getCoreRowModel(),
 	});
 
-	const scrollRef = useRef<HTMLDivElement>(null);
-	const rowVirtualizer = useVirtualizer({
-		count: table.getRowModel().rows.length,
-		getScrollElement: () => scrollRef.current,
-		estimateSize: () => 44,
-		overscan: 8,
-	});
-
-	const virtualRows = rowVirtualizer.getVirtualItems();
-	const totalSize = rowVirtualizer.getTotalSize();
 	const headerGroups = table.getHeaderGroups();
 	const rowModel = table.getRowModel().rows;
 	const columnCount = columns.length;
 
 	return (
-		<section className="space-y-3">
-			<div className="flex items-center gap-2">
-				<div className="h-px flex-1 bg-border/70" />
-				<h2 className="text-muted-foreground text-xs uppercase tracking-[0.22em]">
+		<section
+			className={cn(
+				"flex min-h-0 flex-col bg-[color:var(--surface-background)]",
+				className,
+			)}
+		>
+			<div className="flex items-center gap-2 border-[color:var(--surface-border)] border-b px-4 py-3 sm:px-6">
+				<h2 className="font-medium text-muted-foreground text-xs uppercase tracking-[0.18em]">
 					Results table
 				</h2>
-				<div className="h-px flex-1 bg-border/70" />
+				<div className="h-px flex-1 bg-[color:var(--surface-border)]" />
+				<div className="font-mono text-muted-foreground text-xs tabular-nums">
+					{rows.length.toLocaleString()} rows
+				</div>
 			</div>
 			{rowModel.length === 0 ? (
-				<div className="rounded-md border border-stone-200 border-dashed bg-[#faf9f6] p-6 dark:border-stone-800 dark:bg-stone-950">
+				<div className="min-h-0 flex-1 bg-[color:var(--surface-background)]">
 					{emptyState}
 				</div>
 			) : (
-				<div
-					ref={scrollRef}
-					className="max-h-[38rem] overflow-auto rounded-md border border-stone-200 bg-[#faf9f6] dark:border-stone-800 dark:bg-stone-950"
-				>
+				<div className="min-h-0 flex-1 overflow-auto bg-[color:var(--surface-background)]">
 					<table className="min-w-full border-separate border-spacing-0 text-left">
-						<thead className="sticky top-0 z-10 bg-[#faf9f6]/95 backdrop-blur-sm dark:bg-stone-950/95">
+						<thead className="sticky top-0 z-10 bg-[color:var(--surface-background)]/95 backdrop-blur-sm">
 							{headerGroups.map((headerGroup) => (
 								<tr key={headerGroup.id}>
 									{headerGroup.headers.map((header) => (
 										<th
 											key={header.id}
-											className="border-stone-200 border-b px-4 py-3 font-medium text-muted-foreground text-xs uppercase tracking-[0.16em] dark:border-stone-800"
+											className="border-[color:var(--surface-border)] border-b px-4 py-3 font-medium text-muted-foreground text-xs uppercase tracking-[0.16em]"
 										>
 											{header.isPlaceholder
 												? null
@@ -105,39 +101,29 @@ export function DynamicResultsTable({
 								</tr>
 							))}
 						</thead>
-						<tbody style={{ height: `${totalSize}px`, position: "relative" }}>
-							{virtualRows.map((virtualRow) => {
-								const row = rowModel[virtualRow.index];
-								return (
-									<tr
-										key={row.id}
-										data-index={virtualRow.index}
-										style={{
-											position: "absolute",
-											left: 0,
-											transform: `translateY(${virtualRow.start}px)`,
-											width: "100%",
-										}}
-										className="border-stone-200 border-b transition-colors hover:bg-muted/30 dark:border-stone-800"
-									>
-										{row.getVisibleCells().map((cell) => (
-											<td
-												key={cell.id}
-												className="max-w-0 border-stone-200 border-b px-4 py-2 align-top text-sm dark:border-stone-800"
-											>
-												{flexRender(
-													cell.column.columnDef.cell,
-													cell.getContext(),
-												)}
-											</td>
-										))}
-									</tr>
-								);
-							})}
+						<tbody>
+							{rowModel.map((row) => (
+								<tr
+									key={row.id}
+									className="border-[color:var(--surface-border)] border-b transition-colors hover:bg-muted/30"
+								>
+									{row.getVisibleCells().map((cell) => (
+										<td
+											key={cell.id}
+											className="max-w-0 border-[color:var(--surface-border)] border-b px-4 py-2 align-top text-sm"
+										>
+											{flexRender(
+												cell.column.columnDef.cell,
+												cell.getContext(),
+											)}
+										</td>
+									))}
+								</tr>
+							))}
 						</tbody>
 					</table>
 					{columnCount === 0 && (
-						<div className="border-stone-200 border-t px-4 py-3 text-muted-foreground text-xs dark:border-stone-800">
+						<div className="border-[color:var(--surface-border)] border-t px-4 py-3 text-muted-foreground text-xs">
 							The query returned rows, but no columns were detected.
 						</div>
 					)}

@@ -5,8 +5,8 @@ export function LogsSkeleton() {
 	const { isExpanded: isAppSidebarExpanded } = useContentSidebar();
 
 	return (
-		<div className="flex flex-1 flex-col px-4 pt-20 pb-10 sm:px-6 lg:px-8 xl:px-0 xl:pt-13">
-			<div className="w-full xl:pl-[280px]">
+		<div className="flex min-h-0 flex-1 flex-col bg-[color:var(--surface-background)] px-4 pt-20 pb-0 sm:px-6 lg:px-8 xl:px-0 xl:pt-13">
+			<div className="flex min-h-0 w-full flex-1 flex-col xl:pl-[280px]">
 				<div className="mb-4 flex items-center justify-between rounded-2xl border border-[color:var(--surface-border)] bg-[color:var(--surface-background)]/92 px-4 py-3 shadow-[var(--surface-shadow)] xl:hidden">
 					<div className="space-y-2">
 						<Skeleton className="h-3 w-16" />
@@ -34,7 +34,7 @@ export function LogsSkeleton() {
 					</div>
 				</div>
 
-				<div className="flex min-h-0 w-full flex-col gap-5 xl:gap-0">
+				<div className="flex min-h-0 w-full flex-1 flex-col gap-0 bg-[color:var(--surface-background)]">
 					<div className="space-y-3 border-[color:var(--surface-border)] border-b bg-[color:var(--surface-background)]/92 px-4 py-4 sm:px-5 lg:px-6">
 						<div className="grid gap-2 xl:grid-cols-[minmax(0,2.2fr)_minmax(18rem,0.9fr)]">
 							<Skeleton className="h-10 w-full rounded-lg" />
@@ -47,7 +47,27 @@ export function LogsSkeleton() {
 						</div>
 					</div>
 
-					<div className="min-h-0 w-full flex-1 bg-background" />
+					<div className="flex min-h-0 w-full flex-1 flex-col bg-[color:var(--surface-background)]">
+						<div className="flex items-center gap-2 border-[color:var(--surface-border)] border-b px-4 py-3 sm:px-6">
+							<Skeleton className="h-3 w-24" />
+							<div className="h-px flex-1 bg-[color:var(--surface-border)]" />
+							<Skeleton className="h-3 w-14" />
+						</div>
+						<div className="space-y-0">
+							{Array.from({ length: 12 }).map((_, index) => (
+								<div
+									// biome-ignore lint/suspicious/noArrayIndexKey: fixed skeleton rows
+									key={index}
+									className="grid grid-cols-[minmax(8rem,0.7fr)_minmax(8rem,0.5fr)_minmax(8rem,0.45fr)_minmax(18rem,1.6fr)] gap-4 border-[color:var(--surface-border)] border-b px-4 py-3 sm:px-6"
+								>
+									<Skeleton className="h-4 w-full" />
+									<Skeleton className="h-4 w-2/3" />
+									<Skeleton className="h-4 w-1/2" />
+									<Skeleton className="h-4 w-full" />
+								</div>
+							))}
+						</div>
+					</div>
 				</div>
 			</div>
 		</div>

@@ -1,6 +1,6 @@
 import { queryOptions, useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { PanelLeft } from "lucide-react";
+import { AlertTriangle, PanelLeft } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/web/components/ui/button";
 import {
@@ -15,9 +15,12 @@ import { useContentSidebar } from "@/web/hooks/use-content-sidebar";
 import { requireAuthenticated } from "@/web/lib/route-guards";
 import { getLogSources } from "@/web/lib/sources";
 import {
+	type ClickhouseJsonResult,
 	createProxyClient,
 	executeClickhouseJsonQuery,
+	formatClickhouseQueryError,
 } from "../integrations/-lib/clickhouse-client";
+import { DynamicResultsTable } from "./-components/dynamic-results-table";
 import { LogsError } from "./-components/logs-error";
 import { LogsSidebarPreview } from "./-components/logs-sidebar-preview";
 import { LogsSkeleton } from "./-components/logs-skeleton";
@@ -72,6 +75,10 @@ function LogsRoute() {
 	const [orderByQuery, setOrderByQuery] = useState("");
 	const [isRunning, setIsRunning] = useState(false);
 	const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+	const [tableResult, setTableResult] = useState<ClickhouseJsonResult | null>(
+		null,
+	);
+	const [queryError, setQueryError] = useState<string | null>(null);
 	const previousSourceIdRef = useRef<string | null>(null);
 	const timeRangeRef = useRef(timeRange);
 
@@ -100,13 +107,18 @@ function LogsRoute() {
 		if (!tableQuery || !volumeQuery) return;
 
 		setIsRunning(true);
+		setQueryError(null);
 
 		try {
 			const client = createProxyClient(source.connectionId);
-			await Promise.all([
+			const [nextTableResult] = await Promise.all([
 				executeClickhouseJsonQuery(client, tableQuery),
 				executeClickhouseJsonQuery(client, volumeQuery),
 			]);
+			setTableResult(nextTableResult);
+		} catch (error) {
+			setTableResult(null);
+			setQueryError(formatClickhouseQueryError(error));
 		} finally {
 			setIsRunning(false);
 		}
@@ -170,6 +182,23 @@ function LogsRoute() {
 		[orderByQuery, selectQuery, timeRange, whereQuery],
 	);
 
+	const tableColumns = useMemo(() => {
+		if (tableResult?.meta?.length) {
+			return tableResult.meta.map((column) => ({
+				key: column.name,
+				label: column.name,
+			}));
+		}
+
+		const firstRow = tableResult?.data[0];
+		if (!firstRow) return [];
+
+		return Object.keys(firstRow).map((key) => ({
+			key,
+			label: key,
+		}));
+	}, [tableResult]);
+
 	const runQuery = () => {
 		if (!selectedSource || !canRun) return;
 		void runQueryForSource(selectedSource, activeQueryState);
@@ -208,8 +237,8 @@ function LogsRoute() {
 	]);
 
 	return (
-		<div className="flex flex-1 flex-col px-4 pt-20 pb-10 sm:px-6 lg:px-8 xl:px-0 xl:pt-13">
-			<div className="w-full xl:pl-[280px]">
+		<div className="flex min-h-0 flex-1 flex-col bg-[color:var(--surface-background)] px-4 pt-20 pb-0 sm:px-6 lg:px-8 xl:px-0 xl:pt-13">
+			<div className="flex min-h-0 w-full flex-1 flex-col xl:pl-[280px]">
 				<div className="mb-4 flex items-center justify-between rounded-2xl border border-[color:var(--surface-border)] bg-[color:var(--surface-background)]/92 px-4 py-3 shadow-[var(--surface-shadow)] backdrop-blur-sm xl:hidden">
 					<div>
 						<div className="text-[10px] text-muted-foreground uppercase tracking-[0.18em]">
@@ -247,7 +276,7 @@ function LogsRoute() {
 					className={`fixed top-13 bottom-0 z-20 hidden w-[280px] border-[color:var(--surface-border)] border-r bg-[color:var(--surface-background)] shadow-[12px_0_32px_rgba(0,0,0,0.08)] xl:flex dark:shadow-[12px_0_32px_rgba(0,0,0,0.24)] ${isAppSidebarExpanded ? "left-48" : "left-12"}`}
 				/>
 
-				<div className="flex min-h-0 w-full flex-col gap-5 xl:gap-0">
+				<div className="flex min-h-0 w-full flex-1 flex-col gap-0 bg-[color:var(--surface-background)]">
 					<QueryComposer
 						className="w-full"
 						mode={queryMode}
@@ -269,7 +298,32 @@ function LogsRoute() {
 						isRunning={isRunning}
 					/>
 
-					<section className="min-h-0 w-full flex-1 bg-background" />
+					<section className="flex min-h-0 w-full flex-1 flex-col bg-[color:var(--surface-background)]">
+						{queryError ? (
+							<div className="flex h-full min-h-[20rem] items-start justify-center bg-[color:var(--surface-background)] px-4 py-6 sm:px-6">
+								<div className="w-full rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-destructive shadow-[var(--surface-shadow)]">
+									<div className="flex items-center gap-2 font-medium text-sm">
+										<AlertTriangle className="size-4 shrink-0" />
+										<span>ClickHouse query failed</span>
+									</div>
+									<p className="mt-2 whitespace-pre-wrap break-words font-mono text-xs leading-6">
+										{queryError}
+									</p>
+								</div>
+							</div>
+						) : (
+							<DynamicResultsTable
+								className="flex-1"
+								rows={tableResult?.data ?? []}
+								columns={tableColumns}
+								emptyState={
+									<div className="flex h-full min-h-[18rem] items-center justify-center text-muted-foreground text-sm">
+										Run a query to fill this space with log rows.
+									</div>
+								}
+							/>
+						)}
+					</section>
 				</div>
 			</div>
 		</div>
