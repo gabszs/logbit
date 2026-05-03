@@ -1,37 +1,8 @@
-import type { CSSProperties, PropsWithChildren } from "react";
+import type { PropsWithChildren } from "react";
 import { cn } from "@/web/utils/cn";
 
-const patternMask =
-	"linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0.85) 20%, rgba(0,0,0,0.55) 45%, rgba(0,0,0,0.2) 70%, rgba(0,0,0,0) 100%)";
-
-export const appBackgroundStyle: CSSProperties = {
-	backgroundImage: "url(/pattern.png)",
-	backgroundRepeat: "repeat",
-	backgroundSize: "1028px",
-};
-
-const backgroundMaskStyle: CSSProperties = {
-	maskImage: patternMask,
-	WebkitMaskImage: patternMask,
-};
-
 export function AppBackground() {
-	return (
-		<div
-			aria-hidden="true"
-			className="pointer-events-none fixed inset-0 z-0 overflow-hidden"
-			style={backgroundMaskStyle}
-		>
-			<div
-				className="absolute top-1/2 left-1/2 size-[160%] -translate-x-1/2 -translate-y-1/2 opacity-10 dark:opacity-25"
-				style={{
-					...appBackgroundStyle,
-					transform: "rotate(-15deg)",
-					transformOrigin: "center",
-				}}
-			/>
-		</div>
-	);
+	return null;
 }
 
 interface BackgroundLayoutProps extends PropsWithChildren {
@@ -45,7 +16,7 @@ export function BackgroundLayout({
 	contentClassName,
 }: BackgroundLayoutProps) {
 	return (
-		<div className={cn("relative min-h-screen bg-background", className)}>
+		<div className={cn("relative min-h-screen bg-transparent", className)}>
 			<AppBackground />
 			<div className={cn("relative z-10", contentClassName)}>{children}</div>
 		</div>

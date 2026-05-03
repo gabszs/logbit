@@ -6,7 +6,7 @@
 
 :root {
 	font-family: "ServerMono", monospace;
-	--background: oklch(0.985 0 0);
+	--background: #faf9f6;
 	--foreground: oklch(0.205 0 0);
 	--card: oklch(0.97 0 0);
 	--card-foreground: oklch(0.205 0 0);
@@ -45,7 +45,7 @@
 
 .dark {
 	font-family: "ServerMono", monospace;
-	--background: oklch(0.145 0 0);
+	--background: #0c0a09;
 	--foreground: oklch(0.97 0 0);
 	--card: oklch(0.205 0 0);
 	--card-foreground: oklch(0.97 0.001 106.424);
@@ -144,6 +144,26 @@
 	body {
 		@apply bg-background text-foreground;
 		letter-spacing: -0.02em;
+	}
+
+	html,
+	body {
+		background-color: #faf9f6;
+		background-image:
+			linear-gradient(#f6821f0a 1px, transparent 1px),
+			linear-gradient(90deg, #f6821f0a 1px, transparent 1px),
+			radial-gradient(#f6821f22 1px, transparent 1px);
+		background-size: 96px 96px, 96px 96px, 24px 24px;
+	}
+
+	html.dark body {
+		background-color: #0c0a09;
+		background-image:
+			linear-gradient(#f6821f06 1px, transparent 1px),
+			linear-gradient(90deg, #f6821f06 1px, transparent 1px),
+			radial-gradient(#f6821f18 1px, transparent 1px);
+		background-size: 96px 96px, 96px 96px, 24px 24px;
+		color: #f5f5f4;
 	}
 
 	::selection {
