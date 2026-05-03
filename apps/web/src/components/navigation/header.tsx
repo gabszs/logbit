@@ -55,15 +55,15 @@ export default function Header() {
 									type="button"
 									variant="ghost"
 									size="icon"
-									className="size-7 shrink-0"
+									className="size-8 shrink-0 text-muted-foreground hover:text-foreground"
 									aria-label={logsCanvasSidebarLabel}
 									title={logsCanvasSidebarLabel}
 									onClick={toggleLogsCanvasSidebar}
 								>
 									{isLogsCanvasSidebarExpanded ? (
-										<PanelLeftClose className="size-3.5" />
+										<PanelLeftClose className="size-4" />
 									) : (
-										<PanelLeftOpen className="size-3.5" />
+										<PanelLeftOpen className="size-4" />
 									)}
 								</Button>
 								<span className="truncate text-muted-foreground">

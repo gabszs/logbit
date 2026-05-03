@@ -26,6 +26,11 @@ function isTimestampColumn(columnKey: string) {
 	return normalizedKey.includes("timestamp") || normalizedKey.includes("time");
 }
 
+function isSeverityColumn(columnKey: string) {
+	const normalizedKey = columnKey.toLowerCase();
+	return normalizedKey === "level" || normalizedKey.includes("severity");
+}
+
 function formatTimestampValue(value: string) {
 	const match = value.match(
 		/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2})(?:\.(\d+))?/u,
@@ -57,6 +62,50 @@ function renderCellValue(value: unknown, columnKey: string) {
 	if (Array.isArray(value)) return JSON.stringify(value);
 	if (typeof value === "object") return JSON.stringify(value);
 	return String(value);
+}
+
+function getSeverityBadgeClass(level: string) {
+	switch (level) {
+		case "TRACE":
+			return "border-stone-300 bg-stone-100 text-stone-600 dark:border-stone-700 dark:bg-stone-900/70 dark:text-stone-300";
+		case "DEBUG":
+			return "border-blue-300 bg-blue-50 text-blue-700 dark:border-blue-900/80 dark:bg-blue-950/70 dark:text-blue-300";
+		case "INFO":
+			return "border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-900/80 dark:bg-emerald-950/70 dark:text-emerald-300";
+		case "WARN":
+		case "WARNING":
+			return "border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-900/80 dark:bg-amber-950/70 dark:text-amber-300";
+		case "ERROR":
+			return "border-red-300 bg-red-50 text-red-700 dark:border-red-900/80 dark:bg-red-950/70 dark:text-red-300";
+		case "FATAL":
+			return "border-purple-400 bg-purple-50 text-purple-800 dark:border-purple-900/80 dark:bg-purple-950/80 dark:text-purple-300";
+		default:
+			return null;
+	}
+}
+
+function SeverityBadge({ value }: { value: unknown }) {
+	const label = typeof value === "string" ? value.trim().toUpperCase() : "";
+	const className = getSeverityBadgeClass(label);
+
+	if (!label || !className) {
+		return (
+			<div className="truncate font-mono text-[13px] text-foreground">
+				{renderCellValue(value, "level")}
+			</div>
+		);
+	}
+
+	return (
+		<span
+			className={cn(
+				"inline-flex h-5 max-w-full items-center rounded border px-1.5 font-mono text-[11px] tabular-nums leading-none",
+				className,
+			)}
+		>
+			{label}
+		</span>
+	);
 }
 
 function getColumnWidthClass(columnKey: string) {
@@ -110,11 +159,14 @@ export function DynamicResultsTable({
 			columns.map((column) => ({
 				accessorKey: column.key,
 				header: column.label,
-				cell: ({ getValue }) => (
-					<div className="truncate font-mono text-[13px] text-foreground">
-						{renderCellValue(getValue(), column.key)}
-					</div>
-				),
+				cell: ({ getValue }) =>
+					isSeverityColumn(column.key) ? (
+						<SeverityBadge value={getValue()} />
+					) : (
+						<div className="truncate font-mono text-[13px] text-foreground">
+							{renderCellValue(getValue(), column.key)}
+						</div>
+					),
 			})),
 		[columns],
 	);
