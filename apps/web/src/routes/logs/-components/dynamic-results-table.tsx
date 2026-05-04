@@ -206,10 +206,10 @@ function getColumnWidthClass(
 	}
 
 	if (normalizedKey === "body" || normalizedKey.includes("message")) {
-		return "w-[44rem] min-w-[28rem]";
+		return "w-[44rem] min-w-[28rem] max-w-[44rem]";
 	}
 
-	return "w-[14rem] min-w-[12rem]";
+	return "w-[14rem] min-w-[12rem] max-w-[14rem]";
 }
 
 function formatElapsedMs(elapsedSeconds: number) {
@@ -251,12 +251,12 @@ export function DynamicResultsTable({
 					) : (
 						<div
 							className={cn(
-								"font-mono text-[13px] text-foreground",
+								"max-w-full font-mono text-[13px] text-foreground",
 								isLongTextColumn(column.key)
 									? isWrapped
 										? "whitespace-pre-wrap break-words"
-										: "truncate whitespace-nowrap"
-									: "truncate",
+										: "overflow-hidden text-ellipsis whitespace-nowrap"
+									: "overflow-hidden text-ellipsis whitespace-nowrap",
 							)}
 						>
 							{renderCellValue(getValue(), column.key)}

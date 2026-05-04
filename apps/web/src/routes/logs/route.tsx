@@ -57,12 +57,23 @@ export const Route = createFileRoute("/logs")({
 	validateSearch: (search: Record<string, unknown>) => {
 		const sourceId = search.sourceId;
 		const view = search.view;
+		const levels = Array.isArray(search.levels)
+			? search.levels.filter((item): item is string => typeof item === "string")
+			: typeof search.levels === "string"
+				? [search.levels]
+				: [];
 		return {
 			...(typeof sourceId === "string" && sourceId.trim()
 				? { sourceId: sourceId.trim() }
 				: {}),
 			...(view === "table" || view === "groups" ? { view } : {}),
-			denoise: search.denoise === true || search.denoise === "true",
+			...(search.denoise === true || search.denoise === "true"
+				? { denoise: true }
+				: {}),
+			...(levels.length ? { levels } : {}),
+			...(search.showLevelDist === true || search.showLevelDist === "true"
+				? { showLevelDist: true }
+				: {}),
 		};
 	},
 	beforeLoad: async (opts) => {
@@ -111,6 +122,7 @@ function LogsRoute() {
 	const timeRangeRef = useRef(timeRange);
 	const resultsView: LogsResultsView =
 		search.view === "groups" ? "groups" : "table";
+	const selectedLevels = useMemo(() => search.levels ?? [], [search.levels]);
 
 	const selectedSource = useMemo(
 		() => logSources.find((source) => source.id === search.sourceId) ?? null,
@@ -283,33 +295,82 @@ function LogsRoute() {
 			),
 		[hasSeverityField, timeRange, volumeResult?.data],
 	);
+
+	const baseRows = tableResult?.data ?? [];
+	const levelKey = useMemo(() => {
+		if (!baseRows.length) return null;
+		const keys = Object.keys(baseRows[0]);
+		const configuredKey = selectedSource?.config.severityField?.trim().toLowerCase();
+		if (configuredKey) {
+			const found = keys.find(k => k.toLowerCase() === configuredKey || k.toLowerCase().includes(configuredKey));
+			if (found) return found;
+		}
+		const candidates = ["level", "Level", "severity", "SeverityText", "severityText"];
+		for (const cand of candidates) {
+			const found = keys.find(k => k.toLowerCase() === cand.toLowerCase());
+			if (found) return found;
+		}
+		return null;
+	}, [baseRows, selectedSource?.config.severityField]);
+
+	const { levelFilteredRows, levelDistribution } = useMemo(() => {
+		const distribution = new Map<string, number>();
+		let totalWithLevel = 0;
+
+		const normalizedRows = baseRows.map(row => {
+			let level = null;
+			if (levelKey) {
+				const raw = row[levelKey];
+				if (typeof raw === "string" && raw.trim()) {
+					level = raw.trim().toUpperCase();
+					if (level === "WARNING") level = "WARN";
+				}
+			}
+			if (!level) {
+				level = "UNKNOWN";
+			}
+
+			distribution.set(level, (distribution.get(level) || 0) + 1);
+			totalWithLevel++;
+			
+			return { row, level };
+		});
+
+		const filtered = selectedLevels.length > 0
+			? normalizedRows.filter(nr => nr.level && selectedLevels.includes(nr.level)).map(nr => nr.row)
+			: baseRows;
+
+		return {
+			levelFilteredRows: filtered,
+			levelDistribution: { counts: distribution, total: totalWithLevel }
+		};
+	}, [baseRows, levelKey, selectedLevels]);
 	const patternsResult = useMemo(
 		() =>
 			computeLogsPatternGroups({
-				rows: tableResult?.data ?? [],
+				rows: levelFilteredRows,
 				source: selectedSource,
 				timeRange,
 			}),
-		[selectedSource, tableResult?.data, timeRange],
+		[selectedSource, levelFilteredRows, timeRange],
 	);
 
 	const { denoisedRows, noisyGroups } = useMemo(() => {
-		const baseRows = tableResult?.data ?? [];
 		if (!search.denoise || !patternsResult.groups.length) {
-			return { denoisedRows: baseRows, noisyGroups: [] };
+			return { denoisedRows: levelFilteredRows, noisyGroups: [] };
 		}
 
-		const threshold = baseRows.length * 0.1;
+		const threshold = levelFilteredRows.length * 0.1;
 		const noisy = patternsResult.groups.filter(g => g.count > threshold);
 		if (noisy.length === 0) {
-			return { denoisedRows: baseRows, noisyGroups: [] };
+			return { denoisedRows: levelFilteredRows, noisyGroups: [] };
 		}
 
 		const noisyRowsSet = new Set(noisy.flatMap(g => g.samples));
-		const filteredRows = baseRows.filter(row => !noisyRowsSet.has(row));
+		const filteredRows = levelFilteredRows.filter(row => !noisyRowsSet.has(row));
 		
 		return { denoisedRows: filteredRows, noisyGroups: noisy };
-	}, [search.denoise, tableResult?.data, patternsResult.groups]);
+	}, [search.denoise, levelFilteredRows, patternsResult.groups]);
 
 	const tableColumns = useMemo(() => {
 		if (tableResult?.meta?.length) {
@@ -330,7 +391,40 @@ function LogsRoute() {
 
 	const runQuery = () => {
 		if (!selectedSource || !canRun) return;
-		void runQueryForSource(selectedSource, activeQueryState, chartDrilldown);
+
+		let finalWhereQuery = activeQueryState.whereQuery;
+		
+		if (selectedLevels.length > 0) {
+			const severityField = selectedSource.config.severityField?.trim() || "SeverityText";
+			
+			const normalLevels = selectedLevels.filter(l => l !== "UNKNOWN");
+			const hasUnknown = selectedLevels.includes("UNKNOWN");
+			
+			const conditions = [];
+			if (normalLevels.length > 0) {
+				const lowerLevels = normalLevels.map(l => `'${l.toLowerCase()}'`).join(", ");
+				conditions.push(`lower(${severityField}) IN (${lowerLevels})`);
+			}
+			if (hasUnknown) {
+				conditions.push(`(${severityField} IS NULL OR ${severityField} = '')`);
+			}
+			
+			const levelCondition = conditions.length > 1 
+				? `(${conditions.join(" OR ")})` 
+				: conditions[0];
+				
+			if (finalWhereQuery.trim()) {
+				finalWhereQuery = `(${finalWhereQuery}) AND ${levelCondition}`;
+			} else {
+				finalWhereQuery = levelCondition;
+			}
+		}
+
+		void runQueryForSource(
+			selectedSource, 
+			{ ...activeQueryState, whereQuery: finalWhereQuery }, 
+			chartDrilldown
+		);
 	};
 
 	const handleResultsViewChange = useCallback(
@@ -356,6 +450,36 @@ function LogsRoute() {
 		},
 		[navigate],
 	);
+
+	const handleLevelToggle = useCallback((level: string) => {
+		void navigate({
+			to: "/logs",
+			search: (prev) => {
+				const currentLevels = prev.levels || [];
+				const newLevels = currentLevels.includes(level)
+					? currentLevels.filter(l => l !== level)
+					: [...currentLevels, level];
+				return { ...prev, levels: newLevels };
+			},
+			replace: true,
+		});
+	}, [navigate]);
+
+	const handleClearLevels = useCallback(() => {
+		void navigate({
+			to: "/logs",
+			search: (prev) => ({ ...prev, levels: [] }),
+			replace: true,
+		});
+	}, [navigate]);
+
+	const handleToggleLevelDist = useCallback(() => {
+		void navigate({
+			to: "/logs",
+			search: (prev) => ({ ...prev, showLevelDist: !prev.showLevelDist }),
+			replace: true,
+		});
+	}, [navigate]);
 
 	const clearChartDrilldown = useCallback(() => {
 		if (!selectedSource) return;
@@ -445,9 +569,15 @@ function LogsRoute() {
 								value={resultsView}
 								activeFilters={search.denoise ? ["denoise"] : []}
 								isDenoisePanelVisible={isDenoisePanelVisible}
+								selectedLevels={selectedLevels}
+								levelDistribution={levelDistribution}
+								showLevelDist={search.showLevelDist}
 								onValueChange={handleResultsViewChange}
 								onFilterToggle={handleFilterToggle}
 								onToggleDenoisePanel={() => setIsDenoisePanelVisible(!isDenoisePanelVisible)}
+								onLevelToggle={handleLevelToggle}
+								onClearLevels={handleClearLevels}
+								onToggleLevelDist={handleToggleLevelDist}
 							/>
 						</SheetContent>
 					</Sheet>
@@ -458,9 +588,15 @@ function LogsRoute() {
 						value={resultsView}
 						activeFilters={search.denoise ? ["denoise"] : []}
 						isDenoisePanelVisible={isDenoisePanelVisible}
+						selectedLevels={selectedLevels}
+						levelDistribution={levelDistribution}
+						showLevelDist={search.showLevelDist}
 						onValueChange={handleResultsViewChange}
 						onFilterToggle={handleFilterToggle}
 						onToggleDenoisePanel={() => setIsDenoisePanelVisible(!isDenoisePanelVisible)}
+						onLevelToggle={handleLevelToggle}
+						onClearLevels={handleClearLevels}
+						onToggleLevelDist={handleToggleLevelDist}
 						className={`fixed top-13 bottom-0 z-20 hidden w-[280px] border-[color:var(--surface-border)] border-r bg-[color:var(--surface-background)] shadow-[12px_0_32px_rgba(0,0,0,0.08)] xl:flex dark:shadow-[12px_0_32px_rgba(0,0,0,0.24)] ${isAppSidebarExpanded ? "left-48" : "left-12"}`}
 					/>
 				)}
@@ -548,6 +684,10 @@ function LogsRoute() {
 											className="flex-1"
 											rows={denoisedRows}
 											columns={tableColumns}
+											enableWrapToggle
+											enableCsvDownload
+											csvExportRows={denoisedRows}
+											csvFileName={() => "logs-table-results"}
 											statistics={tableResult?.statistics}
 											emptyState={
 												<div className="flex h-full min-h-[18rem] items-center justify-center text-muted-foreground text-sm">

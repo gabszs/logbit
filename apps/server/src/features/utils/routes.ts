@@ -4,6 +4,7 @@ import { models } from "../../db/models";
 import { ContentTypes, status } from "../../lib/constants";
 import type { AppContextType } from "../../types";
 import { healthSchema, setupSchema } from "./schemas";
+import { logger } from "@/lib/telemetry";
 
 const utilityRouter = new OpenAPIHono<AppContextType>()
 	.openapi(
@@ -29,11 +30,11 @@ const utilityRouter = new OpenAPIHono<AppContextType>()
 			},
 		}),
 		async (c) => {
-			// logger.info("Health check endpoint called");
-			// logger.debug("Health check endpoint called");
-			// logger.warn("Health check endpoint called");
-			// logger.error("Health check endpoint called");
-			// logger.trace("Health check endpoint called");
+			logger.info("Health check endpoint called");
+			logger.debug("Health check endpoint called");
+			logger.warn("Health check endpoint called");
+			logger.error("Health check endpoint called");
+			logger.trace("Health check endpoint called");
 			return c.json(
 				{
 					status: "ok",

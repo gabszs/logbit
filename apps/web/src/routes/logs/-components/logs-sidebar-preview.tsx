@@ -1,7 +1,31 @@
 import { cn } from "@/web/utils/cn";
-import { ArrowRight, Eye, EyeOff, Plus, Sparkles, Waves } from "lucide-react";
-import type { ReactNode } from "react";
+import { ArrowRight, ChartBar, ChevronDown, ChevronRight, Eye, EyeOff, FilterX, Plus, Sparkles, Waves } from "lucide-react";
+import { useState, type ReactNode } from "react";
 import type { LogsResultsView } from "../-lib/logs-patterns";
+
+const LOG_LEVELS = ["FATAL", "ERROR", "WARN", "INFO", "DEBUG", "TRACE", "UNKNOWN"];
+
+function getSeverityTextClass(level: string) {
+	switch (level) {
+		case "TRACE":
+			return "text-stone-500 dark:text-stone-400";
+		case "DEBUG":
+			return "text-blue-600 dark:text-blue-400";
+		case "INFO":
+			return "text-emerald-600 dark:text-emerald-400";
+		case "WARN":
+		case "WARNING":
+			return "text-amber-600 dark:text-amber-500";
+		case "ERROR":
+			return "text-red-600 dark:text-red-400";
+		case "FATAL":
+			return "text-purple-600 dark:text-purple-400";
+		case "UNKNOWN":
+			return "text-stone-400 dark:text-stone-500 italic";
+		default:
+			return "text-stone-600 dark:text-stone-400";
+	}
+}
 
 const presetItems = [
 	"LLMs in series",
@@ -62,18 +86,32 @@ export function LogsSidebarPreview({
 	value = "table",
 	activeFilters = [],
 	isDenoisePanelVisible = true,
+	selectedLevels = [],
+	levelDistribution,
+	showLevelDist = false,
 	onValueChange,
 	onFilterToggle,
 	onToggleDenoisePanel,
+	onLevelToggle,
+	onClearLevels,
+	onToggleLevelDist,
 }: {
 	className?: string;
 	value?: LogsResultsView;
 	activeFilters?: string[];
 	isDenoisePanelVisible?: boolean;
+	selectedLevels?: string[];
+	levelDistribution?: { counts: Map<string, number>; total: number };
+	showLevelDist?: boolean;
 	onValueChange?: (value: LogsResultsView) => void;
 	onFilterToggle?: (filter: string) => void;
 	onToggleDenoisePanel?: () => void;
+	onLevelToggle?: (level: string) => void;
+	onClearLevels?: () => void;
+	onToggleLevelDist?: () => void;
 }) {
+	const [isLogLevelExpanded, setIsLogLevelExpanded] = useState(false);
+
 	return (
 		<aside
 			className={cn(
@@ -142,14 +180,16 @@ export function LogsSidebarPreview({
 										onClick={() => onFilterToggle?.(item.value)}
 										className="flex flex-1 items-center gap-1.5 px-1 py-1 text-left"
 									>
-										<span
-											className={cn(
-												"h-1.5 w-1.5 rounded-full transition-all",
-												isActive
-													? "bg-[#f6821f] shadow-[0_0_6px_#f6821f]"
-													: "bg-stone-300 shadow-inner dark:bg-stone-700",
-											)}
-										/>
+										<div className="flex w-3.5 items-center justify-center">
+											<span
+												className={cn(
+													"h-1.5 w-1.5 rounded-full transition-all",
+													isActive
+														? "bg-[#f6821f] shadow-[0_0_6px_#f6821f]"
+														: "bg-stone-300 shadow-inner dark:bg-stone-700",
+												)}
+											/>
+										</div>
 										<span
 											className={cn(
 												"font-bold text-xs transition-colors",
@@ -178,6 +218,91 @@ export function LogsSidebarPreview({
 							);
 						})}
 					</div>
+				</div>
+
+				<div className="flex flex-col py-1 mt-0">
+					<div className="flex items-center justify-between px-2 py-1">
+						<button
+							type="button"
+							onClick={() => setIsLogLevelExpanded(!isLogLevelExpanded)}
+							className="flex flex-1 items-center gap-1.5 text-left"
+						>
+							{isLogLevelExpanded ? <ChevronDown className="size-3.5 text-stone-500" /> : <ChevronRight className="size-3.5 text-stone-500" />}
+							<span className="font-bold text-xs transition-colors text-stone-600 dark:text-stone-400">
+								Log Level {selectedLevels.length > 0 ? `(${selectedLevels.length})` : ""}
+							</span>
+						</button>
+						<div className="flex items-center gap-1">
+							{selectedLevels.length > 0 && (
+								<button
+									type="button"
+									onClick={onClearLevels}
+									className="rounded p-1 text-stone-400 hover:bg-stone-200 hover:text-stone-700 transition-colors dark:hover:bg-stone-800 dark:hover:text-stone-300"
+									title="Clear Filters"
+								>
+									<FilterX className="size-3.5" />
+								</button>
+							)}
+							<button
+								type="button"
+								onClick={onToggleLevelDist}
+								className={cn(
+									"rounded p-1 text-stone-400 hover:bg-stone-200 hover:text-stone-700 transition-colors dark:hover:bg-stone-800 dark:hover:text-stone-300",
+									showLevelDist && "text-[#f6821f] dark:text-[#f6821f] bg-[#f6821f0c] dark:bg-[#f6821f0a]"
+								)}
+								title={showLevelDist ? "Hide Distribution" : "Show Distribution"}
+							>
+								<ChartBar className="size-3.5" />
+							</button>
+						</div>
+					</div>
+
+					{isLogLevelExpanded && (
+						<div className="mt-1 flex flex-col gap-0.5 px-2">
+							{LOG_LEVELS.map((level) => {
+								const isSelected = selectedLevels.includes(level);
+								const count = levelDistribution?.counts.get(level) || 0;
+								const total = levelDistribution?.total || 1;
+								const percentage = count > 0 ? ((count / total) * 100).toFixed(1) : "0.0";
+								
+								return (
+									<button
+										key={level}
+										type="button"
+										onClick={() => onLevelToggle?.(level)}
+										className={cn(
+											"group flex w-full items-center justify-between rounded px-2 py-1.5 text-left transition-all",
+											isSelected
+												? "bg-[#f6821f0c] dark:bg-[#f6821f0a]"
+												: "hover:bg-stone-100/70 dark:hover:bg-stone-900/60"
+										)}
+									>
+										<div className="flex items-center gap-1.5">
+											<span
+												className={cn(
+													"h-1.5 w-1.5 rounded-full transition-all",
+													isSelected
+														? "bg-[#f6821f] shadow-[0_0_6px_#f6821f]"
+														: "bg-stone-300 shadow-inner dark:bg-stone-700",
+												)}
+											/>
+											<span className={cn(
+												"font-bold text-xs font-mono",
+												getSeverityTextClass(level)
+											)}>
+												{level === "UNKNOWN" ? "EMPTY/UNKNOWN" : level}
+											</span>
+										</div>
+										{showLevelDist && (
+											<span className="font-mono text-[10px] text-stone-500">
+												{percentage}%
+											</span>
+										)}
+									</button>
+								);
+							})}
+						</div>
+					)}
 				</div>
 
 				<div className="logs-surface-divider mt-2.5 pt-2.5">
