@@ -294,10 +294,8 @@ export function DynamicResultsTable({
 	const hasHeaderToolbar =
 		enableWrapToggle || enableCsvDownload || canShowGeneratedSql;
 	const effectiveCsvRows = csvExportRows ?? rows;
-	const headerVerticalPaddingClass = fitToContainer ? "py-2" : "py-3";
-	const headerToolbarButtonClass = fitToContainer
-		? "h-6 w-6"
-		: "h-7 w-7";
+	const headerVerticalPaddingClass = "py-2";
+	const headerToolbarButtonClass = "h-6 w-6";
 	const headerToolbarContainerClass = fitToContainer
 		? "px-0 py-0"
 		: "px-1.5 py-0.5";
