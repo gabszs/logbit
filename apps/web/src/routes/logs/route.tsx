@@ -556,7 +556,7 @@ function LogsRoute() {
 						</SheetTrigger>
 						<SheetContent
 							side="left"
-							className="w-[18.5rem] max-w-[88vw] gap-0 border-[color:var(--surface-border)] bg-[color:var(--surface-background)] p-0 sm:max-w-[18.5rem]"
+							className="w-[18.5rem] max-w-[88vw] gap-0 border-[color:var(--surface-border)] bg-background p-0 sm:max-w-[18.5rem]"
 						>
 							<SheetHeader className="border-[color:var(--surface-border)] border-b px-4 py-4 text-left">
 								<SheetTitle>Sidebar controls</SheetTitle>
@@ -597,7 +597,7 @@ function LogsRoute() {
 						onLevelToggle={handleLevelToggle}
 						onClearLevels={handleClearLevels}
 						onToggleLevelDist={handleToggleLevelDist}
-						className={`fixed top-13 bottom-0 z-20 hidden w-[280px] border-[color:var(--surface-border)] border-r bg-[color:var(--surface-background)] shadow-[12px_0_32px_rgba(0,0,0,0.08)] xl:flex dark:shadow-[12px_0_32px_rgba(0,0,0,0.24)] ${isAppSidebarExpanded ? "left-48" : "left-12"}`}
+						className={`fixed top-13 bottom-0 z-20 hidden w-[280px] border-[color:var(--surface-border)] border-r bg-background shadow-[12px_0_32px_rgba(0,0,0,0.08)] xl:flex dark:shadow-[12px_0_32px_rgba(0,0,0,0.24)] ${isAppSidebarExpanded ? "left-48" : "left-12"}`}
 					/>
 				)}
 

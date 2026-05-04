@@ -21,7 +21,7 @@ export function LogsSkeleton() {
 
 				{isLogsCanvasSidebarExpanded && (
 					<div
-						className={`fixed top-13 bottom-0 z-20 hidden w-[280px] flex-col border-[color:var(--surface-border)] border-r bg-[color:var(--surface-background)] shadow-[12px_0_32px_rgba(0,0,0,0.08)] xl:flex dark:shadow-[12px_0_32px_rgba(0,0,0,0.24)] ${isAppSidebarExpanded ? "left-48" : "left-12"}`}
+						className={`fixed top-13 bottom-0 z-20 hidden w-[280px] flex-col border-[color:var(--surface-border)] border-r bg-background shadow-[12px_0_32px_rgba(0,0,0,0.08)] xl:flex dark:shadow-[12px_0_32px_rgba(0,0,0,0.24)] ${isAppSidebarExpanded ? "left-48" : "left-12"}`}
 					>
 						<div className="flex-1 space-y-3 px-3.5 py-3.5">
 							<Skeleton className="h-3 w-20" />

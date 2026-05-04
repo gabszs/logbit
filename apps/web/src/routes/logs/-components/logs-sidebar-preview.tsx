@@ -115,7 +115,7 @@ export function LogsSidebarPreview({
 	return (
 		<aside
 			className={cn(
-				"flex h-full flex-col bg-[color:var(--surface-background)] text-sm",
+				"flex h-full flex-col bg-background text-sm",
 				className,
 			)}
 		>

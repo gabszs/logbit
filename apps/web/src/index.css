@@ -30,7 +30,7 @@
 	--chart-3: oklch(0.795 0.184 86.047);
 	--chart-4: oklch(0.637 0.237 25.331);
 	--chart-5: oklch(0.656 0.241 354.308);
-	--sidebar: oklch(0.985 0.001 106.423);
+	--sidebar: var(--background);
 	--sidebar-foreground: oklch(0.268 0.007 34.298);
 	--sidebar-primary: oklch(0.2046 0 0);
 	--sidebar-primary-foreground: oklch(0.666 0.179 58.318);
@@ -41,7 +41,7 @@
 	--radius: 0.5rem;
 	--tracking-normal: 0em;
 	--spacing: 0.25rem;
-	--surface-background: #faf9f6;
+	--surface-background: var(--background);
 	--surface-border: #e7e5e4;
 	--surface-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
 	--surface-radius: 0.5rem;
@@ -73,7 +73,7 @@
 	--chart-3: oklch(0.554 0.135 66.442);
 	--chart-4: oklch(0.505 0.213 27.518);
 	--chart-5: oklch(0.525 0.223 3.958);
-	--sidebar: oklch(0.205 0 0);
+	--sidebar: var(--background);
 	--sidebar-foreground: oklch(0.97 0.001 106.424);
 	--sidebar-primary: oklch(0.555 0.163 48.998);
 	--sidebar-primary-foreground: oklch(0.97 0.001 106.424);
@@ -82,7 +82,7 @@
 	--sidebar-border: oklch(0.374 0.01 67.558);
 	--sidebar-ring: oklch(0.473 0.137 46.201);
 	--radius: 0.5rem;
-	--surface-background: #0c0a09;
+	--surface-background: var(--background);
 	--surface-border: #292524;
 	--surface-shadow: 0 1px 2px rgba(0, 0, 0, 0.24);
 	--surface-radius: 0.5rem;
@@ -156,7 +156,7 @@
 
 	html,
 	body {
-		background-color: #faf9f6;
+		background-color: var(--background);
 		background-image:
 			linear-gradient(#f6821f18 1px, transparent 1px),
 			linear-gradient(90deg, #f6821f18 1px, transparent 1px),
@@ -167,8 +167,9 @@
 			24px 24px;
 	}
 
+	html.dark,
 	html.dark body {
-		background-color: #0c0a09;
+		background-color: var(--background);
 		background-image:
 			linear-gradient(#f6821f08 1px, transparent 1px),
 			linear-gradient(90deg, #f6821f08 1px, transparent 1px),
