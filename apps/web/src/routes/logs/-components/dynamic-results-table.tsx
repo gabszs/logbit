@@ -4,9 +4,17 @@ import {
 	getCoreRowModel,
 	useReactTable,
 } from "@tanstack/react-table";
-import { Download, Info, WrapText } from "lucide-react";
+import { Code2, Download, Info, WrapText } from "lucide-react";
 import { type ReactNode, useCallback, useMemo, useState } from "react";
 import { Button } from "@/web/components/ui/button";
+import { CopyButton } from "@/web/components/ui/copy-button";
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogHeader,
+	DialogTitle,
+} from "@/web/components/ui/dialog";
 import {
 	Tooltip,
 	TooltipContent,
@@ -22,8 +30,11 @@ type DynamicResultsTableProps = {
 	rows: ClickhouseRow[];
 	columns: Array<{ key: string; label: string }>;
 	title?: string;
+	hideHeader?: boolean;
 	enableWrapToggle?: boolean;
 	enableCsvDownload?: boolean;
+	enableGeneratedSql?: boolean;
+	generatedSql?: string | null;
 	csvFileName?: string | (() => string);
 	csvExportRows?: ClickhouseRow[];
 	defaultWrapped?: boolean;
@@ -228,8 +239,11 @@ export function DynamicResultsTable({
 	rows,
 	columns,
 	title = "Results table",
+	hideHeader = false,
 	enableWrapToggle = false,
 	enableCsvDownload = false,
+	enableGeneratedSql = false,
+	generatedSql,
 	csvFileName,
 	csvExportRows,
 	defaultWrapped = false,
@@ -240,6 +254,7 @@ export function DynamicResultsTable({
 }: DynamicResultsTableProps) {
 	const data = rows;
 	const [isWrapped, setIsWrapped] = useState(defaultWrapped);
+	const [isGeneratedSqlOpen, setIsGeneratedSqlOpen] = useState(false);
 	const tableColumns = useMemo<ColumnDef<ClickhouseRow>[]>(
 		() =>
 			columns.map((column) => ({
@@ -275,7 +290,9 @@ export function DynamicResultsTable({
 	const headerGroups = table.getHeaderGroups();
 	const rowModel = table.getRowModel().rows;
 	const columnCount = columns.length;
-	const hasHeaderToolbar = enableWrapToggle || enableCsvDownload;
+	const canShowGeneratedSql = enableGeneratedSql && Boolean(generatedSql);
+	const hasHeaderToolbar =
+		enableWrapToggle || enableCsvDownload || canShowGeneratedSql;
 	const effectiveCsvRows = csvExportRows ?? rows;
 	const headerVerticalPaddingClass = fitToContainer ? "py-2" : "py-3";
 	const headerToolbarButtonClass = fitToContainer
@@ -286,8 +303,10 @@ export function DynamicResultsTable({
 		: "px-1.5 py-0.5";
 	const actionColumnSizingClass = fitToContainer
 		? "w-[4rem]"
-		: statistics
-			? "w-[7rem] min-w-[7rem] max-w-[7rem]"
+		: canShowGeneratedSql && statistics
+			? "w-[9rem] min-w-[9rem] max-w-[9rem]"
+			: canShowGeneratedSql || statistics
+				? "w-[7rem] min-w-[7rem] max-w-[7rem]"
 			: "w-[5rem] min-w-[5rem] max-w-[5rem]";
 	const actionColumnWidthClass = fitToContainer
 		? actionColumnSizingClass
@@ -324,27 +343,64 @@ export function DynamicResultsTable({
 				className,
 			)}
 		>
-			<div className="flex items-center gap-2 border-[color:var(--surface-border)] border-b px-4 py-3 sm:px-6">
-				<h2 className="font-medium text-muted-foreground text-xs uppercase tracking-[0.18em]">
-					{title}
-				</h2>
-				<div className="h-px flex-1 bg-[color:var(--surface-border)]" />
-				{statistics ? (
-					<>
-						<div className="font-mono text-muted-foreground text-xs tabular-nums">
-							{formatElapsedMs(statistics.elapsed)}
+			<Dialog open={isGeneratedSqlOpen} onOpenChange={setIsGeneratedSqlOpen}>
+				<DialogContent className="max-w-[min(52rem,calc(100vw-2rem))] border-[color:var(--surface-border)] bg-[color:var(--surface-background)] p-0">
+					<DialogHeader className="border-[color:var(--surface-border)] border-b px-5 py-4">
+						<div className="flex items-start justify-between gap-4 pr-8">
+							<div>
+								<DialogTitle className="text-base">Generated SQL</DialogTitle>
+								<DialogDescription className="mt-1">
+									SQL generated for the current results table.
+								</DialogDescription>
+							</div>
+							<CopyButton
+								onCopy={async () => {
+									await navigator.clipboard.writeText(generatedSql ?? "");
+								}}
+								aria-label="Copy generated SQL"
+								className="size-8 shrink-0 border border-[color:var(--surface-border)] shadow-none"
+							/>
 						</div>
-						<div className="h-3 w-px bg-[color:var(--surface-border)]" />
-						<div className="font-mono text-muted-foreground text-xs tabular-nums">
-							{rows.length.toLocaleString()} rows
+					</DialogHeader>
+					<div className="max-h-[65vh] overflow-auto px-5 py-4">
+						<div className="relative">
+							<CopyButton
+								onCopy={async () => {
+									await navigator.clipboard.writeText(generatedSql ?? "");
+								}}
+								aria-label="Copy generated SQL"
+								className="absolute top-2 right-2 z-10 size-7 border border-[color:var(--surface-border)] bg-[color:var(--surface-background)]/90 shadow-none backdrop-blur-sm"
+							/>
+							<pre className="whitespace-pre-wrap break-words rounded-md border border-[color:var(--surface-border)] bg-muted/30 p-4 pr-12 font-mono text-[12px] leading-6 text-foreground">
+								{generatedSql}
+							</pre>
 						</div>
-						<div className="h-3 w-px bg-[color:var(--surface-border)]" />
-						<div className="font-mono text-muted-foreground text-xs tabular-nums">
-							{formatKilobytes(statistics.bytes_read)}
-						</div>
-					</>
-				) : null}
-			</div>
+					</div>
+				</DialogContent>
+			</Dialog>
+			{hideHeader ? null : (
+				<div className="flex items-center gap-2 border-[color:var(--surface-border)] border-b px-4 py-3 sm:px-6">
+					<h2 className="font-medium text-muted-foreground text-xs uppercase tracking-[0.18em]">
+						{title}
+					</h2>
+					<div className="h-px flex-1 bg-[color:var(--surface-border)]" />
+					{statistics ? (
+						<>
+							<div className="font-mono text-muted-foreground text-xs tabular-nums">
+								{formatElapsedMs(statistics.elapsed)}
+							</div>
+							<div className="h-3 w-px bg-[color:var(--surface-border)]" />
+							<div className="font-mono text-muted-foreground text-xs tabular-nums">
+								{rows.length.toLocaleString()} rows
+							</div>
+							<div className="h-3 w-px bg-[color:var(--surface-border)]" />
+							<div className="font-mono text-muted-foreground text-xs tabular-nums">
+								{formatKilobytes(statistics.bytes_read)}
+							</div>
+						</>
+					) : null}
+				</div>
+			)}
 			{rowModel.length === 0 ? (
 				<div className="min-h-0 flex-1 bg-[color:var(--surface-background)]">
 					{emptyState}
@@ -439,6 +495,28 @@ export function DynamicResultsTable({
 														</TooltipContent>
 													</Tooltip>
 												) : null}
+												{canShowGeneratedSql ? (
+													<Tooltip>
+														<TooltipTrigger asChild>
+															<Button
+																type="button"
+																variant="ghost"
+																size="sm"
+																className={cn(
+																	headerToolbarButtonClass,
+																	"px-0 text-muted-foreground",
+																)}
+																onClick={() => setIsGeneratedSqlOpen(true)}
+																aria-label="Show generated SQL"
+															>
+																<Code2 className="size-4" />
+															</Button>
+														</TooltipTrigger>
+														<TooltipContent sideOffset={6}>
+															Show generated SQL
+														</TooltipContent>
+													</Tooltip>
+												) : null}
 												{enableWrapToggle ? (
 													<Tooltip>
 														<TooltipTrigger asChild>
@@ -520,7 +598,10 @@ export function DynamicResultsTable({
 												`border-[color:var(--surface-border)] border-b px-2 ${TABLE_CELL_VERTICAL_PADDING}`,
 												fitToContainer
 													? actionColumnWidthClass
-													: "sticky right-0 z-10 w-[5rem] min-w-[5rem] max-w-[5rem] bg-[color:var(--surface-background)]/95",
+													: cn(
+															actionColumnSizingClass,
+															"sticky right-0 z-10 bg-[color:var(--surface-background)]/95",
+														),
 											)}
 										/>
 									) : null}

@@ -94,6 +94,7 @@ export function LogsSidebarPreview({
 	onToggleDenoisePanel,
 	onLevelToggle,
 	onClearLevels,
+	onClearAllFilters,
 	onToggleLevelDist,
 }: {
 	className?: string;
@@ -108,9 +109,11 @@ export function LogsSidebarPreview({
 	onToggleDenoisePanel?: () => void;
 	onLevelToggle?: (level: string) => void;
 	onClearLevels?: () => void;
+	onClearAllFilters?: () => void;
 	onToggleLevelDist?: () => void;
 }) {
 	const [isLogLevelExpanded, setIsLogLevelExpanded] = useState(false);
+	const hasActiveFilters = activeFilters.length > 0 || selectedLevels.length > 0;
 
 	return (
 		<aside
@@ -161,7 +164,22 @@ export function LogsSidebarPreview({
 				</div>
 
 				<div className="logs-surface-divider mt-2.5 pt-2.5">
-					<SectionHeader label="Filters" />
+					<div className="mb-2 flex items-center justify-between gap-2">
+						<h3 className="flex items-center gap-1.5 font-normal text-[9px] text-stone-400 uppercase tracking-[0.16em] dark:text-stone-600">
+							<span className="inline-block h-px w-3 bg-stone-300 dark:bg-stone-700" />
+							Filters
+						</h3>
+						{hasActiveFilters ? (
+							<button
+								type="button"
+								onClick={onClearAllFilters}
+								className="rounded p-1 text-stone-400 transition-colors hover:bg-stone-200 hover:text-stone-700 dark:hover:bg-stone-800 dark:hover:text-stone-300"
+								title="Clear all filters"
+							>
+								<FilterX className="size-3.5" />
+							</button>
+						) : null}
+					</div>
 					<div className="flex flex-col gap-1">
 						{filterItems.map((item) => {
 							const isActive = activeFilters.includes(item.value);

@@ -285,6 +285,46 @@ function LogsRoute() {
 		[orderByQuery, selectQuery, timeRange, whereQuery],
 	);
 
+	const buildQueryStateWithLevelFilters = useCallback(
+		(source: NonNullable<typeof selectedSource>, queryState: ActiveLogsQueryState) => {
+			let finalWhereQuery = queryState.whereQuery;
+
+			if (selectedLevels.length > 0) {
+				const severityField =
+					source.config.severityField?.trim() || "SeverityText";
+				const normalLevels = selectedLevels.filter((level) => level !== "UNKNOWN");
+				const hasUnknown = selectedLevels.includes("UNKNOWN");
+				const conditions: string[] = [];
+
+				if (normalLevels.length > 0) {
+					const lowerLevels = normalLevels
+						.map((level) => `'${level.toLowerCase()}'`)
+						.join(", ");
+					conditions.push(`lower(${severityField}) IN (${lowerLevels})`);
+				}
+
+				if (hasUnknown) {
+					conditions.push(`(${severityField} IS NULL OR ${severityField} = '')`);
+				}
+
+				const levelCondition =
+					conditions.length > 1 ? `(${conditions.join(" OR ")})` : conditions[0];
+
+				if (levelCondition) {
+					finalWhereQuery = finalWhereQuery.trim()
+						? `(${finalWhereQuery}) AND ${levelCondition}`
+						: levelCondition;
+				}
+			}
+
+			return {
+				...queryState,
+				whereQuery: finalWhereQuery,
+			};
+		},
+		[selectedLevels],
+	);
+
 	const hasSeverityField = Boolean(selectedSource?.config.severityField?.trim());
 	const volumeData = useMemo(
 		() =>
@@ -389,40 +429,36 @@ function LogsRoute() {
 		}));
 	}, [tableResult]);
 
+	const generatedTableSql = useMemo(() => {
+		if (!selectedSource) return null;
+
+		const queryState = buildQueryStateWithLevelFilters(
+			selectedSource,
+			activeQueryState,
+		);
+		const drilldownOptions = buildDrilldownOptions(
+			selectedSource,
+			chartDrilldown,
+		);
+
+		return buildLogsTableQuery(selectedSource, {
+			...queryState,
+			...drilldownOptions,
+		});
+	}, [
+		activeQueryState,
+		buildDrilldownOptions,
+		buildQueryStateWithLevelFilters,
+		chartDrilldown,
+		selectedSource,
+	]);
+
 	const runQuery = () => {
 		if (!selectedSource || !canRun) return;
 
-		let finalWhereQuery = activeQueryState.whereQuery;
-		
-		if (selectedLevels.length > 0) {
-			const severityField = selectedSource.config.severityField?.trim() || "SeverityText";
-			
-			const normalLevels = selectedLevels.filter(l => l !== "UNKNOWN");
-			const hasUnknown = selectedLevels.includes("UNKNOWN");
-			
-			const conditions = [];
-			if (normalLevels.length > 0) {
-				const lowerLevels = normalLevels.map(l => `'${l.toLowerCase()}'`).join(", ");
-				conditions.push(`lower(${severityField}) IN (${lowerLevels})`);
-			}
-			if (hasUnknown) {
-				conditions.push(`(${severityField} IS NULL OR ${severityField} = '')`);
-			}
-			
-			const levelCondition = conditions.length > 1 
-				? `(${conditions.join(" OR ")})` 
-				: conditions[0];
-				
-			if (finalWhereQuery.trim()) {
-				finalWhereQuery = `(${finalWhereQuery}) AND ${levelCondition}`;
-			} else {
-				finalWhereQuery = levelCondition;
-			}
-		}
-
 		void runQueryForSource(
 			selectedSource, 
-			{ ...activeQueryState, whereQuery: finalWhereQuery }, 
+			buildQueryStateWithLevelFilters(selectedSource, activeQueryState), 
 			chartDrilldown
 		);
 	};
@@ -473,6 +509,14 @@ function LogsRoute() {
 		});
 	}, [navigate]);
 
+	const handleClearAllFilters = useCallback(() => {
+		void navigate({
+			to: "/logs",
+			search: (prev) => ({ ...prev, denoise: false, levels: [] }),
+			replace: true,
+		});
+	}, [navigate]);
+
 	const handleToggleLevelDist = useCallback(() => {
 		void navigate({
 			to: "/logs",
@@ -485,16 +529,34 @@ function LogsRoute() {
 		if (!selectedSource) return;
 		setChartDrilldown(null);
 		setActiveChartPopover(null);
-		void runQueryForSource(selectedSource, activeQueryState, null);
-	}, [activeQueryState, runQueryForSource, selectedSource]);
+		void runQueryForSource(
+			selectedSource,
+			buildQueryStateWithLevelFilters(selectedSource, activeQueryState),
+			null,
+		);
+	}, [
+		activeQueryState,
+		buildQueryStateWithLevelFilters,
+		runQueryForSource,
+		selectedSource,
+	]);
 
 	const applyChartDrilldown = useCallback(
 		(drilldown: LogsChartDrilldown) => {
 			if (!selectedSource) return;
 			setChartDrilldown(drilldown);
-			void runQueryForSource(selectedSource, activeQueryState, drilldown);
+			void runQueryForSource(
+				selectedSource,
+				buildQueryStateWithLevelFilters(selectedSource, activeQueryState),
+				drilldown,
+			);
 		},
-		[activeQueryState, runQueryForSource, selectedSource],
+		[
+			activeQueryState,
+			buildQueryStateWithLevelFilters,
+			runQueryForSource,
+			selectedSource,
+		],
 	);
 
 	useEffect(() => {
@@ -508,12 +570,13 @@ function LogsRoute() {
 					: 60_000;
 
 		const intervalId = window.setInterval(() => {
-			void runQueryForSource(selectedSource, {
+			const queryState = buildQueryStateWithLevelFilters(selectedSource, {
 				selectQuery,
 				whereQuery,
 				orderByQuery,
 				timeRange,
-			}, chartDrilldown);
+			});
+			void runQueryForSource(selectedSource, queryState, chartDrilldown);
 		}, intervalMs);
 
 		return () => {
@@ -521,6 +584,7 @@ function LogsRoute() {
 		};
 	}, [
 		autoRefreshInterval,
+		buildQueryStateWithLevelFilters,
 		canRun,
 		orderByQuery,
 		selectQuery,
@@ -577,6 +641,7 @@ function LogsRoute() {
 								onToggleDenoisePanel={() => setIsDenoisePanelVisible(!isDenoisePanelVisible)}
 								onLevelToggle={handleLevelToggle}
 								onClearLevels={handleClearLevels}
+								onClearAllFilters={handleClearAllFilters}
 								onToggleLevelDist={handleToggleLevelDist}
 							/>
 						</SheetContent>
@@ -596,6 +661,7 @@ function LogsRoute() {
 						onToggleDenoisePanel={() => setIsDenoisePanelVisible(!isDenoisePanelVisible)}
 						onLevelToggle={handleLevelToggle}
 						onClearLevels={handleClearLevels}
+						onClearAllFilters={handleClearAllFilters}
 						onToggleLevelDist={handleToggleLevelDist}
 						className={`fixed top-13 bottom-0 z-20 hidden w-[280px] border-[color:var(--surface-border)] border-r bg-background shadow-[12px_0_32px_rgba(0,0,0,0.08)] xl:flex dark:shadow-[12px_0_32px_rgba(0,0,0,0.24)] ${isAppSidebarExpanded ? "left-48" : "left-12"}`}
 					/>
@@ -684,8 +750,11 @@ function LogsRoute() {
 											className="flex-1"
 											rows={denoisedRows}
 											columns={tableColumns}
+											hideHeader
 											enableWrapToggle
 											enableCsvDownload
+											enableGeneratedSql
+											generatedSql={generatedTableSql}
 											csvExportRows={denoisedRows}
 											csvFileName={() => "logs-table-results"}
 											statistics={tableResult?.statistics}
