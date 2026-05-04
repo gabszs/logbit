@@ -4,15 +4,31 @@ import {
 	getCoreRowModel,
 	useReactTable,
 } from "@tanstack/react-table";
-import { type ReactNode, useMemo } from "react";
+import { Download, WrapText } from "lucide-react";
+import { type ReactNode, useCallback, useMemo, useState } from "react";
+import { Button } from "@/web/components/ui/button";
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "@/web/components/ui/tooltip";
 import { cn } from "@/web/utils/cn";
 
 export type ClickhouseRow = Record<string, unknown>;
+
+const TABLE_HEADER_VERTICAL_PADDING = "py-3";
+const TABLE_CELL_VERTICAL_PADDING = "py-2";
 
 type DynamicResultsTableProps = {
 	rows: ClickhouseRow[];
 	columns: Array<{ key: string; label: string }>;
 	title?: string;
+	enableWrapToggle?: boolean;
+	enableCsvDownload?: boolean;
+	csvFileName?: string | (() => string);
+	csvExportRows?: ClickhouseRow[];
+	defaultWrapped?: boolean;
+	fitToContainer?: boolean;
 	statistics?: {
 		elapsed: number;
 		rows_read: number;
@@ -30,6 +46,18 @@ function isTimestampColumn(columnKey: string) {
 function isSeverityColumn(columnKey: string) {
 	const normalizedKey = columnKey.toLowerCase();
 	return normalizedKey === "level" || normalizedKey.includes("severity");
+}
+
+function isLongTextColumn(columnKey: string) {
+	const normalizedKey = columnKey.toLowerCase();
+	return (
+		normalizedKey === "body" ||
+		normalizedKey === "pattern" ||
+		normalizedKey === "message" ||
+		normalizedKey === "msg" ||
+		normalizedKey.includes("body") ||
+		normalizedKey.includes("message")
+	);
 }
 
 function formatTimestampValue(value: string) {
@@ -63,6 +91,26 @@ function renderCellValue(value: unknown, columnKey: string) {
 	if (Array.isArray(value)) return JSON.stringify(value);
 	if (typeof value === "object") return JSON.stringify(value);
 	return String(value);
+}
+
+function serializeCsvValue(value: unknown, columnKey: string) {
+	const normalizedValue = renderCellValue(value, columnKey).replaceAll('"', '""');
+	return `"${normalizedValue}"`;
+}
+
+function buildCsvContent(
+	rows: ClickhouseRow[],
+	columns: Array<{ key: string; label: string }>,
+) {
+	const header = columns.map((column) =>
+		`"${column.label.replaceAll('"', '""')}"`,
+	);
+	const body = rows.map((row) =>
+		columns
+			.map((column) => serializeCsvValue(row[column.key], column.key))
+			.join(","),
+	);
+	return [header.join(","), ...body].join("\n");
 }
 
 function getSeverityBadgeClass(level: string) {
@@ -109,8 +157,38 @@ function SeverityBadge({ value }: { value: unknown }) {
 	);
 }
 
-function getColumnWidthClass(columnKey: string) {
+function getColumnWidthClass(
+	columnKey: string,
+	options?: {
+		fitToContainer?: boolean;
+	},
+) {
 	const normalizedKey = columnKey.toLowerCase();
+	const fitToContainer = options?.fitToContainer ?? false;
+
+	if (fitToContainer) {
+		if (normalizedKey.includes("timestamp") || normalizedKey.includes("time")) {
+			return "w-[12.5rem]";
+		}
+
+		if (normalizedKey === "service" || normalizedKey.includes("servicename")) {
+			return "w-[10rem]";
+		}
+
+		if (
+			normalizedKey === "level" ||
+			normalizedKey.includes("severity") ||
+			normalizedKey.includes("status")
+		) {
+			return "w-[6rem]";
+		}
+
+		if (normalizedKey === "body" || normalizedKey.includes("message")) {
+			return "w-auto";
+		}
+
+		return "w-[9rem]";
+	}
 
 	if (normalizedKey.includes("timestamp") || normalizedKey.includes("time")) {
 		return "w-[15rem] min-w-[15rem] max-w-[15rem]";
@@ -151,11 +229,18 @@ export function DynamicResultsTable({
 	rows,
 	columns,
 	title = "Results table",
+	enableWrapToggle = false,
+	enableCsvDownload = false,
+	csvFileName,
+	csvExportRows,
+	defaultWrapped = false,
+	fitToContainer = false,
 	statistics,
 	emptyState,
 	className,
 }: DynamicResultsTableProps) {
 	const data = rows;
+	const [isWrapped, setIsWrapped] = useState(defaultWrapped);
 	const tableColumns = useMemo<ColumnDef<ClickhouseRow>[]>(
 		() =>
 			columns.map((column) => ({
@@ -165,12 +250,21 @@ export function DynamicResultsTable({
 					isSeverityColumn(column.key) ? (
 						<SeverityBadge value={getValue()} />
 					) : (
-						<div className="truncate font-mono text-[13px] text-foreground">
+						<div
+							className={cn(
+								"font-mono text-[13px] text-foreground",
+								isLongTextColumn(column.key)
+									? isWrapped
+										? "whitespace-pre-wrap break-words"
+										: "truncate whitespace-nowrap"
+									: "truncate",
+							)}
+						>
 							{renderCellValue(getValue(), column.key)}
 						</div>
 					),
 			})),
-		[columns],
+		[columns, isWrapped],
 	);
 
 	const table = useReactTable({
@@ -182,6 +276,29 @@ export function DynamicResultsTable({
 	const headerGroups = table.getHeaderGroups();
 	const rowModel = table.getRowModel().rows;
 	const columnCount = columns.length;
+	const hasHeaderToolbar = enableWrapToggle || enableCsvDownload;
+	const effectiveCsvRows = csvExportRows ?? rows;
+
+	const triggerCsvDownload = useCallback(() => {
+		const content = buildCsvContent(effectiveCsvRows, columns);
+		const timestamp = new Date().toISOString().replaceAll(/[:.]/gu, "-");
+		const baseName =
+			typeof csvFileName === "function"
+				? csvFileName()
+				: csvFileName ?? `logs-export-${timestamp}`;
+		const fileName = baseName.endsWith(".csv") ? baseName : `${baseName}.csv`;
+		const blob = new Blob([`\uFEFF${content}`], {
+			type: "text/csv;charset=utf-8;",
+		});
+		const objectUrl = URL.createObjectURL(blob);
+		const anchor = document.createElement("a");
+		anchor.href = objectUrl;
+		anchor.download = fileName;
+		document.body.append(anchor);
+		anchor.click();
+		anchor.remove();
+		URL.revokeObjectURL(objectUrl);
+	}, [columns, csvFileName, effectiveCsvRows]);
 
 	return (
 		<section
@@ -216,27 +333,95 @@ export function DynamicResultsTable({
 					{emptyState}
 				</div>
 			) : (
-				<div className="min-h-0 flex-1 overflow-auto bg-[color:var(--surface-background)]">
-					<table className="min-w-full border-separate border-spacing-0 text-left">
+				<div
+					className={cn(
+						"min-h-0 flex-1 bg-[color:var(--surface-background)]",
+						fitToContainer ? "overflow-y-auto overflow-x-hidden" : "overflow-auto",
+					)}
+				>
+					<table
+						className={cn(
+							"border-separate border-spacing-0 text-left",
+							fitToContainer ? "table-fixed w-full" : "min-w-full",
+						)}
+					>
 						<thead className="sticky top-0 z-10 bg-[color:var(--surface-background)]/95 backdrop-blur-sm">
 							{headerGroups.map((headerGroup) => (
 								<tr key={headerGroup.id}>
-									{headerGroup.headers.map((header) => (
+									{headerGroup.headers.map((header, headerIndex) => {
+										const isLastHeader =
+											headerIndex === headerGroup.headers.length - 1;
+
+										return (
 										<th
 											key={header.id}
 											className={cn(
-												"border-[color:var(--surface-border)] border-b px-4 py-3 font-medium text-muted-foreground text-xs uppercase tracking-[0.16em]",
-												getColumnWidthClass(header.column.id),
+												`border-[color:var(--surface-border)] border-b px-4 ${TABLE_HEADER_VERTICAL_PADDING} font-medium text-muted-foreground text-xs uppercase tracking-[0.16em]`,
+												hasHeaderToolbar && isLastHeader
+													? fitToContainer
+														? "bg-[color:var(--surface-background)]/95"
+														: "sticky right-0 z-20 bg-[color:var(--surface-background)]/95 backdrop-blur-sm"
+													: "",
+												getColumnWidthClass(header.column.id, {
+													fitToContainer,
+												}),
 											)}
 										>
-											{header.isPlaceholder
-												? null
-												: flexRender(
-														header.column.columnDef.header,
-														header.getContext(),
-													)}
+											<div className="flex items-center gap-2">
+												<div className="min-w-0">
+													{header.isPlaceholder
+														? null
+														: flexRender(
+																header.column.columnDef.header,
+																header.getContext(),
+															)}
+												</div>
+												{hasHeaderToolbar && isLastHeader ? (
+													<div className="ml-auto flex items-center gap-1 rounded-md border border-[color:var(--surface-border)] bg-[color:var(--surface-background)]/95 px-1.5 py-0.5 shadow-sm">
+														{enableWrapToggle ? (
+															<Tooltip>
+																<TooltipTrigger asChild>
+																	<Button
+																		type="button"
+																		variant="ghost"
+																		size="sm"
+																		className="h-7 w-7 px-0 text-muted-foreground"
+																		onClick={() => setIsWrapped((prev) => !prev)}
+																		aria-label={isWrapped ? "Disable unwrap" : "Enable unwrap"}
+																	>
+																		<WrapText className="size-4" />
+																	</Button>
+																</TooltipTrigger>
+																<TooltipContent sideOffset={6}>
+																	{isWrapped ? "Disable unwrap" : "Enable unwrap"}
+																</TooltipContent>
+															</Tooltip>
+														) : null}
+														{enableCsvDownload ? (
+															<Tooltip>
+																<TooltipTrigger asChild>
+																	<Button
+																		type="button"
+																		variant="ghost"
+																		size="sm"
+																		className="h-7 w-7 px-0 text-muted-foreground"
+																		onClick={triggerCsvDownload}
+																		aria-label="Download CSV"
+																	>
+																		<Download className="size-4" />
+																	</Button>
+																</TooltipTrigger>
+																<TooltipContent sideOffset={6}>
+																	Download CSV
+																</TooltipContent>
+															</Tooltip>
+														) : null}
+													</div>
+												) : null}
+											</div>
 										</th>
-									))}
+										);
+									})}
 								</tr>
 							))}
 						</thead>
@@ -250,8 +435,10 @@ export function DynamicResultsTable({
 										<td
 											key={cell.id}
 											className={cn(
-												"border-[color:var(--surface-border)] border-b px-4 py-2 align-top text-sm",
-												getColumnWidthClass(cell.column.id),
+												`border-[color:var(--surface-border)] border-b px-4 ${TABLE_CELL_VERTICAL_PADDING} align-top text-sm`,
+												getColumnWidthClass(cell.column.id, {
+													fitToContainer,
+												}),
 											)}
 										>
 											{flexRender(

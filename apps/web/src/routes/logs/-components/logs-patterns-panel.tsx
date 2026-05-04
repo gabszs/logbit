@@ -130,6 +130,21 @@ export function LogsPatternsPanel({
 								title={`Sample events ${group.countLabel}`}
 								rows={displayedSamples as ClickhouseRow[]}
 								columns={sampleColumns}
+								enableWrapToggle
+								enableCsvDownload
+								fitToContainer
+								csvExportRows={group.samples}
+								csvFileName={() => {
+									const compactPattern = group.pattern
+										.replaceAll(/[^\w\s-]/gu, "")
+										.trim()
+										.replaceAll(/\s+/gu, "-")
+										.toLowerCase()
+										.slice(0, 48);
+									return compactPattern
+										? `pattern-samples-${compactPattern}`
+										: `pattern-samples-${group.id.slice(0, 12)}`;
+								}}
 								emptyState={
 									<div className="flex h-full min-h-[14rem] items-center justify-center text-muted-foreground text-sm">
 										No sample events available for this pattern.
