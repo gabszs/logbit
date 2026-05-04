@@ -37,7 +37,7 @@ import {
 	createManualClient,
 	createProxyClient,
 	pingClient,
-} from "./-lib/clickhouse-client";
+} from "../../lib/clickhouse-client";
 
 type ClickhouseColumn = { name: string; type: string };
 

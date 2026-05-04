@@ -20,7 +20,7 @@ import {
 	createProxyClient,
 	executeClickhouseJsonQuery,
 	formatClickhouseQueryError,
-} from "../integrations/-lib/clickhouse-client";
+} from "../../lib/clickhouse-client";
 import { DynamicResultsTable } from "./-components/dynamic-results-table";
 import { LogsError } from "./-components/logs-error";
 import { LogsPatternsTable } from "./-components/logs-patterns-table";

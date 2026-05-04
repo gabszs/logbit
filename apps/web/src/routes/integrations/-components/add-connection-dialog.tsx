@@ -33,7 +33,7 @@ import {
 import {
 	pingClickhouseConnection,
 	queryTestClickhouseConnection,
-} from "../-lib/clickhouse-client";
+} from "../../../lib/clickhouse-client";
 
 const CONNECTION_TYPES = supportedIntegrationTypes.map((value) => ({
 	value,
