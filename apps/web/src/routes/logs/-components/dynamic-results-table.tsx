@@ -16,7 +16,6 @@ import { cn } from "@/web/utils/cn";
 
 export type ClickhouseRow = Record<string, unknown>;
 
-const TABLE_HEADER_VERTICAL_PADDING = "py-3";
 const TABLE_CELL_VERTICAL_PADDING = "py-2";
 
 type DynamicResultsTableProps = {
@@ -278,6 +277,13 @@ export function DynamicResultsTable({
 	const columnCount = columns.length;
 	const hasHeaderToolbar = enableWrapToggle || enableCsvDownload;
 	const effectiveCsvRows = csvExportRows ?? rows;
+	const headerVerticalPaddingClass = fitToContainer ? "py-2" : "py-3";
+	const headerToolbarButtonClass = fitToContainer
+		? "h-6 w-6"
+		: "h-7 w-7";
+	const headerToolbarContainerClass = fitToContainer
+		? "px-0 py-0"
+		: "px-1.5 py-0.5";
 
 	const triggerCsvDownload = useCallback(() => {
 		const content = buildCsvContent(effectiveCsvRows, columns);
@@ -356,7 +362,7 @@ export function DynamicResultsTable({
 										<th
 											key={header.id}
 											className={cn(
-												`border-[color:var(--surface-border)] border-b px-4 ${TABLE_HEADER_VERTICAL_PADDING} font-medium text-muted-foreground text-xs uppercase tracking-[0.16em]`,
+												`border-[color:var(--surface-border)] border-b px-4 ${headerVerticalPaddingClass} font-medium text-muted-foreground text-xs uppercase tracking-[0.16em]`,
 												hasHeaderToolbar && isLastHeader
 													? fitToContainer
 														? "bg-[color:var(--surface-background)]/95"
@@ -377,7 +383,12 @@ export function DynamicResultsTable({
 															)}
 												</div>
 												{hasHeaderToolbar && isLastHeader ? (
-													<div className="ml-auto flex items-center gap-1 rounded-md border border-[color:var(--surface-border)] bg-[color:var(--surface-background)]/95 px-1.5 py-0.5 shadow-sm">
+													<div
+														className={cn(
+															"ml-auto flex items-center gap-1 bg-transparent shadow-none",
+															headerToolbarContainerClass,
+														)}
+													>
 														{enableWrapToggle ? (
 															<Tooltip>
 																<TooltipTrigger asChild>
@@ -385,7 +396,10 @@ export function DynamicResultsTable({
 																		type="button"
 																		variant="ghost"
 																		size="sm"
-																		className="h-7 w-7 px-0 text-muted-foreground"
+																		className={cn(
+																			headerToolbarButtonClass,
+																			"px-0 text-muted-foreground",
+																		)}
 																		onClick={() => setIsWrapped((prev) => !prev)}
 																		aria-label={isWrapped ? "Disable unwrap" : "Enable unwrap"}
 																	>
@@ -404,7 +418,10 @@ export function DynamicResultsTable({
 																		type="button"
 																		variant="ghost"
 																		size="sm"
-																		className="h-7 w-7 px-0 text-muted-foreground"
+																		className={cn(
+																			headerToolbarButtonClass,
+																			"px-0 text-muted-foreground",
+																		)}
 																		onClick={triggerCsvDownload}
 																		aria-label="Download CSV"
 																	>

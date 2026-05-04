@@ -1,4 +1,3 @@
-import { Check, ChevronDown, RefreshCw } from "lucide-react";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -15,6 +14,7 @@ import {
 	SelectValue,
 } from "@/web/components/ui/select";
 import { cn } from "@/web/utils/cn";
+import { Check, ChevronDown, RefreshCw } from "lucide-react";
 import { TimeRangeSelect } from "./time-range-select";
 
 export type AutoRefreshInterval = "off" | "10s" | "30s" | "60s";

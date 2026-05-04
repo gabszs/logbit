@@ -1,6 +1,6 @@
+import { cn } from "@/web/utils/cn";
 import { ArrowRight, Plus, Sparkles, Waves } from "lucide-react";
 import type { ReactNode } from "react";
-import { cn } from "@/web/utils/cn";
 import type { LogsResultsView } from "../-lib/logs-patterns";
 
 const presetItems = [
@@ -22,12 +22,10 @@ const modeItems = [
 	{
 		value: "table" as const,
 		label: "Table",
-		blurb: "Show query results in table view with returned log rows.",
 	},
 	{
 		value: "groups" as const,
 		label: "Groups",
-		blurb: "Group similar log patterns and surface metrics like count and trend.",
 	},
 ];
 
@@ -112,9 +110,6 @@ export function LogsSidebarPreview({
 									>
 										{item.label}
 									</span>
-								</div>
-								<div className="mt-0.5 pl-3 text-[10px] text-stone-400 leading-snug dark:text-stone-600">
-									{item.blurb}
 								</div>
 							</button>
 						))}
