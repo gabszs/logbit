@@ -23,6 +23,7 @@ import {
 } from "../integrations/-lib/clickhouse-client";
 import { DynamicResultsTable } from "./-components/dynamic-results-table";
 import { LogsError } from "./-components/logs-error";
+import { LogsPatternsTable } from "./-components/logs-patterns-table";
 import { LogsSidebarPreview } from "./-components/logs-sidebar-preview";
 import { LogsSkeleton } from "./-components/logs-skeleton";
 import {
@@ -31,6 +32,10 @@ import {
 } from "./-components/logs-volume-chart";
 import type { AutoRefreshInterval } from "./-components/query-composer";
 import { QueryComposer } from "./-components/query-composer";
+import {
+	computeLogsPatternGroups,
+	type LogsResultsView,
+} from "./-lib/logs-patterns";
 import {
 	buildLogsChartDrilldownClauses,
 	buildLogsTableQuery,
@@ -51,10 +56,12 @@ const logSourcesQueryOptions = queryOptions({
 export const Route = createFileRoute("/logs")({
 	validateSearch: (search: Record<string, unknown>) => {
 		const sourceId = search.sourceId;
+		const view = search.view;
 		return {
 			...(typeof sourceId === "string" && sourceId.trim()
 				? { sourceId: sourceId.trim() }
 				: {}),
+			...(view === "table" || view === "groups" ? { view } : {}),
 		};
 	},
 	beforeLoad: async (opts) => {
@@ -100,6 +107,8 @@ function LogsRoute() {
 		useState<LogsVolumeActivePopover | null>(null);
 	const previousSourceIdRef = useRef<string | null>(null);
 	const timeRangeRef = useRef(timeRange);
+	const resultsView: LogsResultsView =
+		search.view === "groups" ? "groups" : "table";
 
 	const selectedSource = useMemo(
 		() => logSources.find((source) => source.id === search.sourceId) ?? null,
@@ -272,6 +281,15 @@ function LogsRoute() {
 			),
 		[hasSeverityField, timeRange, volumeResult?.data],
 	);
+	const patternsResult = useMemo(
+		() =>
+			computeLogsPatternGroups({
+				rows: tableResult?.data ?? [],
+				source: selectedSource,
+				timeRange,
+			}),
+		[selectedSource, tableResult?.data, timeRange],
+	);
 
 	const tableColumns = useMemo(() => {
 		if (tableResult?.meta?.length) {
@@ -294,6 +312,17 @@ function LogsRoute() {
 		if (!selectedSource || !canRun) return;
 		void runQueryForSource(selectedSource, activeQueryState, chartDrilldown);
 	};
+
+	const handleResultsViewChange = useCallback(
+		(view: LogsResultsView) => {
+			void navigate({
+				to: "/logs",
+				search: (prev) => ({ ...prev, view }),
+				replace: true,
+			});
+		},
+		[navigate],
+	);
 
 	const clearChartDrilldown = useCallback(() => {
 		if (!selectedSource) return;
@@ -378,13 +407,19 @@ function LogsRoute() {
 									Browse presets, models, memory, and mode options.
 								</SheetDescription>
 							</SheetHeader>
-							<LogsSidebarPreview className="min-h-0 flex-1" />
+							<LogsSidebarPreview
+								className="min-h-0 flex-1"
+								value={resultsView}
+								onValueChange={handleResultsViewChange}
+							/>
 						</SheetContent>
 					</Sheet>
 				</div>
 
 				{isLogsCanvasSidebarExpanded && (
 					<LogsSidebarPreview
+						value={resultsView}
+						onValueChange={handleResultsViewChange}
 						className={`fixed top-13 bottom-0 z-20 hidden w-[280px] border-[color:var(--surface-border)] border-r bg-[color:var(--surface-background)] shadow-[12px_0_32px_rgba(0,0,0,0.08)] xl:flex dark:shadow-[12px_0_32px_rgba(0,0,0,0.24)] ${isAppSidebarExpanded ? "left-48" : "left-12"}`}
 					/>
 				)}
@@ -440,17 +475,24 @@ function LogsRoute() {
 										onClearDrilldown={clearChartDrilldown}
 									/>
 								</div>
-								<DynamicResultsTable
-									className="flex-1"
-									rows={tableResult?.data ?? []}
-									columns={tableColumns}
-									statistics={tableResult?.statistics}
-									emptyState={
-										<div className="flex h-full min-h-[18rem] items-center justify-center text-muted-foreground text-sm">
-											Run a query to fill this space with log rows.
-										</div>
-									}
-								/>
+								{resultsView === "groups" ? (
+									<LogsPatternsTable
+										result={patternsResult}
+										isRunning={isRunning && tableResult == null}
+									/>
+								) : (
+									<DynamicResultsTable
+										className="flex-1"
+										rows={tableResult?.data ?? []}
+										columns={tableColumns}
+										statistics={tableResult?.statistics}
+										emptyState={
+											<div className="flex h-full min-h-[18rem] items-center justify-center text-muted-foreground text-sm">
+												Run a query to fill this space with log rows.
+											</div>
+										}
+									/>
+								)}
 							</>
 						)}
 					</section>

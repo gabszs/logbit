@@ -1,6 +1,7 @@
 import { ArrowRight, Plus, Sparkles, Waves } from "lucide-react";
 import type { ReactNode } from "react";
 import { cn } from "@/web/utils/cn";
+import type { LogsResultsView } from "../-lib/logs-patterns";
 
 const presetItems = [
 	"LLMs in series",
@@ -19,19 +20,14 @@ const memoryItems = ["Scratchpad", "Style guide", "Code review"];
 
 const modeItems = [
 	{
-		label: "Physics-faithful",
-		blurb: "Resistance ∝ params. Parallel splits token budget by 1/R.",
-		active: true,
+		value: "table" as const,
+		label: "Table",
+		blurb: "Show query results in table view with returned log rows.",
 	},
 	{
-		label: "Refine / Vote",
-		blurb: "Series refines prior answer. Parallel branches vote for consensus.",
-		active: false,
-	},
-	{
-		label: "Chain / Ensemble",
-		blurb: "Series chains output. Parallel synthesizes via judge.",
-		active: false,
+		value: "groups" as const,
+		label: "Groups",
+		blurb: "Group similar log patterns and surface metrics like count and trend.",
 	},
 ];
 
@@ -65,7 +61,15 @@ function DisabledRow({
 	);
 }
 
-export function LogsSidebarPreview({ className }: { className?: string }) {
+export function LogsSidebarPreview({
+	className,
+	value = "table",
+	onValueChange,
+}: {
+	className?: string;
+	value?: LogsResultsView;
+	onValueChange?: (value: LogsResultsView) => void;
+}) {
 	return (
 		<aside
 			className={cn(
@@ -75,6 +79,49 @@ export function LogsSidebarPreview({ className }: { className?: string }) {
 		>
 			<div className="flex-1 px-3.5 py-3.5">
 				<div className="space-y-2.5">
+					<SectionHeader label="Mode" />
+					<div className="flex flex-col gap-1">
+						{modeItems.map((item) => (
+							<button
+								key={item.label}
+								type="button"
+								onClick={() => onValueChange?.(item.value)}
+								className={cn(
+									"w-full rounded border px-2 py-2 text-left transition-colors",
+									value === item.value
+										? "border-[#f6821f] bg-[#f6821f0c] dark:bg-[#f6821f0a]"
+										: "border-transparent hover:bg-stone-100/70 dark:hover:bg-stone-900/60",
+								)}
+							>
+								<div className="flex items-center gap-1.5">
+									<span
+										className={cn(
+											"h-1.5 w-1.5 rounded-full transition-colors",
+											value === item.value
+												? "bg-[#f6821f]"
+												: "bg-stone-300 dark:bg-stone-700",
+										)}
+									/>
+									<span
+										className={cn(
+											"font-bold text-xs",
+											value === item.value
+												? "text-stone-900 dark:text-stone-100"
+												: "text-stone-600 dark:text-stone-400",
+										)}
+									>
+										{item.label}
+									</span>
+								</div>
+								<div className="mt-0.5 pl-3 text-[10px] text-stone-400 leading-snug dark:text-stone-600">
+									{item.blurb}
+								</div>
+							</button>
+						))}
+					</div>
+				</div>
+
+				<div className="logs-surface-divider mt-2.5 pt-2.5">
 					<SectionHeader label="Canvas" />
 					<DisabledRow className="text-stone-600 hover:bg-stone-100 hover:text-stone-900 dark:text-stone-400 dark:hover:bg-stone-900 dark:hover:text-stone-100">
 						<Plus className="mr-1.5 size-3.5 shrink-0 text-stone-300 dark:text-stone-700" />
@@ -154,48 +201,6 @@ export function LogsSidebarPreview({ className }: { className?: string }) {
 					</div>
 				</div>
 
-				<div className="logs-surface-divider mt-2.5 pt-2.5">
-					<SectionHeader label="Mode" />
-					<div className="flex flex-col gap-1">
-						{modeItems.map((item) => (
-							<button
-								key={item.label}
-								type="button"
-								disabled
-								className={cn(
-									"w-full rounded border px-2 py-2 text-left transition-colors",
-									item.active
-										? "border-[#f6821f] bg-[#f6821f0c] dark:bg-[#f6821f0a]"
-										: "border-transparent",
-								)}
-							>
-								<div className="flex items-center gap-1.5">
-									<span
-										className={cn(
-											"h-1.5 w-1.5 rounded-full transition-colors",
-											item.active
-												? "bg-[#f6821f]"
-												: "bg-stone-300 dark:bg-stone-700",
-										)}
-									/>
-									<span
-										className={cn(
-											"font-bold text-xs",
-											item.active
-												? "text-stone-900 dark:text-stone-100"
-												: "text-stone-600 dark:text-stone-400",
-										)}
-									>
-										{item.label}
-									</span>
-								</div>
-								<div className="mt-0.5 pl-3 text-[10px] text-stone-400 leading-snug dark:text-stone-600">
-									{item.blurb}
-								</div>
-							</button>
-						))}
-					</div>
-				</div>
 			</div>
 		</aside>
 	);

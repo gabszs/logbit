@@ -12,6 +12,7 @@ export type ClickhouseRow = Record<string, unknown>;
 type DynamicResultsTableProps = {
 	rows: ClickhouseRow[];
 	columns: Array<{ key: string; label: string }>;
+	title?: string;
 	statistics?: {
 		elapsed: number;
 		rows_read: number;
@@ -149,6 +150,7 @@ function formatKilobytes(bytes: number) {
 export function DynamicResultsTable({
 	rows,
 	columns,
+	title = "Results table",
 	statistics,
 	emptyState,
 	className,
@@ -190,7 +192,7 @@ export function DynamicResultsTable({
 		>
 			<div className="flex items-center gap-2 border-[color:var(--surface-border)] border-b px-4 py-3 sm:px-6">
 				<h2 className="font-medium text-muted-foreground text-xs uppercase tracking-[0.18em]">
-					Results table
+					{title}
 				</h2>
 				<div className="h-px flex-1 bg-[color:var(--surface-border)]" />
 				{statistics ? (

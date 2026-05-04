@@ -14,6 +14,7 @@ import { Badge } from "@/web/components/ui/badge";
 import { Button } from "@/web/components/ui/button";
 import { Skeleton } from "@/web/components/ui/skeleton";
 import { cn } from "@/web/utils/cn";
+import { getLogsChartColor } from "./logs-chart-primitives";
 import type {
 	LogsChartDrilldown,
 	LogsVolumeGroup,
@@ -29,16 +30,6 @@ export type LogsVolumeActivePopover = {
 	groups: Array<LogsVolumeGroup & { count: number; color: string }>;
 };
 
-const CHART_GROUP_COLORS: Record<string, string> = {
-	FATAL: "#ff5d73",
-	ERROR: "#ff7a59",
-	WARN: "#f4b942",
-	INFO: "#2dd4bf",
-	DEBUG: "#60a5fa",
-	TRACE: "#a78bfa",
-	unknown: "#94a3b8",
-	__all__: "#2dd4bf",
-};
 const DEFAULT_LOG_LEVELS = [
 	"FATAL",
 	"ERROR",
@@ -50,7 +41,7 @@ const DEFAULT_LOG_LEVELS = [
 ] as const;
 
 function getGroupColor(groupKey: string) {
-	return CHART_GROUP_COLORS[groupKey] ?? "#7dd3fc";
+	return getLogsChartColor(groupKey);
 }
 
 function formatEventCount(value: number) {
