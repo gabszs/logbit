@@ -1,5 +1,5 @@
 import { cn } from "@/web/utils/cn";
-import { ArrowRight, Plus, Sparkles, Waves } from "lucide-react";
+import { ArrowRight, Eye, EyeOff, Plus, Sparkles, Waves } from "lucide-react";
 import type { ReactNode } from "react";
 import type { LogsResultsView } from "../-lib/logs-patterns";
 
@@ -10,10 +10,8 @@ const presetItems = [
 	"Capacitor: style inject",
 ];
 
-const modelItems = [
-	{ label: "@cf/meta/llama-3.1-8b-instruct", value: "8B" },
-	{ label: "@cf/qwen/qwq-32b", value: "32B" },
-	{ label: "@cf/mistralai/mistral-small-3.1-24b-instruct", value: "24B" },
+const filterItems = [
+	{ label: "Denoise Results", value: "denoise" },
 ];
 
 const memoryItems = ["Scratchpad", "Style guide", "Code review"];
@@ -62,11 +60,19 @@ function DisabledRow({
 export function LogsSidebarPreview({
 	className,
 	value = "table",
+	activeFilters = [],
+	isDenoisePanelVisible = true,
 	onValueChange,
+	onFilterToggle,
+	onToggleDenoisePanel,
 }: {
 	className?: string;
 	value?: LogsResultsView;
+	activeFilters?: string[];
+	isDenoisePanelVisible?: boolean;
 	onValueChange?: (value: LogsResultsView) => void;
+	onFilterToggle?: (filter: string) => void;
+	onToggleDenoisePanel?: () => void;
 }) {
 	return (
 		<aside
@@ -117,6 +123,64 @@ export function LogsSidebarPreview({
 				</div>
 
 				<div className="logs-surface-divider mt-2.5 pt-2.5">
+					<SectionHeader label="Filters" />
+					<div className="flex flex-col gap-1">
+						{filterItems.map((item) => {
+							const isActive = activeFilters.includes(item.value);
+							return (
+								<div
+									key={item.label}
+									className={cn(
+										"flex w-full items-center justify-between rounded px-1 py-1 transition-all",
+										isActive
+											? "bg-[#f6821f0c] dark:bg-[#f6821f0a]"
+											: "hover:bg-stone-100/70 dark:hover:bg-stone-900/60",
+									)}
+								>
+									<button
+										type="button"
+										onClick={() => onFilterToggle?.(item.value)}
+										className="flex flex-1 items-center gap-1.5 px-1 py-1 text-left"
+									>
+										<span
+											className={cn(
+												"h-1.5 w-1.5 rounded-full transition-all",
+												isActive
+													? "bg-[#f6821f] shadow-[0_0_6px_#f6821f]"
+													: "bg-stone-300 shadow-inner dark:bg-stone-700",
+											)}
+										/>
+										<span
+											className={cn(
+												"font-bold text-xs transition-colors",
+												isActive
+													? "text-stone-900 dark:text-stone-100"
+													: "text-stone-600 dark:text-stone-400",
+											)}
+										>
+											{item.label}
+										</span>
+									</button>
+									{isActive && item.value === "denoise" && (
+										<button
+											type="button"
+											onClick={(e) => {
+												e.stopPropagation();
+												onToggleDenoisePanel?.();
+											}}
+											className="mr-1 rounded-sm p-1 text-stone-400 hover:bg-stone-200 hover:text-stone-700 transition-colors dark:hover:bg-stone-800 dark:hover:text-stone-300"
+											title={isDenoisePanelVisible ? "Hide removed patterns panel" : "Show removed patterns panel"}
+										>
+											{isDenoisePanelVisible ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
+										</button>
+									)}
+								</div>
+							);
+						})}
+					</div>
+				</div>
+
+				<div className="logs-surface-divider mt-2.5 pt-2.5">
 					<SectionHeader label="Canvas" />
 					<DisabledRow className="text-stone-600 hover:bg-stone-100 hover:text-stone-900 dark:text-stone-400 dark:hover:bg-stone-900 dark:hover:text-stone-100">
 						<Plus className="mr-1.5 size-3.5 shrink-0 text-stone-300 dark:text-stone-700" />
@@ -149,27 +213,7 @@ export function LogsSidebarPreview({
 					</div>
 				</div>
 
-				<div className="logs-surface-divider mt-2.5 pt-2.5">
-					<SectionHeader label="Resistance / LLM" />
-					<div className="flex flex-col gap-0.5">
-						{modelItems.map((item) => (
-							<DisabledRow
-								key={item.label}
-								className="group justify-between text-stone-600 hover:bg-orange-50 dark:text-stone-400 dark:hover:bg-stone-900"
-							>
-								<span className="min-w-0 flex-1 truncate">
-									<span className="mr-1 opacity-50 transition-opacity group-hover:opacity-100">
-										⊡
-									</span>
-									{item.label}
-								</span>
-								<span className="text-[10px] text-stone-400 tabular-nums transition-colors group-hover:text-[#f6821f] dark:text-stone-600">
-									{item.value}Ω
-								</span>
-							</DisabledRow>
-						))}
-					</div>
-				</div>
+
 
 				<div className="logs-surface-divider mt-2.5 pt-2.5">
 					<SectionHeader label="Capacitance / Memory" />

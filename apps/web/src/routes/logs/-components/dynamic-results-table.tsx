@@ -325,7 +325,7 @@ export function DynamicResultsTable({
 						</div>
 						<div className="h-3 w-px bg-[color:var(--surface-border)]" />
 						<div className="font-mono text-muted-foreground text-xs tabular-nums">
-							{statistics.rows_read.toLocaleString()} rows
+							{rows.length.toLocaleString()} rows
 						</div>
 						<div className="h-3 w-px bg-[color:var(--surface-border)]" />
 						<div className="font-mono text-muted-foreground text-xs tabular-nums">

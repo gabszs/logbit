@@ -62,6 +62,7 @@ export const Route = createFileRoute("/logs")({
 				? { sourceId: sourceId.trim() }
 				: {}),
 			...(view === "table" || view === "groups" ? { view } : {}),
+			denoise: search.denoise === true || search.denoise === "true",
 		};
 	},
 	beforeLoad: async (opts) => {
@@ -101,6 +102,7 @@ function LogsRoute() {
 	>(null);
 	const [queryError, setQueryError] = useState<string | null>(null);
 	const [volumeError, setVolumeError] = useState<string | null>(null);
+	const [isDenoisePanelVisible, setIsDenoisePanelVisible] = useState(true);
 	const [chartDrilldown, setChartDrilldown] =
 		useState<LogsChartDrilldown | null>(null);
 	const [activeChartPopover, setActiveChartPopover] =
@@ -291,6 +293,24 @@ function LogsRoute() {
 		[selectedSource, tableResult?.data, timeRange],
 	);
 
+	const { denoisedRows, noisyGroups } = useMemo(() => {
+		const baseRows = tableResult?.data ?? [];
+		if (!search.denoise || !patternsResult.groups.length) {
+			return { denoisedRows: baseRows, noisyGroups: [] };
+		}
+
+		const threshold = baseRows.length * 0.1;
+		const noisy = patternsResult.groups.filter(g => g.count > threshold);
+		if (noisy.length === 0) {
+			return { denoisedRows: baseRows, noisyGroups: [] };
+		}
+
+		const noisyRowsSet = new Set(noisy.flatMap(g => g.samples));
+		const filteredRows = baseRows.filter(row => !noisyRowsSet.has(row));
+		
+		return { denoisedRows: filteredRows, noisyGroups: noisy };
+	}, [search.denoise, tableResult?.data, patternsResult.groups]);
+
 	const tableColumns = useMemo(() => {
 		if (tableResult?.meta?.length) {
 			return tableResult.meta.map((column) => ({
@@ -320,6 +340,19 @@ function LogsRoute() {
 				search: (prev) => ({ ...prev, view }),
 				replace: true,
 			});
+		},
+		[navigate],
+	);
+
+	const handleFilterToggle = useCallback(
+		(filter: string) => {
+			if (filter === "denoise") {
+				void navigate({
+					to: "/logs",
+					search: (prev) => ({ ...prev, denoise: !prev.denoise }),
+					replace: true,
+				});
+			}
 		},
 		[navigate],
 	);
@@ -410,7 +443,11 @@ function LogsRoute() {
 							<LogsSidebarPreview
 								className="min-h-0 flex-1"
 								value={resultsView}
+								activeFilters={search.denoise ? ["denoise"] : []}
+								isDenoisePanelVisible={isDenoisePanelVisible}
 								onValueChange={handleResultsViewChange}
+								onFilterToggle={handleFilterToggle}
+								onToggleDenoisePanel={() => setIsDenoisePanelVisible(!isDenoisePanelVisible)}
 							/>
 						</SheetContent>
 					</Sheet>
@@ -419,7 +456,11 @@ function LogsRoute() {
 				{isLogsCanvasSidebarExpanded && (
 					<LogsSidebarPreview
 						value={resultsView}
+						activeFilters={search.denoise ? ["denoise"] : []}
+						isDenoisePanelVisible={isDenoisePanelVisible}
 						onValueChange={handleResultsViewChange}
+						onFilterToggle={handleFilterToggle}
+						onToggleDenoisePanel={() => setIsDenoisePanelVisible(!isDenoisePanelVisible)}
 						className={`fixed top-13 bottom-0 z-20 hidden w-[280px] border-[color:var(--surface-border)] border-r bg-[color:var(--surface-background)] shadow-[12px_0_32px_rgba(0,0,0,0.08)] xl:flex dark:shadow-[12px_0_32px_rgba(0,0,0,0.24)] ${isAppSidebarExpanded ? "left-48" : "left-12"}`}
 					/>
 				)}
@@ -481,17 +522,40 @@ function LogsRoute() {
 										isRunning={isRunning && tableResult == null}
 									/>
 								) : (
-									<DynamicResultsTable
-										className="flex-1"
-										rows={tableResult?.data ?? []}
-										columns={tableColumns}
-										statistics={tableResult?.statistics}
-										emptyState={
-											<div className="flex h-full min-h-[18rem] items-center justify-center text-muted-foreground text-sm">
-												Run a query to fill this space with log rows.
+									<div className="flex flex-1 flex-col min-h-0">
+										{search.denoise && isDenoisePanelVisible && (
+											<div className="border-[color:var(--surface-border)] border-b px-4 py-3 sm:px-6">
+												<div className="flex items-center gap-2 text-sm font-medium text-amber-600 dark:text-amber-500">
+													<span>Removed Noisy Event Patterns</span>
+												</div>
+												{noisyGroups.length > 0 ? (
+													<div className="mt-2 flex flex-col gap-1.5">
+														{noisyGroups.map((g) => (
+															<div key={g.id} className="flex items-start gap-2 text-xs text-stone-600 dark:text-stone-400">
+																<span className="mt-0.5 rounded bg-stone-100 px-1.5 py-0.5 font-mono text-[10px] dark:bg-stone-800">
+																	{((g.count / (tableResult?.data?.length || 1)) * 100).toFixed(1)}%
+																</span>
+																<span className="line-clamp-2 flex-1 font-mono">{g.pattern}</span>
+															</div>
+														))}
+													</div>
+												) : (
+													<div className="mt-2 text-xs text-stone-500">No noisy patterns found (&gt;10% of results).</div>
+												)}
 											</div>
-										}
-									/>
+										)}
+										<DynamicResultsTable
+											className="flex-1"
+											rows={denoisedRows}
+											columns={tableColumns}
+											statistics={tableResult?.statistics}
+											emptyState={
+												<div className="flex h-full min-h-[18rem] items-center justify-center text-muted-foreground text-sm">
+													Run a query to fill this space with log rows.
+												</div>
+											}
+										/>
+									</div>
 								)}
 							</>
 						)}
