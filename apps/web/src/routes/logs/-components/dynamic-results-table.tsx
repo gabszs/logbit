@@ -284,6 +284,15 @@ export function DynamicResultsTable({
 	const headerToolbarContainerClass = fitToContainer
 		? "px-0 py-0"
 		: "px-1.5 py-0.5";
+	const actionColumnSizingClass = fitToContainer
+		? "w-[4rem]"
+		: "w-[5rem] min-w-[5rem] max-w-[5rem]";
+	const actionColumnWidthClass = fitToContainer
+		? actionColumnSizingClass
+		: cn(
+				actionColumnSizingClass,
+				"sticky right-0 z-20 bg-[color:var(--surface-background)]/95 backdrop-blur-sm",
+			);
 
 	const triggerCsvDownload = useCallback(() => {
 		const content = buildCsvContent(effectiveCsvRows, columns);
@@ -348,26 +357,30 @@ export function DynamicResultsTable({
 					<table
 						className={cn(
 							"border-separate border-spacing-0 text-left",
-							fitToContainer ? "table-fixed w-full" : "min-w-full",
+							fitToContainer ? "table-fixed w-full" : "table-fixed w-max min-w-full",
 						)}
 					>
+						<colgroup>
+							{columns.map((column) => (
+								<col
+									key={column.key}
+									className={getColumnWidthClass(column.key, {
+										fitToContainer,
+									})}
+								/>
+							))}
+							{hasHeaderToolbar ? (
+								<col className={actionColumnSizingClass} />
+							) : null}
+						</colgroup>
 						<thead className="sticky top-0 z-10 bg-[color:var(--surface-background)]/95 backdrop-blur-sm">
 							{headerGroups.map((headerGroup) => (
 								<tr key={headerGroup.id}>
-									{headerGroup.headers.map((header, headerIndex) => {
-										const isLastHeader =
-											headerIndex === headerGroup.headers.length - 1;
-
-										return (
+									{headerGroup.headers.map((header) => (
 										<th
 											key={header.id}
 											className={cn(
 												`border-[color:var(--surface-border)] border-b px-4 ${headerVerticalPaddingClass} font-medium text-muted-foreground text-xs uppercase tracking-[0.16em]`,
-												hasHeaderToolbar && isLastHeader
-													? fitToContainer
-														? "bg-[color:var(--surface-background)]/95"
-														: "sticky right-0 z-20 bg-[color:var(--surface-background)]/95 backdrop-blur-sm"
-													: "",
 												getColumnWidthClass(header.column.id, {
 													fitToContainer,
 												}),
@@ -379,66 +392,75 @@ export function DynamicResultsTable({
 														? null
 														: flexRender(
 																header.column.columnDef.header,
-																header.getContext(),
-															)}
-												</div>
-												{hasHeaderToolbar && isLastHeader ? (
-													<div
-														className={cn(
-															"ml-auto flex items-center gap-1 bg-transparent shadow-none",
-															headerToolbarContainerClass,
+															header.getContext(),
 														)}
-													>
-														{enableWrapToggle ? (
-															<Tooltip>
-																<TooltipTrigger asChild>
-																	<Button
-																		type="button"
-																		variant="ghost"
-																		size="sm"
-																		className={cn(
-																			headerToolbarButtonClass,
-																			"px-0 text-muted-foreground",
-																		)}
-																		onClick={() => setIsWrapped((prev) => !prev)}
-																		aria-label={isWrapped ? "Disable unwrap" : "Enable unwrap"}
-																	>
-																		<WrapText className="size-4" />
-																	</Button>
-																</TooltipTrigger>
-																<TooltipContent sideOffset={6}>
-																	{isWrapped ? "Disable unwrap" : "Enable unwrap"}
-																</TooltipContent>
-															</Tooltip>
-														) : null}
-														{enableCsvDownload ? (
-															<Tooltip>
-																<TooltipTrigger asChild>
-																	<Button
-																		type="button"
-																		variant="ghost"
-																		size="sm"
-																		className={cn(
-																			headerToolbarButtonClass,
-																			"px-0 text-muted-foreground",
-																		)}
-																		onClick={triggerCsvDownload}
-																		aria-label="Download CSV"
-																	>
-																		<Download className="size-4" />
-																	</Button>
-																</TooltipTrigger>
-																<TooltipContent sideOffset={6}>
-																	Download CSV
-																</TooltipContent>
-															</Tooltip>
-														) : null}
-													</div>
+												</div>
+											</div>
+										</th>
+									))}
+									{hasHeaderToolbar ? (
+										<th
+											aria-label="Table actions"
+											className={cn(
+												`border-[color:var(--surface-border)] border-b px-2 ${headerVerticalPaddingClass}`,
+												actionColumnWidthClass,
+											)}
+										>
+											<div
+												className={cn(
+													"flex items-center justify-end gap-1 bg-transparent shadow-none",
+													headerToolbarContainerClass,
+												)}
+											>
+												{enableWrapToggle ? (
+													<Tooltip>
+														<TooltipTrigger asChild>
+															<Button
+																type="button"
+																variant="ghost"
+																size="sm"
+																className={cn(
+																	headerToolbarButtonClass,
+																	"px-0 text-muted-foreground",
+																)}
+																onClick={() => setIsWrapped((prev) => !prev)}
+																aria-label={
+																	isWrapped ? "Disable unwrap" : "Enable unwrap"
+																}
+															>
+																<WrapText className="size-4" />
+															</Button>
+														</TooltipTrigger>
+														<TooltipContent sideOffset={6}>
+															{isWrapped ? "Disable unwrap" : "Enable unwrap"}
+														</TooltipContent>
+													</Tooltip>
+												) : null}
+												{enableCsvDownload ? (
+													<Tooltip>
+														<TooltipTrigger asChild>
+															<Button
+																type="button"
+																variant="ghost"
+																size="sm"
+																className={cn(
+																	headerToolbarButtonClass,
+																	"px-0 text-muted-foreground",
+																)}
+																onClick={triggerCsvDownload}
+																aria-label="Download CSV"
+															>
+																<Download className="size-4" />
+															</Button>
+														</TooltipTrigger>
+														<TooltipContent sideOffset={6}>
+															Download CSV
+														</TooltipContent>
+													</Tooltip>
 												) : null}
 											</div>
 										</th>
-										);
-									})}
+									) : null}
 								</tr>
 							))}
 						</thead>
@@ -464,6 +486,17 @@ export function DynamicResultsTable({
 											)}
 										</td>
 									))}
+									{hasHeaderToolbar ? (
+										<td
+											aria-hidden="true"
+											className={cn(
+												`border-[color:var(--surface-border)] border-b px-2 ${TABLE_CELL_VERTICAL_PADDING}`,
+												fitToContainer
+													? actionColumnWidthClass
+													: "sticky right-0 z-10 w-[5rem] min-w-[5rem] max-w-[5rem] bg-[color:var(--surface-background)]/95",
+											)}
+										/>
+									) : null}
 								</tr>
 							))}
 						</tbody>
