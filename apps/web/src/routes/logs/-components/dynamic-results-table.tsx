@@ -4,7 +4,7 @@ import {
 	getCoreRowModel,
 	useReactTable,
 } from "@tanstack/react-table";
-import { Download, WrapText } from "lucide-react";
+import { Download, Info, WrapText } from "lucide-react";
 import { type ReactNode, useCallback, useMemo, useState } from "react";
 import { Button } from "@/web/components/ui/button";
 import {
@@ -286,7 +286,9 @@ export function DynamicResultsTable({
 		: "px-1.5 py-0.5";
 	const actionColumnSizingClass = fitToContainer
 		? "w-[4rem]"
-		: "w-[5rem] min-w-[5rem] max-w-[5rem]";
+		: statistics
+			? "w-[7rem] min-w-[7rem] max-w-[7rem]"
+			: "w-[5rem] min-w-[5rem] max-w-[5rem]";
 	const actionColumnWidthClass = fitToContainer
 		? actionColumnSizingClass
 		: cn(
@@ -412,6 +414,31 @@ export function DynamicResultsTable({
 													headerToolbarContainerClass,
 												)}
 											>
+												{statistics ? (
+													<Tooltip>
+														<TooltipTrigger asChild>
+															<Button
+																type="button"
+																variant="ghost"
+																size="sm"
+																className={cn(
+																	headerToolbarButtonClass,
+																	"px-0 text-muted-foreground",
+																)}
+																aria-label="Show query statistics"
+															>
+																<Info className="size-4" />
+															</Button>
+														</TooltipTrigger>
+														<TooltipContent sideOffset={6}>
+															<div className="space-y-1 font-mono text-xs">
+																<div>{formatElapsedMs(statistics.elapsed)}</div>
+																<div>{rows.length.toLocaleString()} rows</div>
+																<div>{formatKilobytes(statistics.bytes_read)}</div>
+															</div>
+														</TooltipContent>
+													</Tooltip>
+												) : null}
 												{enableWrapToggle ? (
 													<Tooltip>
 														<TooltipTrigger asChild>
