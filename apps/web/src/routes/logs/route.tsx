@@ -2,6 +2,10 @@ import { queryOptions, useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { AlertTriangle, PanelLeft } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+	DataRowSidePanel,
+	type RowIdentity,
+} from "@/web/components/data-row-side-panel";
 import { Button } from "@/web/components/ui/button";
 import {
 	Sheet,
@@ -41,12 +45,18 @@ import {
 	buildLogsTableQuery,
 	buildLogsVolumeQuery,
 	getLogsQueryDefaults,
-	type LogTimeRange,
 	type LogsChartDrilldown,
 	type LogsQueryAbsoluteTimeRange,
 	type LogsVolumeRow,
+	type LogTimeRange,
 	normalizeLogsVolumeRows,
 } from "./-lib/logs-queries";
+import {
+	buildLogsRowIdentity,
+	createLogsRowPanelAdapter,
+	getLogsRowSelectorAliases,
+	getLogsRowSelectorSelects,
+} from "./-lib/logs-row-panel";
 
 const logSourcesQueryOptions = queryOptions({
 	queryKey: ["sources", "logs"],
@@ -108,9 +118,8 @@ function LogsRoute() {
 	const [tableResult, setTableResult] = useState<ClickhouseJsonResult | null>(
 		null,
 	);
-	const [volumeResult, setVolumeResult] = useState<
-		ClickhouseJsonResult<LogsVolumeRow> | null
-	>(null);
+	const [volumeResult, setVolumeResult] =
+		useState<ClickhouseJsonResult<LogsVolumeRow> | null>(null);
 	const [queryError, setQueryError] = useState<string | null>(null);
 	const [volumeError, setVolumeError] = useState<string | null>(null);
 	const [isDenoisePanelVisible, setIsDenoisePanelVisible] = useState(true);
@@ -118,6 +127,8 @@ function LogsRoute() {
 		useState<LogsChartDrilldown | null>(null);
 	const [activeChartPopover, setActiveChartPopover] =
 		useState<LogsVolumeActivePopover | null>(null);
+	const [selectedRowIdentity, setSelectedRowIdentity] =
+		useState<RowIdentity | null>(null);
 	const previousSourceIdRef = useRef<string | null>(null);
 	const timeRangeRef = useRef(timeRange);
 	const resultsView: LogsResultsView =
@@ -127,6 +138,14 @@ function LogsRoute() {
 	const selectedSource = useMemo(
 		() => logSources.find((source) => source.id === search.sourceId) ?? null,
 		[logSources, search.sourceId],
+	);
+	const rowPanelAdapter = useMemo(
+		() => (selectedSource ? createLogsRowPanelAdapter(selectedSource) : null),
+		[selectedSource],
+	);
+	const hiddenRowSelectorAliases = useMemo(
+		() => (selectedSource ? getLogsRowSelectorAliases(selectedSource) : []),
+		[selectedSource],
 	);
 
 	useEffect(() => {
@@ -141,7 +160,10 @@ function LogsRoute() {
 	};
 
 	const buildDrilldownOptions = useCallback(
-		(source: NonNullable<typeof selectedSource>, drilldown: LogsChartDrilldown | null) => {
+		(
+			source: NonNullable<typeof selectedSource>,
+			drilldown: LogsChartDrilldown | null,
+		) => {
 			const additionalWhereClauses = buildLogsChartDrilldownClauses(
 				source,
 				drilldown,
@@ -174,6 +196,7 @@ function LogsRoute() {
 			const tableQuery = buildLogsTableQuery(source, {
 				...queryState,
 				...drilldownOptions,
+				extraSelectExpressions: getLogsRowSelectorSelects(source),
 			});
 			if (!tableQuery) {
 				return;
@@ -255,15 +278,20 @@ function LogsRoute() {
 		setVolumeResult(null);
 		setQueryError(null);
 		setVolumeError(null);
+		setSelectedRowIdentity(null);
 		setSelectQuery(defaults.selectQuery);
 		setOrderByQuery(defaults.orderByQuery);
 		setWhereQuery("");
-		void runQueryForSource(nextSource, {
-			selectQuery: defaults.selectQuery,
-			whereQuery: "",
-			orderByQuery: defaults.orderByQuery,
-			timeRange: timeRangeRef.current,
-		}, null);
+		void runQueryForSource(
+			nextSource,
+			{
+				selectQuery: defaults.selectQuery,
+				whereQuery: "",
+				orderByQuery: defaults.orderByQuery,
+				timeRange: timeRangeRef.current,
+			},
+			null,
+		);
 	}, [logSources, runQueryForSource, search.sourceId]);
 
 	const canRun =
@@ -286,13 +314,18 @@ function LogsRoute() {
 	);
 
 	const buildQueryStateWithLevelFilters = useCallback(
-		(source: NonNullable<typeof selectedSource>, queryState: ActiveLogsQueryState) => {
+		(
+			source: NonNullable<typeof selectedSource>,
+			queryState: ActiveLogsQueryState,
+		) => {
 			let finalWhereQuery = queryState.whereQuery;
 
 			if (selectedLevels.length > 0) {
 				const severityField =
 					source.config.severityField?.trim() || "SeverityText";
-				const normalLevels = selectedLevels.filter((level) => level !== "UNKNOWN");
+				const normalLevels = selectedLevels.filter(
+					(level) => level !== "UNKNOWN",
+				);
 				const hasUnknown = selectedLevels.includes("UNKNOWN");
 				const conditions: string[] = [];
 
@@ -304,11 +337,15 @@ function LogsRoute() {
 				}
 
 				if (hasUnknown) {
-					conditions.push(`(${severityField} IS NULL OR ${severityField} = '')`);
+					conditions.push(
+						`(${severityField} IS NULL OR ${severityField} = '')`,
+					);
 				}
 
 				const levelCondition =
-					conditions.length > 1 ? `(${conditions.join(" OR ")})` : conditions[0];
+					conditions.length > 1
+						? `(${conditions.join(" OR ")})`
+						: conditions[0];
 
 				if (levelCondition) {
 					finalWhereQuery = finalWhereQuery.trim()
@@ -325,7 +362,9 @@ function LogsRoute() {
 		[selectedLevels],
 	);
 
-	const hasSeverityField = Boolean(selectedSource?.config.severityField?.trim());
+	const hasSeverityField = Boolean(
+		selectedSource?.config.severityField?.trim(),
+	);
 	const volumeData = useMemo(
 		() =>
 			normalizeLogsVolumeRows(
@@ -340,14 +379,26 @@ function LogsRoute() {
 	const levelKey = useMemo(() => {
 		if (!baseRows.length) return null;
 		const keys = Object.keys(baseRows[0]);
-		const configuredKey = selectedSource?.config.severityField?.trim().toLowerCase();
+		const configuredKey = selectedSource?.config.severityField
+			?.trim()
+			.toLowerCase();
 		if (configuredKey) {
-			const found = keys.find(k => k.toLowerCase() === configuredKey || k.toLowerCase().includes(configuredKey));
+			const found = keys.find(
+				(k) =>
+					k.toLowerCase() === configuredKey ||
+					k.toLowerCase().includes(configuredKey),
+			);
 			if (found) return found;
 		}
-		const candidates = ["level", "Level", "severity", "SeverityText", "severityText"];
+		const candidates = [
+			"level",
+			"Level",
+			"severity",
+			"SeverityText",
+			"severityText",
+		];
 		for (const cand of candidates) {
-			const found = keys.find(k => k.toLowerCase() === cand.toLowerCase());
+			const found = keys.find((k) => k.toLowerCase() === cand.toLowerCase());
 			if (found) return found;
 		}
 		return null;
@@ -357,7 +408,7 @@ function LogsRoute() {
 		const distribution = new Map<string, number>();
 		let totalWithLevel = 0;
 
-		const normalizedRows = baseRows.map(row => {
+		const normalizedRows = baseRows.map((row) => {
 			let level = null;
 			if (levelKey) {
 				const raw = row[levelKey];
@@ -372,17 +423,20 @@ function LogsRoute() {
 
 			distribution.set(level, (distribution.get(level) || 0) + 1);
 			totalWithLevel++;
-			
+
 			return { row, level };
 		});
 
-		const filtered = selectedLevels.length > 0
-			? normalizedRows.filter(nr => nr.level && selectedLevels.includes(nr.level)).map(nr => nr.row)
-			: baseRows;
+		const filtered =
+			selectedLevels.length > 0
+				? normalizedRows
+						.filter((nr) => nr.level && selectedLevels.includes(nr.level))
+						.map((nr) => nr.row)
+				: baseRows;
 
 		return {
 			levelFilteredRows: filtered,
-			levelDistribution: { counts: distribution, total: totalWithLevel }
+			levelDistribution: { counts: distribution, total: totalWithLevel },
 		};
 	}, [baseRows, levelKey, selectedLevels]);
 	const patternsResult = useMemo(
@@ -401,14 +455,16 @@ function LogsRoute() {
 		}
 
 		const threshold = levelFilteredRows.length * 0.1;
-		const noisy = patternsResult.groups.filter(g => g.count > threshold);
+		const noisy = patternsResult.groups.filter((g) => g.count > threshold);
 		if (noisy.length === 0) {
 			return { denoisedRows: levelFilteredRows, noisyGroups: [] };
 		}
 
-		const noisyRowsSet = new Set(noisy.flatMap(g => g.samples));
-		const filteredRows = levelFilteredRows.filter(row => !noisyRowsSet.has(row));
-		
+		const noisyRowsSet = new Set(noisy.flatMap((g) => g.samples));
+		const filteredRows = levelFilteredRows.filter(
+			(row) => !noisyRowsSet.has(row),
+		);
+
 		return { denoisedRows: filteredRows, noisyGroups: noisy };
 	}, [search.denoise, levelFilteredRows, patternsResult.groups]);
 
@@ -444,6 +500,7 @@ function LogsRoute() {
 		return buildLogsTableQuery(selectedSource, {
 			...queryState,
 			...drilldownOptions,
+			extraSelectExpressions: getLogsRowSelectorSelects(selectedSource),
 		});
 	}, [
 		activeQueryState,
@@ -457,11 +514,30 @@ function LogsRoute() {
 		if (!selectedSource || !canRun) return;
 
 		void runQueryForSource(
-			selectedSource, 
-			buildQueryStateWithLevelFilters(selectedSource, activeQueryState), 
-			chartDrilldown
+			selectedSource,
+			buildQueryStateWithLevelFilters(selectedSource, activeQueryState),
+			chartDrilldown,
 		);
 	};
+
+	const getRowKey = useCallback(
+		(row: Record<string, unknown>) => {
+			if (!selectedSource) return null;
+			return buildLogsRowIdentity(selectedSource, row)?.selectedRowKey ?? null;
+		},
+		[selectedSource],
+	);
+
+	const handleRowClick = useCallback(
+		(row: Record<string, unknown>) => {
+			if (!selectedSource) return;
+			const identity = buildLogsRowIdentity(selectedSource, row);
+			if (identity) {
+				setSelectedRowIdentity(identity);
+			}
+		},
+		[selectedSource],
+	);
 
 	const handleResultsViewChange = useCallback(
 		(view: LogsResultsView) => {
@@ -487,19 +563,22 @@ function LogsRoute() {
 		[navigate],
 	);
 
-	const handleLevelToggle = useCallback((level: string) => {
-		void navigate({
-			to: "/logs",
-			search: (prev) => {
-				const currentLevels = prev.levels || [];
-				const newLevels = currentLevels.includes(level)
-					? currentLevels.filter(l => l !== level)
-					: [...currentLevels, level];
-				return { ...prev, levels: newLevels };
-			},
-			replace: true,
-		});
-	}, [navigate]);
+	const handleLevelToggle = useCallback(
+		(level: string) => {
+			void navigate({
+				to: "/logs",
+				search: (prev) => {
+					const currentLevels = prev.levels || [];
+					const newLevels = currentLevels.includes(level)
+						? currentLevels.filter((l) => l !== level)
+						: [...currentLevels, level];
+					return { ...prev, levels: newLevels };
+				},
+				replace: true,
+			});
+		},
+		[navigate],
+	);
 
 	const handleClearLevels = useCallback(() => {
 		void navigate({
@@ -597,6 +676,16 @@ function LogsRoute() {
 
 	return (
 		<div className="flex min-h-0 flex-1 flex-col bg-[color:var(--surface-background)] px-4 pt-20 pb-0 sm:px-6 lg:px-8 xl:px-0 xl:pt-13">
+			<DataRowSidePanel
+				open={selectedRowIdentity != null}
+				onOpenChange={(open) => {
+					if (!open) {
+						setSelectedRowIdentity(null);
+					}
+				}}
+				identity={selectedRowIdentity}
+				adapter={rowPanelAdapter}
+			/>
 			<div
 				className={`flex min-h-0 w-full flex-1 flex-col transition-[padding-left] duration-200 ease-linear ${isLogsCanvasSidebarExpanded ? "xl:pl-[280px]" : "xl:pl-0"}`}
 			>
@@ -638,7 +727,9 @@ function LogsRoute() {
 								showLevelDist={search.showLevelDist}
 								onValueChange={handleResultsViewChange}
 								onFilterToggle={handleFilterToggle}
-								onToggleDenoisePanel={() => setIsDenoisePanelVisible(!isDenoisePanelVisible)}
+								onToggleDenoisePanel={() =>
+									setIsDenoisePanelVisible(!isDenoisePanelVisible)
+								}
 								onLevelToggle={handleLevelToggle}
 								onClearLevels={handleClearLevels}
 								onClearAllFilters={handleClearAllFilters}
@@ -658,7 +749,9 @@ function LogsRoute() {
 						showLevelDist={search.showLevelDist}
 						onValueChange={handleResultsViewChange}
 						onFilterToggle={handleFilterToggle}
-						onToggleDenoisePanel={() => setIsDenoisePanelVisible(!isDenoisePanelVisible)}
+						onToggleDenoisePanel={() =>
+							setIsDenoisePanelVisible(!isDenoisePanelVisible)
+						}
 						onLevelToggle={handleLevelToggle}
 						onClearLevels={handleClearLevels}
 						onClearAllFilters={handleClearAllFilters}
@@ -733,16 +826,28 @@ function LogsRoute() {
 												{noisyGroups.length > 0 ? (
 													<div className="mt-2 flex flex-col gap-1.5">
 														{noisyGroups.map((g) => (
-															<div key={g.id} className="flex items-start gap-2 text-xs text-stone-600 dark:text-stone-400">
+															<div
+																key={g.id}
+																className="flex items-start gap-2 text-xs text-stone-600 dark:text-stone-400"
+															>
 																<span className="mt-0.5 rounded bg-stone-100 px-1.5 py-0.5 font-mono text-[10px] dark:bg-stone-800">
-																	{((g.count / (tableResult?.data?.length || 1)) * 100).toFixed(1)}%
+																	{(
+																		(g.count /
+																			(tableResult?.data?.length || 1)) *
+																		100
+																	).toFixed(1)}
+																	%
 																</span>
-																<span className="line-clamp-2 flex-1 font-mono">{g.pattern}</span>
+																<span className="line-clamp-2 flex-1 font-mono">
+																	{g.pattern}
+																</span>
 															</div>
 														))}
 													</div>
 												) : (
-													<div className="mt-2 text-xs text-stone-500">No noisy patterns found (&gt;10% of results).</div>
+													<div className="mt-2 text-xs text-stone-500">
+														No noisy patterns found (&gt;10% of results).
+													</div>
 												)}
 											</div>
 										)}
@@ -757,6 +862,12 @@ function LogsRoute() {
 											generatedSql={generatedTableSql}
 											csvExportRows={denoisedRows}
 											csvFileName={() => "logs-table-results"}
+											hiddenColumnKeys={hiddenRowSelectorAliases}
+											selectedRowKey={
+												selectedRowIdentity?.selectedRowKey ?? null
+											}
+											getRowKey={getRowKey}
+											onRowClick={handleRowClick}
 											statistics={tableResult?.statistics}
 											emptyState={
 												<div className="flex h-full min-h-[18rem] items-center justify-center text-muted-foreground text-sm">

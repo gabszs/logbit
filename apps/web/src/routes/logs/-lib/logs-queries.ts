@@ -98,15 +98,15 @@ type LogsQueryBaseOptions = {
 	additionalWhereClauses?: string[];
 };
 
-function quoteIdentifier(identifier: string) {
+export function quoteIdentifier(identifier: string) {
 	return `\`${identifier.replaceAll("`", "``")}\``;
 }
 
-function escapeSqlString(value: string) {
+export function escapeSqlString(value: string) {
 	return value.replaceAll("\\", "\\\\").replaceAll("'", "\\'");
 }
 
-function normalizeSqlExpression(value: string | null | undefined) {
+export function normalizeSqlExpression(value: string | null | undefined) {
 	const trimmed = value?.trim() ?? "";
 	if (!trimmed) return "";
 	return trimmed.replaceAll(/;+\s*$/gu, "");
@@ -276,6 +276,10 @@ export function buildLogsTableQuery(
 	options: LogsQueryBaseOptions & {
 		selectQuery: string;
 		orderByQuery: string;
+		extraSelectExpressions?: Array<{
+			valueExpression: string;
+			alias: string;
+		}>;
 	} = {
 		selectQuery: DEFAULT_SELECT_QUERY,
 		orderByQuery: DEFAULT_ORDER_BY_QUERY,
@@ -289,9 +293,19 @@ export function buildLogsTableQuery(
 	if (!selectQuery || !orderByQuery) return null;
 
 	const { clauses } = buildLogsQueryConfig(source, options);
+	const extraSelects =
+		options.extraSelectExpressions
+			?.map((expression) => {
+				const valueExpression = normalizeSqlExpression(
+					expression.valueExpression,
+				);
+				if (!valueExpression || !expression.alias.trim()) return null;
+				return `${valueExpression} AS ${quoteIdentifier(expression.alias)}`;
+			})
+			.filter((expression): expression is string => expression != null) ?? [];
 
 	return [
-		`SELECT ${selectQuery}`,
+		`SELECT ${[selectQuery, ...extraSelects].join(", ")}`,
 		buildFromClause(source),
 		`WHERE ${clauses.join(" AND ")}`,
 		`ORDER BY ${orderByQuery}`,
@@ -342,9 +356,7 @@ export function buildLogsChartDrilldownClauses(
 	}
 
 	const groupValue = normalizeSeverityGroupValue(drilldown.groupValue);
-	return [
-		`${severityGroupExpression} = '${escapeSqlString(groupValue)}'`,
-	];
+	return [`${severityGroupExpression} = '${escapeSqlString(groupValue)}'`];
 }
 
 export function normalizeLogsVolumeRows(

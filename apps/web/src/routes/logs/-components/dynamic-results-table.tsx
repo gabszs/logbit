@@ -39,6 +39,10 @@ type DynamicResultsTableProps = {
 	csvExportRows?: ClickhouseRow[];
 	defaultWrapped?: boolean;
 	fitToContainer?: boolean;
+	hiddenColumnKeys?: string[];
+	selectedRowKey?: string | null;
+	getRowKey?: (row: ClickhouseRow) => string | null;
+	onRowClick?: (row: ClickhouseRow) => void;
 	statistics?: {
 		elapsed: number;
 		rows_read: number;
@@ -104,7 +108,10 @@ function renderCellValue(value: unknown, columnKey: string) {
 }
 
 function serializeCsvValue(value: unknown, columnKey: string) {
-	const normalizedValue = renderCellValue(value, columnKey).replaceAll('"', '""');
+	const normalizedValue = renderCellValue(value, columnKey).replaceAll(
+		'"',
+		'""',
+	);
 	return `"${normalizedValue}"`;
 }
 
@@ -112,8 +119,8 @@ function buildCsvContent(
 	rows: ClickhouseRow[],
 	columns: Array<{ key: string; label: string }>,
 ) {
-	const header = columns.map((column) =>
-		`"${column.label.replaceAll('"', '""')}"`,
+	const header = columns.map(
+		(column) => `"${column.label.replaceAll('"', '""')}"`,
 	);
 	const body = rows.map((row) =>
 		columns
@@ -248,6 +255,10 @@ export function DynamicResultsTable({
 	csvExportRows,
 	defaultWrapped = false,
 	fitToContainer = false,
+	hiddenColumnKeys = [],
+	selectedRowKey,
+	getRowKey,
+	onRowClick,
 	statistics,
 	emptyState,
 	className,
@@ -255,9 +266,17 @@ export function DynamicResultsTable({
 	const data = rows;
 	const [isWrapped, setIsWrapped] = useState(defaultWrapped);
 	const [isGeneratedSqlOpen, setIsGeneratedSqlOpen] = useState(false);
+	const hiddenColumnKeySet = useMemo(
+		() => new Set(hiddenColumnKeys),
+		[hiddenColumnKeys],
+	);
+	const visibleColumns = useMemo(
+		() => columns.filter((column) => !hiddenColumnKeySet.has(column.key)),
+		[columns, hiddenColumnKeySet],
+	);
 	const tableColumns = useMemo<ColumnDef<ClickhouseRow>[]>(
 		() =>
-			columns.map((column) => ({
+			visibleColumns.map((column) => ({
 				accessorKey: column.key,
 				header: column.label,
 				cell: ({ getValue }) =>
@@ -278,7 +297,7 @@ export function DynamicResultsTable({
 						</div>
 					),
 			})),
-		[columns, isWrapped],
+		[isWrapped, visibleColumns],
 	);
 
 	const table = useReactTable({
@@ -289,7 +308,7 @@ export function DynamicResultsTable({
 
 	const headerGroups = table.getHeaderGroups();
 	const rowModel = table.getRowModel().rows;
-	const columnCount = columns.length;
+	const columnCount = visibleColumns.length;
 	const canShowGeneratedSql = enableGeneratedSql && Boolean(generatedSql);
 	const hasHeaderToolbar =
 		enableWrapToggle || enableCsvDownload || canShowGeneratedSql;
@@ -305,7 +324,7 @@ export function DynamicResultsTable({
 			? "w-[9rem] min-w-[9rem] max-w-[9rem]"
 			: canShowGeneratedSql || statistics
 				? "w-[7rem] min-w-[7rem] max-w-[7rem]"
-			: "w-[5rem] min-w-[5rem] max-w-[5rem]";
+				: "w-[5rem] min-w-[5rem] max-w-[5rem]";
 	const actionColumnWidthClass = fitToContainer
 		? actionColumnSizingClass
 		: cn(
@@ -314,12 +333,12 @@ export function DynamicResultsTable({
 			);
 
 	const triggerCsvDownload = useCallback(() => {
-		const content = buildCsvContent(effectiveCsvRows, columns);
+		const content = buildCsvContent(effectiveCsvRows, visibleColumns);
 		const timestamp = new Date().toISOString().replaceAll(/[:.]/gu, "-");
 		const baseName =
 			typeof csvFileName === "function"
 				? csvFileName()
-				: csvFileName ?? `logs-export-${timestamp}`;
+				: (csvFileName ?? `logs-export-${timestamp}`);
 		const fileName = baseName.endsWith(".csv") ? baseName : `${baseName}.csv`;
 		const blob = new Blob([`\uFEFF${content}`], {
 			type: "text/csv;charset=utf-8;",
@@ -332,7 +351,7 @@ export function DynamicResultsTable({
 		anchor.click();
 		anchor.remove();
 		URL.revokeObjectURL(objectUrl);
-	}, [columns, csvFileName, effectiveCsvRows]);
+	}, [csvFileName, effectiveCsvRows, visibleColumns]);
 
 	return (
 		<section
@@ -407,17 +426,21 @@ export function DynamicResultsTable({
 				<div
 					className={cn(
 						"min-h-0 flex-1 bg-[color:var(--surface-background)]",
-						fitToContainer ? "overflow-y-auto overflow-x-hidden" : "overflow-auto",
+						fitToContainer
+							? "overflow-y-auto overflow-x-hidden"
+							: "overflow-auto",
 					)}
 				>
 					<table
 						className={cn(
 							"border-separate border-spacing-0 text-left",
-							fitToContainer ? "table-fixed w-full" : "table-fixed w-max min-w-full",
+							fitToContainer
+								? "table-fixed w-full"
+								: "table-fixed w-max min-w-full",
 						)}
 					>
 						<colgroup>
-							{columns.map((column) => (
+							{visibleColumns.map((column) => (
 								<col
 									key={column.key}
 									className={getColumnWidthClass(column.key, {
@@ -448,8 +471,8 @@ export function DynamicResultsTable({
 														? null
 														: flexRender(
 																header.column.columnDef.header,
-															header.getContext(),
-														)}
+																header.getContext(),
+															)}
 												</div>
 											</div>
 										</th>
@@ -488,7 +511,9 @@ export function DynamicResultsTable({
 															<div className="space-y-1 font-mono text-xs">
 																<div>{formatElapsedMs(statistics.elapsed)}</div>
 																<div>{rows.length.toLocaleString()} rows</div>
-																<div>{formatKilobytes(statistics.bytes_read)}</div>
+																<div>
+																	{formatKilobytes(statistics.bytes_read)}
+																</div>
 															</div>
 														</TooltipContent>
 													</Tooltip>
@@ -568,43 +593,74 @@ export function DynamicResultsTable({
 							))}
 						</thead>
 						<tbody>
-							{rowModel.map((row) => (
-								<tr
-									key={row.id}
-									className="border-[color:var(--surface-border)] border-b transition-colors hover:bg-muted/30"
-								>
-									{row.getVisibleCells().map((cell) => (
-										<td
-											key={cell.id}
-											className={cn(
-												`border-[color:var(--surface-border)] border-b px-4 ${TABLE_CELL_VERTICAL_PADDING} align-top text-sm`,
-												getColumnWidthClass(cell.column.id, {
-													fitToContainer,
-												}),
-											)}
-										>
-											{flexRender(
-												cell.column.columnDef.cell,
-												cell.getContext(),
-											)}
-										</td>
-									))}
-									{hasHeaderToolbar ? (
-										<td
-											aria-hidden="true"
-											className={cn(
-												`border-[color:var(--surface-border)] border-b px-2 ${TABLE_CELL_VERTICAL_PADDING}`,
-												fitToContainer
-													? actionColumnWidthClass
-													: cn(
-															actionColumnSizingClass,
-															"sticky right-0 z-10 bg-[color:var(--surface-background)]/95",
-														),
-											)}
-										/>
-									) : null}
-								</tr>
-							))}
+							{rowModel.map((row) => {
+								const rowKey = getRowKey?.(row.original) ?? null;
+								const isSelected =
+									rowKey != null &&
+									selectedRowKey != null &&
+									rowKey === selectedRowKey;
+								const isClickable = onRowClick != null && rowKey != null;
+
+								return (
+									<tr
+										key={row.id}
+										aria-selected={isSelected}
+										tabIndex={isClickable ? 0 : undefined}
+										onClick={() => {
+											if (isClickable) {
+												onRowClick?.(row.original);
+											}
+										}}
+										onKeyDown={(event) => {
+											if (!isClickable) return;
+											if (event.key === "Enter" || event.key === " ") {
+												event.preventDefault();
+												onRowClick?.(row.original);
+											}
+										}}
+										className={cn(
+											"border-[color:var(--surface-border)] border-b transition-colors hover:bg-muted/30",
+											isClickable &&
+												"cursor-pointer focus-visible:outline-none",
+											isSelected &&
+												"bg-primary/10 shadow-[inset_3px_0_0_var(--color-primary)] hover:bg-primary/10",
+										)}
+									>
+										{row.getVisibleCells().map((cell) => (
+											<td
+												key={cell.id}
+												className={cn(
+													`border-[color:var(--surface-border)] border-b px-4 ${TABLE_CELL_VERTICAL_PADDING} align-top text-sm`,
+													getColumnWidthClass(cell.column.id, {
+														fitToContainer,
+													}),
+												)}
+											>
+												{flexRender(
+													cell.column.columnDef.cell,
+													cell.getContext(),
+												)}
+											</td>
+										))}
+										{hasHeaderToolbar ? (
+											<td
+												aria-hidden="true"
+												className={cn(
+													`border-[color:var(--surface-border)] border-b px-2 ${TABLE_CELL_VERTICAL_PADDING}`,
+													fitToContainer
+														? actionColumnWidthClass
+														: cn(
+																actionColumnSizingClass,
+																isSelected
+																	? "sticky right-0 z-10 bg-primary/10"
+																	: "sticky right-0 z-10 bg-[color:var(--surface-background)]/95",
+															),
+												)}
+											/>
+										) : null}
+									</tr>
+								);
+							})}
 						</tbody>
 					</table>
 					{columnCount === 0 && (
