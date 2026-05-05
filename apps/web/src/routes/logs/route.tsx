@@ -859,6 +859,7 @@ function LogsRoute() {
 											enableWrapToggle
 											enableCsvDownload
 											enableGeneratedSql
+											fitToContainer
 											generatedSql={generatedTableSql}
 											csvExportRows={denoisedRows}
 											csvFileName={() => "logs-table-results"}

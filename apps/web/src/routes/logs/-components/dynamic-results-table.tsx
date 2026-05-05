@@ -224,7 +224,7 @@ function getColumnWidthClass(
 	}
 
 	if (normalizedKey === "body" || normalizedKey.includes("message")) {
-		return "w-[44rem] min-w-[28rem] max-w-[44rem]";
+		return "w-full min-w-[28rem]";
 	}
 
 	return "w-[14rem] min-w-[12rem] max-w-[14rem]";
@@ -315,22 +315,6 @@ export function DynamicResultsTable({
 	const effectiveCsvRows = csvExportRows ?? rows;
 	const headerVerticalPaddingClass = "py-2";
 	const headerToolbarButtonClass = "h-6 w-6";
-	const headerToolbarContainerClass = fitToContainer
-		? "px-0 py-0"
-		: "px-1.5 py-0.5";
-	const actionColumnSizingClass = fitToContainer
-		? "w-[4rem]"
-		: canShowGeneratedSql && statistics
-			? "w-[9rem] min-w-[9rem] max-w-[9rem]"
-			: canShowGeneratedSql || statistics
-				? "w-[7rem] min-w-[7rem] max-w-[7rem]"
-				: "w-[5rem] min-w-[5rem] max-w-[5rem]";
-	const actionColumnWidthClass = fitToContainer
-		? actionColumnSizingClass
-		: cn(
-				actionColumnSizingClass,
-				"sticky right-0 z-20 bg-[color:var(--surface-background)]/95 backdrop-blur-sm",
-			);
 
 	const triggerCsvDownload = useCallback(() => {
 		const content = buildCsvContent(effectiveCsvRows, visibleColumns);
@@ -449,7 +433,7 @@ export function DynamicResultsTable({
 								/>
 							))}
 							{hasHeaderToolbar ? (
-								<col className={actionColumnSizingClass} />
+								<col className="w-0" />
 							) : null}
 						</colgroup>
 						<thead className="sticky top-0 z-10 bg-[color:var(--surface-background)]/95 backdrop-blur-sm">
@@ -480,17 +464,9 @@ export function DynamicResultsTable({
 									{hasHeaderToolbar ? (
 										<th
 											aria-label="Table actions"
-											className={cn(
-												`border-[color:var(--surface-border)] border-b px-2 ${headerVerticalPaddingClass}`,
-												actionColumnWidthClass,
-											)}
+											className="sticky right-0 z-20 w-0 border-0 p-0"
 										>
-											<div
-												className={cn(
-													"flex items-center justify-end gap-1 bg-transparent shadow-none",
-													headerToolbarContainerClass,
-												)}
-											>
+											<div className="absolute right-0 top-0 bottom-0 flex items-center justify-end gap-1 bg-[color:var(--surface-background)]/95 px-2 backdrop-blur-sm">
 												{statistics ? (
 													<Tooltip>
 														<TooltipTrigger asChild>
@@ -634,6 +610,7 @@ export function DynamicResultsTable({
 													getColumnWidthClass(cell.column.id, {
 														fitToContainer,
 													}),
+													isLongTextColumn(cell.column.id) && "max-w-0",
 												)}
 											>
 												{flexRender(
@@ -645,11 +622,7 @@ export function DynamicResultsTable({
 										{hasHeaderToolbar ? (
 											<td
 												aria-hidden="true"
-												className={cn(
-													`border-[color:var(--surface-border)] border-b px-2 ${TABLE_CELL_VERTICAL_PADDING}`,
-													actionColumnSizingClass,
-													isSelected && "bg-primary/10",
-												)}
+												className="w-0 border-0 p-0"
 											/>
 										) : null}
 									</tr>
