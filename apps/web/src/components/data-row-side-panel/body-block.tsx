@@ -12,7 +12,7 @@ export function BodyBlock({ fields }: { fields: ResolvedRowFields }) {
 					Body
 				</h3>
 			</div>
-			<div className="relative max-h-[18rem] overflow-auto rounded-md border border-[color:var(--surface-border)] bg-[#faf9f6]/70 px-4 py-3 pr-14 font-mono text-[13px] leading-6 text-foreground dark:bg-stone-950/70">
+			<div className="relative max-h-[18rem] overflow-auto rounded-md border border-[color:var(--surface-border)] bg-[#faf9f6]/70 px-4 py-3 pr-14 font-mono text-[13px] text-foreground leading-6 dark:bg-stone-950/70">
 				<CopyButton
 					aria-label="Copy body"
 					onCopy={async () => {

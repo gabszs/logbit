@@ -1,10 +1,10 @@
 import { createRoute, OpenAPIHono } from "@hono/zod-openapi";
+import { logger } from "@/lib/telemetry";
 import { db } from "../../db";
 import { models } from "../../db/models";
 import { ContentTypes, status } from "../../lib/constants";
 import type { AppContextType } from "../../types";
 import { healthSchema, setupSchema } from "./schemas";
-import { logger } from "@/lib/telemetry";
 
 const utilityRouter = new OpenAPIHono<AppContextType>()
 	.openapi(

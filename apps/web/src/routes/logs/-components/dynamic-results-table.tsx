@@ -388,7 +388,7 @@ export function DynamicResultsTable({
 								aria-label="Copy generated SQL"
 								className="absolute top-2 right-2 z-10 size-7 border border-[color:var(--surface-border)] bg-[color:var(--surface-background)]/90 shadow-none backdrop-blur-sm"
 							/>
-							<pre className="whitespace-pre-wrap break-words rounded-md border border-[color:var(--surface-border)] bg-muted/30 p-4 pr-12 font-mono text-[12px] leading-6 text-foreground">
+							<pre className="whitespace-pre-wrap break-words rounded-md border border-[color:var(--surface-border)] bg-muted/30 p-4 pr-12 font-mono text-[12px] text-foreground leading-6">
 								{generatedSql}
 							</pre>
 						</div>
@@ -435,8 +435,8 @@ export function DynamicResultsTable({
 						className={cn(
 							"border-separate border-spacing-0 text-left",
 							fitToContainer
-								? "table-fixed w-full"
-								: "table-fixed w-max min-w-full",
+								? "w-full table-fixed"
+								: "w-max min-w-full table-fixed",
 						)}
 					>
 						<colgroup>
@@ -647,14 +647,8 @@ export function DynamicResultsTable({
 												aria-hidden="true"
 												className={cn(
 													`border-[color:var(--surface-border)] border-b px-2 ${TABLE_CELL_VERTICAL_PADDING}`,
-													fitToContainer
-														? actionColumnWidthClass
-														: cn(
-																actionColumnSizingClass,
-																isSelected
-																	? "sticky right-0 z-10 bg-primary/10"
-																	: "sticky right-0 z-10 bg-[color:var(--surface-background)]/95",
-															),
+													actionColumnSizingClass,
+													isSelected && "bg-primary/10",
 												)}
 											/>
 										) : null}

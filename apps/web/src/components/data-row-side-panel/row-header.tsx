@@ -97,7 +97,7 @@ export function RowHeader({
 			<div className="flex min-w-0 flex-wrap items-center gap-2">
 				<span
 					className={cn(
-						"inline-flex h-5 max-w-full items-center justify-center rounded border px-1.5 font-mono text-[11px] leading-none tabular-nums",
+						"inline-flex h-5 max-w-full items-center justify-center rounded border px-1.5 font-mono text-[11px] tabular-nums leading-none",
 						getSeverityBadgeClass(level),
 					)}
 				>
@@ -116,7 +116,7 @@ export function RowHeader({
 				<span className="font-mono text-muted-foreground text-xs">-</span>
 				<span
 					className={cn(
-						"inline-flex h-5 max-w-full items-center gap-1 rounded-md border border-[color:var(--surface-border)] bg-[color:var(--surface-background)] font-mono text-[11px] leading-none text-foreground",
+						"inline-flex h-5 max-w-full items-center gap-1 rounded-md border border-[color:var(--surface-border)] bg-[color:var(--surface-background)] font-mono text-[11px] text-foreground leading-none",
 						hasServiceName ? "pr-1 pl-2" : "px-2",
 					)}
 				>

@@ -31,13 +31,13 @@ import { Separator } from "@/web/components/ui/separator";
 import { Textarea } from "@/web/components/ui/textarea";
 import { listConnections } from "@/web/lib/sources";
 import { cn } from "@/web/utils/cn";
-import { IntegrationsError } from "./-components/integrations-error";
-import { IntegrationsSectionSkeleton } from "./-components/integrations-section-skeleton";
 import {
 	createManualClient,
 	createProxyClient,
 	pingClient,
 } from "../../lib/clickhouse-client";
+import { IntegrationsError } from "./-components/integrations-error";
+import { IntegrationsSectionSkeleton } from "./-components/integrations-section-skeleton";
 
 type ClickhouseColumn = { name: string; type: string };
 

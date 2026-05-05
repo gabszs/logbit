@@ -817,10 +817,10 @@ function LogsRoute() {
 										isRunning={isRunning && tableResult == null}
 									/>
 								) : (
-									<div className="flex flex-1 flex-col min-h-0">
+									<div className="flex min-h-0 flex-1 flex-col">
 										{search.denoise && isDenoisePanelVisible && (
 											<div className="border-[color:var(--surface-border)] border-b px-4 py-3 sm:px-6">
-												<div className="flex items-center gap-2 text-sm font-medium text-amber-600 dark:text-amber-500">
+												<div className="flex items-center gap-2 font-medium text-amber-600 text-sm dark:text-amber-500">
 													<span>Removed Noisy Event Patterns</span>
 												</div>
 												{noisyGroups.length > 0 ? (
@@ -828,7 +828,7 @@ function LogsRoute() {
 														{noisyGroups.map((g) => (
 															<div
 																key={g.id}
-																className="flex items-start gap-2 text-xs text-stone-600 dark:text-stone-400"
+																className="flex items-start gap-2 text-stone-600 text-xs dark:text-stone-400"
 															>
 																<span className="mt-0.5 rounded bg-stone-100 px-1.5 py-0.5 font-mono text-[10px] dark:bg-stone-800">
 																	{(
@@ -845,7 +845,7 @@ function LogsRoute() {
 														))}
 													</div>
 												) : (
-													<div className="mt-2 text-xs text-stone-500">
+													<div className="mt-2 text-stone-500 text-xs">
 														No noisy patterns found (&gt;10% of results).
 													</div>
 												)}

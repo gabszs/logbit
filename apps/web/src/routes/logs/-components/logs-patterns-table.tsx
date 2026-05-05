@@ -1,15 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { Skeleton } from "@/web/components/ui/skeleton";
 import { cn } from "@/web/utils/cn";
+import type {
+	LogsPatternComputationResult,
+	LogsPatternGroup,
+} from "../-lib/logs-patterns";
 import {
 	getLogsChartBarTone,
 	LogsBarsSparkline,
 } from "./logs-chart-primitives";
 import { LogsPatternsPanel } from "./logs-patterns-panel";
-import type {
-	LogsPatternComputationResult,
-	LogsPatternGroup,
-} from "../-lib/logs-patterns";
 
 function getSeverityBadgeClass(level: string) {
 	switch (level) {
@@ -43,7 +43,9 @@ function GroupsState({
 		<div
 			className={cn(
 				"flex h-full min-h-[18rem] items-center justify-center px-6 py-10 text-center",
-				tone === "warning" ? "text-amber-900 dark:text-amber-100" : "text-muted-foreground",
+				tone === "warning"
+					? "text-amber-900 dark:text-amber-100"
+					: "text-muted-foreground",
 			)}
 		>
 			<div
@@ -61,11 +63,7 @@ function GroupsState({
 	);
 }
 
-function TrendBars({
-	group,
-}: {
-	group: LogsPatternGroup;
-}) {
+function TrendBars({ group }: { group: LogsPatternGroup }) {
 	return (
 		<LogsBarsSparkline
 			points={group.trend.map((point) => ({
@@ -208,7 +206,7 @@ export function LogsPatternsTable({
 										)}
 									</td>
 									<td className="border-[color:var(--surface-border)] border-b px-4 py-3 align-top">
-										<div className="max-w-none break-words font-mono text-[13px] leading-6 text-foreground">
+										<div className="max-w-none break-words font-mono text-[13px] text-foreground leading-6">
 											{group.pattern}
 										</div>
 									</td>

@@ -1,9 +1,28 @@
+import {
+	ArrowRight,
+	ChartBar,
+	ChevronDown,
+	ChevronRight,
+	Eye,
+	EyeOff,
+	FilterX,
+	Plus,
+	Sparkles,
+	Waves,
+} from "lucide-react";
+import { type ReactNode, useState } from "react";
 import { cn } from "@/web/utils/cn";
-import { ArrowRight, ChartBar, ChevronDown, ChevronRight, Eye, EyeOff, FilterX, Plus, Sparkles, Waves } from "lucide-react";
-import { useState, type ReactNode } from "react";
 import type { LogsResultsView } from "../-lib/logs-patterns";
 
-const LOG_LEVELS = ["FATAL", "ERROR", "WARN", "INFO", "DEBUG", "TRACE", "UNKNOWN"];
+const LOG_LEVELS = [
+	"FATAL",
+	"ERROR",
+	"WARN",
+	"INFO",
+	"DEBUG",
+	"TRACE",
+	"UNKNOWN",
+];
 
 function getSeverityTextClass(level: string) {
 	switch (level) {
@@ -34,9 +53,7 @@ const presetItems = [
 	"Capacitor: style inject",
 ];
 
-const filterItems = [
-	{ label: "Denoise Results", value: "denoise" },
-];
+const filterItems = [{ label: "Denoise Results", value: "denoise" }];
 
 const memoryItems = ["Scratchpad", "Style guide", "Code review"];
 
@@ -113,14 +130,12 @@ export function LogsSidebarPreview({
 	onToggleLevelDist?: () => void;
 }) {
 	const [isLogLevelExpanded, setIsLogLevelExpanded] = useState(false);
-	const hasActiveFilters = activeFilters.length > 0 || selectedLevels.length > 0;
+	const hasActiveFilters =
+		activeFilters.length > 0 || selectedLevels.length > 0;
 
 	return (
 		<aside
-			className={cn(
-				"flex h-full flex-col bg-background text-sm",
-				className,
-			)}
+			className={cn("flex h-full flex-col bg-background text-sm", className)}
 		>
 			<div className="flex-1 px-3.5 py-3.5">
 				<div className="space-y-2.5">
@@ -226,10 +241,18 @@ export function LogsSidebarPreview({
 												e.stopPropagation();
 												onToggleDenoisePanel?.();
 											}}
-											className="mr-1 rounded-sm p-1 text-stone-400 hover:bg-stone-200 hover:text-stone-700 transition-colors dark:hover:bg-stone-800 dark:hover:text-stone-300"
-											title={isDenoisePanelVisible ? "Hide removed patterns panel" : "Show removed patterns panel"}
+											className="mr-1 rounded-sm p-1 text-stone-400 transition-colors hover:bg-stone-200 hover:text-stone-700 dark:hover:bg-stone-800 dark:hover:text-stone-300"
+											title={
+												isDenoisePanelVisible
+													? "Hide removed patterns panel"
+													: "Show removed patterns panel"
+											}
 										>
-											{isDenoisePanelVisible ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
+											{isDenoisePanelVisible ? (
+												<EyeOff className="size-3.5" />
+											) : (
+												<Eye className="size-3.5" />
+											)}
 										</button>
 									)}
 								</div>
@@ -238,16 +261,21 @@ export function LogsSidebarPreview({
 					</div>
 				</div>
 
-				<div className="flex flex-col py-1 mt-0">
+				<div className="mt-0 flex flex-col py-1">
 					<div className="flex items-center justify-between px-2 py-1">
 						<button
 							type="button"
 							onClick={() => setIsLogLevelExpanded(!isLogLevelExpanded)}
 							className="flex flex-1 items-center gap-1.5 text-left"
 						>
-							{isLogLevelExpanded ? <ChevronDown className="size-3.5 text-stone-500" /> : <ChevronRight className="size-3.5 text-stone-500" />}
-							<span className="font-bold text-xs transition-colors text-stone-600 dark:text-stone-400">
-								Log Level {selectedLevels.length > 0 ? `(${selectedLevels.length})` : ""}
+							{isLogLevelExpanded ? (
+								<ChevronDown className="size-3.5 text-stone-500" />
+							) : (
+								<ChevronRight className="size-3.5 text-stone-500" />
+							)}
+							<span className="font-bold text-stone-600 text-xs transition-colors dark:text-stone-400">
+								Log Level{" "}
+								{selectedLevels.length > 0 ? `(${selectedLevels.length})` : ""}
 							</span>
 						</button>
 						<div className="flex items-center gap-1">
@@ -255,7 +283,7 @@ export function LogsSidebarPreview({
 								<button
 									type="button"
 									onClick={onClearLevels}
-									className="rounded p-1 text-stone-400 hover:bg-stone-200 hover:text-stone-700 transition-colors dark:hover:bg-stone-800 dark:hover:text-stone-300"
+									className="rounded p-1 text-stone-400 transition-colors hover:bg-stone-200 hover:text-stone-700 dark:hover:bg-stone-800 dark:hover:text-stone-300"
 									title="Clear Filters"
 								>
 									<FilterX className="size-3.5" />
@@ -265,10 +293,13 @@ export function LogsSidebarPreview({
 								type="button"
 								onClick={onToggleLevelDist}
 								className={cn(
-									"rounded p-1 text-stone-400 hover:bg-stone-200 hover:text-stone-700 transition-colors dark:hover:bg-stone-800 dark:hover:text-stone-300",
-									showLevelDist && "text-[#f6821f] dark:text-[#f6821f] bg-[#f6821f0c] dark:bg-[#f6821f0a]"
+									"rounded p-1 text-stone-400 transition-colors hover:bg-stone-200 hover:text-stone-700 dark:hover:bg-stone-800 dark:hover:text-stone-300",
+									showLevelDist &&
+										"bg-[#f6821f0c] text-[#f6821f] dark:bg-[#f6821f0a] dark:text-[#f6821f]",
 								)}
-								title={showLevelDist ? "Hide Distribution" : "Show Distribution"}
+								title={
+									showLevelDist ? "Hide Distribution" : "Show Distribution"
+								}
 							>
 								<ChartBar className="size-3.5" />
 							</button>
@@ -281,8 +312,9 @@ export function LogsSidebarPreview({
 								const isSelected = selectedLevels.includes(level);
 								const count = levelDistribution?.counts.get(level) || 0;
 								const total = levelDistribution?.total || 1;
-								const percentage = count > 0 ? ((count / total) * 100).toFixed(1) : "0.0";
-								
+								const percentage =
+									count > 0 ? ((count / total) * 100).toFixed(1) : "0.0";
+
 								return (
 									<button
 										key={level}
@@ -292,7 +324,7 @@ export function LogsSidebarPreview({
 											"group flex w-full items-center justify-between rounded px-2 py-1.5 text-left transition-all",
 											isSelected
 												? "bg-[#f6821f0c] dark:bg-[#f6821f0a]"
-												: "hover:bg-stone-100/70 dark:hover:bg-stone-900/60"
+												: "hover:bg-stone-100/70 dark:hover:bg-stone-900/60",
 										)}
 									>
 										<div className="flex items-center gap-1.5">
@@ -304,10 +336,12 @@ export function LogsSidebarPreview({
 														: "bg-stone-300 shadow-inner dark:bg-stone-700",
 												)}
 											/>
-											<span className={cn(
-												"font-bold text-xs font-mono",
-												getSeverityTextClass(level)
-											)}>
+											<span
+												className={cn(
+													"font-bold font-mono text-xs",
+													getSeverityTextClass(level),
+												)}
+											>
 												{level === "UNKNOWN" ? "EMPTY/UNKNOWN" : level}
 											</span>
 										</div>
@@ -356,8 +390,6 @@ export function LogsSidebarPreview({
 					</div>
 				</div>
 
-
-
 				<div className="logs-surface-divider mt-2.5 pt-2.5">
 					<SectionHeader label="Capacitance / Memory" />
 					<div className="flex flex-col gap-0.5">
@@ -382,7 +414,6 @@ export function LogsSidebarPreview({
 						</DisabledRow>
 					</div>
 				</div>
-
 			</div>
 		</aside>
 	);

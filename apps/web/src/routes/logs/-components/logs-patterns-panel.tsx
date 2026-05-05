@@ -7,9 +7,9 @@ import {
 	SheetHeader,
 	SheetTitle,
 } from "@/web/components/ui/sheet";
+import type { LogsPatternGroup } from "../-lib/logs-patterns";
 import type { ClickhouseRow } from "./dynamic-results-table";
 import { DynamicResultsTable } from "./dynamic-results-table";
-import type { LogsPatternGroup } from "../-lib/logs-patterns";
 
 const INITIAL_SAMPLE_LIMIT = 100;
 
@@ -64,7 +64,9 @@ export function LogsPatternsPanel({
 				: [],
 		[group, showAllSamples],
 	);
-	const canShowMore = Boolean(group && group.samples.length > INITIAL_SAMPLE_LIMIT);
+	const canShowMore = Boolean(
+		group && group.samples.length > INITIAL_SAMPLE_LIMIT,
+	);
 
 	const sampleColumns = [
 		timestampKey
@@ -91,7 +93,9 @@ export function LogsPatternsPanel({
 					label: "Body",
 				}
 			: null,
-	].filter((column): column is { key: string; label: string } => column != null);
+	].filter(
+		(column): column is { key: string; label: string } => column != null,
+	);
 
 	return (
 		<Sheet open={open} onOpenChange={onOpenChange}>
@@ -119,7 +123,7 @@ export function LogsPatternsPanel({
 								</div>
 							) : null}
 
-							<div className="rounded-lg border border-[color:var(--surface-border)] bg-[#faf9f6]/70 px-4 py-3 font-mono text-[13px] leading-6 text-foreground dark:bg-stone-950/70">
+							<div className="rounded-lg border border-[color:var(--surface-border)] bg-[#faf9f6]/70 px-4 py-3 font-mono text-[13px] text-foreground leading-6 dark:bg-stone-950/70">
 								{group.pattern}
 							</div>
 						</div>

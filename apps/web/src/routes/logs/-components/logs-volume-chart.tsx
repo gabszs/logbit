@@ -14,12 +14,12 @@ import { Badge } from "@/web/components/ui/badge";
 import { Button } from "@/web/components/ui/button";
 import { Skeleton } from "@/web/components/ui/skeleton";
 import { cn } from "@/web/utils/cn";
-import { getLogsChartColor } from "./logs-chart-primitives";
 import type {
 	LogsChartDrilldown,
 	LogsVolumeGroup,
 	LogsVolumePoint,
 } from "../-lib/logs-queries";
+import { getLogsChartColor } from "./logs-chart-primitives";
 
 export type LogsVolumeActivePopover = {
 	x: number;
@@ -61,11 +61,16 @@ function buildPopoverGroups(
 	}
 
 	const customGroups = filterableGroups.filter(
-		(group) => !DEFAULT_LOG_LEVELS.includes(group.key as (typeof DEFAULT_LOG_LEVELS)[number]),
+		(group) =>
+			!DEFAULT_LOG_LEVELS.includes(
+				group.key as (typeof DEFAULT_LOG_LEVELS)[number],
+			),
 	);
 	const orderedGroups = [
 		...DEFAULT_LOG_LEVELS.map((groupKey) => {
-			const existingGroup = filterableGroups.find((group) => group.key === groupKey);
+			const existingGroup = filterableGroups.find(
+				(group) => group.key === groupKey,
+			);
 			return (
 				existingGroup ?? {
 					key: groupKey,
@@ -230,7 +235,10 @@ export function LogsVolumeChart({
 		const maxWidth = 280;
 		const left = Math.max(
 			12,
-			Math.min(activePopover.x - 18, Math.max(12, containerSize.width - maxWidth)),
+			Math.min(
+				activePopover.x - 18,
+				Math.max(12, containerSize.width - maxWidth),
+			),
 		);
 		const shouldOpenUpward =
 			containerSize.height > 0 && activePopover.y > containerSize.height * 0.56;
@@ -343,7 +351,9 @@ export function LogsVolumeChart({
 									axisLine={false}
 									minTickGap={20}
 									tickFormatter={(value) => {
-										const point = points.find((entry) => entry.bucketStart === value);
+										const point = points.find(
+											(entry) => entry.bucketStart === value,
+										);
 										return point?.bucketLabel ?? "";
 									}}
 									tick={{
@@ -390,9 +400,11 @@ export function LogsVolumeChart({
 
 										const point = pointPayload;
 										return (
-												<div className="min-w-[14rem] rounded-md border border-stone-200 bg-[#faf9f6]/95 px-3 py-2.5 shadow-sm backdrop-blur dark:border-stone-800 dark:bg-stone-950/95">
-												<div className="font-medium text-sm text-foreground">
-													{typeof label === "string" ? label : point.bucketLabel}
+											<div className="min-w-[14rem] rounded-md border border-stone-200 bg-[#faf9f6]/95 px-3 py-2.5 shadow-sm backdrop-blur dark:border-stone-800 dark:bg-stone-950/95">
+												<div className="font-medium text-foreground text-sm">
+													{typeof label === "string"
+														? label
+														: point.bucketLabel}
 												</div>
 												<div className="mt-1 font-mono text-[11px] text-muted-foreground uppercase tracking-[0.18em]">
 													{formatEventCount(point.total)}
@@ -462,14 +474,14 @@ export function LogsVolumeChart({
 				)}
 
 				{activePopover && popoverStyle ? (
-						<div
-							ref={popoverRef}
-							className="absolute z-20 w-[17.5rem] rounded-md border border-stone-200 bg-[#faf9f6]/96 p-3 shadow-sm backdrop-blur dark:border-stone-800 dark:bg-stone-950/96"
-							style={popoverStyle}
-						>
+					<div
+						ref={popoverRef}
+						className="absolute z-20 w-[17.5rem] rounded-md border border-stone-200 bg-[#faf9f6]/96 p-3 shadow-sm backdrop-blur dark:border-stone-800 dark:bg-stone-950/96"
+						style={popoverStyle}
+					>
 						<div className="flex items-start justify-between gap-3">
 							<div>
-								<div className="font-medium text-sm text-foreground">
+								<div className="font-medium text-foreground text-sm">
 									{activePopover.bucketLabel}
 								</div>
 								<div className="mt-1 font-mono text-[11px] text-muted-foreground uppercase tracking-[0.18em]">
@@ -507,7 +519,7 @@ export function LogsVolumeChart({
 							>
 								<Rows3 className="size-4 text-primary" />
 								<div>
-									<div className="font-medium text-sm text-foreground">
+									<div className="font-medium text-foreground text-sm">
 										View all events
 									</div>
 									<div className="text-muted-foreground text-xs">
@@ -539,7 +551,7 @@ export function LogsVolumeChart({
 													}}
 													className="flex w-full items-center justify-between gap-3 rounded-md px-3 py-2 text-left transition-colors hover:bg-accent/60"
 												>
-													<div className="flex items-center gap-2 text-sm text-foreground">
+													<div className="flex items-center gap-2 text-foreground text-sm">
 														<span
 															className="size-2.5 rounded-full"
 															style={{ backgroundColor: group.color }}

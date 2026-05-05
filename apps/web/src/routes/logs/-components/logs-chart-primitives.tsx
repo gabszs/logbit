@@ -59,7 +59,7 @@ export function LogsBarsSparkline({
 			) : null}
 			<div
 				className={cn(
-					"grid min-w-0 flex-1 grid-flow-col auto-cols-fr items-end border-stone-300/80 border-b pb-0.5 dark:border-stone-700/80",
+					"grid min-w-0 flex-1 auto-cols-fr grid-flow-col items-end border-stone-300/80 border-b pb-0.5 dark:border-stone-700/80",
 					compact ? "gap-[2px]" : "gap-[3px]",
 				)}
 				style={{ height }}

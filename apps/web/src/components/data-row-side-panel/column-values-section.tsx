@@ -40,7 +40,7 @@ export function ColumnValuesSection({
 				</nav>
 			</div>
 			<div className="mb-3 flex items-center justify-between gap-2">
-				<div className="relative min-w-[14rem] w-1/2 max-w-[32rem]">
+				<div className="relative w-1/2 min-w-[14rem] max-w-[32rem]">
 					<Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
 					<Input
 						value={search}

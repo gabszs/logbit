@@ -173,7 +173,9 @@ function findTimestampFallbackKey(keys: string[]) {
 		findFallbackKey(keys, FIELD_FALLBACKS.timestamp) ??
 		keys.find((key) => {
 			const normalizedKey = key.toLowerCase();
-			return normalizedKey.includes("timestamp") || normalizedKey.includes("time");
+			return (
+				normalizedKey.includes("timestamp") || normalizedKey.includes("time")
+			);
 		}) ??
 		null
 	);
