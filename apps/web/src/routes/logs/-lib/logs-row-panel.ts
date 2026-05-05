@@ -3,7 +3,13 @@ import type {
 	ResolvedRowFields,
 	RowIdentity,
 	RowPanelAdapter,
+	RowPanelAttribute,
+	RowPanelOverview,
 } from "@/web/components/data-row-side-panel";
+import {
+	isDataRecord,
+	tryParseJsonString,
+} from "@/web/components/data-row-side-panel/value-formatting";
 import {
 	createProxyClient,
 	executeClickhouseJsonQuery,
@@ -24,7 +30,9 @@ type LogsSelectorRole =
 	| "severityText"
 	| "serviceName"
 	| "traceId"
-	| "spanId";
+	| "spanId"
+	| "resourceAttributes"
+	| "logAttributes";
 
 type LogsRowSelector = {
 	alias: string;
@@ -41,7 +49,9 @@ const LOG_SELECTOR_CONFIGS: Array<{
 		| "severityField"
 		| "serviceNameField"
 		| "traceIdField"
-		| "spanIdField";
+		| "spanIdField"
+		| "resourceAttributesField"
+		| "logAttributesField";
 	fallbackExpression: string;
 	includeInRowWhere: boolean;
 }> = [
@@ -81,6 +91,18 @@ const LOG_SELECTOR_CONFIGS: Array<{
 		fallbackExpression: "SpanId",
 		includeInRowWhere: true,
 	},
+	{
+		role: "resourceAttributes",
+		configKey: "resourceAttributesField",
+		fallbackExpression: "ResourceAttributes",
+		includeInRowWhere: false,
+	},
+	{
+		role: "logAttributes",
+		configKey: "logAttributesField",
+		fallbackExpression: "LogAttributes",
+		includeInRowWhere: false,
+	},
 ];
 
 const FIELD_FALLBACKS = {
@@ -91,6 +113,24 @@ const FIELD_FALLBACKS = {
 	severityText: ["SeverityText", "severityText", "severity", "level", "Level"],
 	severityNumber: ["SeverityNumber", "severityNumber", "severity_number"],
 	body: ["Body", "body", "message", "Message", "msg"],
+	resourceAttributes: [
+		"ResourceAttributes",
+		"resourceAttributes",
+		"resource_attributes",
+	],
+	logAttributes: ["LogAttributes", "logAttributes", "log_attributes"],
+	spanAttributes: ["SpanAttributes", "spanAttributes", "span_attributes"],
+} as const;
+
+const TOP_LEVEL_FIELD_FALLBACKS = {
+	SpanName: ["SpanName", "spanName", "span_name"],
+	Duration: ["Duration", "duration", "DurationNano", "durationNano"],
+	StatusCode: ["StatusCode", "statusCode", "status_code"],
+	StatusMessage: ["StatusMessage", "statusMessage", "status_message"],
+	SpanKind: ["SpanKind", "spanKind", "span_kind"],
+	ParentSpanId: ["ParentSpanId", "parentSpanId", "parent_span_id"],
+	ScopeName: ["ScopeName", "scopeName", "scope_name"],
+	ScopeVersion: ["ScopeVersion", "scopeVersion", "scope_version"],
 } as const;
 
 const SPAN_ROW_FIELD_HINTS = [
@@ -269,6 +309,106 @@ function getLogsColumnValuesLabel(source: LogSourceEntity, row: DataRow) {
 	return isSpanLikeRow(source, row) ? "Span Values" : "Log Values";
 }
 
+function pushAttribute(
+	attributes: RowPanelAttribute[],
+	key: string,
+	value: unknown,
+) {
+	if (!hasMeaningfulValue(value)) return;
+	attributes.push({ key, value });
+}
+
+function getAttributesObject(value: unknown): DataRow {
+	const parsed = tryParseJsonString(value);
+	return isDataRecord(parsed) ? parsed : {};
+}
+
+function valueForSimpleExpression(
+	source: LogSourceEntity,
+	row: DataRow,
+	role: LogsSelectorRole,
+	fallbackKeys: readonly string[],
+) {
+	const selector = getLogsRowSelectors(source).find(
+		(candidate) => candidate.role === role,
+	);
+	if (selector && row[selector.alias] !== undefined) {
+		return row[selector.alias];
+	}
+	return fallbackValue(row, fallbackKeys);
+}
+
+function attributesFromValue(value: unknown): RowPanelAttribute[] {
+	return Object.entries(getAttributesObject(value))
+		.filter(([, attributeValue]) => hasMeaningfulValue(attributeValue))
+		.map(([key, attributeValue]) => ({
+			key,
+			value: attributeValue,
+		}));
+}
+
+function getLogsOverview(
+	source: LogSourceEntity,
+	row: DataRow,
+	fields: ResolvedRowFields,
+): RowPanelOverview {
+	const topLevelAttributes: RowPanelAttribute[] = [];
+	pushAttribute(topLevelAttributes, "Timestamp", fields.timestamp);
+	pushAttribute(topLevelAttributes, "ServiceName", fields.serviceName);
+	const severityValue = hasMeaningfulValue(fields.severityText)
+		? fields.severityText
+		: fields.severityNumber;
+	pushAttribute(
+		topLevelAttributes,
+		hasMeaningfulValue(fields.severityText) ? "SeverityText" : "SeverityNumber",
+		severityValue,
+	);
+	pushAttribute(topLevelAttributes, "TraceId", fields.traceId);
+	pushAttribute(topLevelAttributes, "SpanId", fields.spanId);
+
+	for (const [label, fallbackKeys] of Object.entries(
+		TOP_LEVEL_FIELD_FALLBACKS,
+	)) {
+		pushAttribute(topLevelAttributes, label, fallbackValue(row, fallbackKeys));
+	}
+
+	const isSpan = isSpanLikeRow(source, row);
+	const eventAttributes = isSpan
+		? fallbackValue(row, FIELD_FALLBACKS.spanAttributes)
+		: valueForSimpleExpression(
+				source,
+				row,
+				"logAttributes",
+				FIELD_FALLBACKS.logAttributes,
+			);
+	const resourceAttributes = valueForSimpleExpression(
+		source,
+		row,
+		"resourceAttributes",
+		FIELD_FALLBACKS.resourceAttributes,
+	);
+
+	return {
+		sections: [
+			{
+				id: "top-level-attributes",
+				title: "Top Level Attributes",
+				attributes: topLevelAttributes,
+			},
+			{
+				id: "event-attributes",
+				title: isSpan ? "Span Attributes" : "Log Attributes",
+				attributes: attributesFromValue(eventAttributes),
+			},
+			{
+				id: "resource-attributes",
+				title: "Resource Attributes",
+				attributes: attributesFromValue(resourceAttributes),
+			},
+		],
+	};
+}
+
 export function resolveLogsRowFields(
 	source: LogSourceEntity,
 	row: DataRow,
@@ -316,6 +456,7 @@ export function createLogsRowPanelAdapter(
 			return { rows: result.data };
 		},
 		resolveFields: (row) => resolveLogsRowFields(source, row),
+		getOverview: (row, fields) => getLogsOverview(source, row, fields),
 		getColumnValues: stripTechnicalAliases,
 		getColumnValuesLabel: (row) => getLogsColumnValuesLabel(source, row),
 		formatError: formatClickhouseQueryError,

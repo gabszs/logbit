@@ -13,32 +13,13 @@ import { StructuredValueTree } from "./structured-value-tree";
 import type { DataRow } from "./types";
 import { safeStringify } from "./value-formatting";
 
-export function ColumnValuesSection({
-	row,
-	label = "Log/trace Values",
-}: {
-	row: DataRow;
-	label?: string;
-}) {
+export function ColumnValuesSection({ row }: { row: DataRow }) {
 	const [search, setSearch] = useState("");
 	const [isWrapped, setIsWrapped] = useState(false);
 	const serializedRow = safeStringify(row);
 
 	return (
 		<section className="min-h-0 flex-1 px-5 py-4">
-			<div className="scrollbar-hide mb-3 overflow-x-auto">
-				<nav
-					aria-label="Row detail sections"
-					className="flex min-w-max items-end gap-2 border-stone-200 border-b dark:border-stone-800"
-				>
-					<button
-						type="button"
-						className="relative overflow-hidden rounded-t-lg border-primary border-b-2 bg-[color:var(--surface-background)] px-4 py-3 font-semibold text-foreground text-sm transition-all duration-150"
-					>
-						{label}
-					</button>
-				</nav>
-			</div>
 			<div className="mb-3 flex items-center justify-between gap-2">
 				<div className="relative w-1/2 min-w-[14rem] max-w-[32rem]">
 					<Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />

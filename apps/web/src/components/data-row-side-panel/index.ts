@@ -4,5 +4,8 @@ export type {
 	ResolvedRowFields,
 	RowIdentity,
 	RowPanelAdapter,
+	RowPanelAttribute,
+	RowPanelOverview,
+	RowPanelOverviewSection,
 	RowPanelQueryResult,
 } from "./types";

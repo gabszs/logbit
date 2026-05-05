@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, Loader2 } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import {
 	Sheet,
 	SheetContent,
@@ -7,10 +8,14 @@ import {
 	SheetHeader,
 	SheetTitle,
 } from "@/web/components/ui/sheet";
+import { cn } from "@/web/utils/cn";
 import { BodyBlock } from "./body-block";
 import { ColumnValuesSection } from "./column-values-section";
+import { OverviewSection } from "./overview-section";
 import { RowHeader } from "./row-header";
 import type { DataRow, RowIdentity, RowPanelAdapter } from "./types";
+
+type PanelTab = "overview" | "values";
 
 function StateMessage({
 	title,
@@ -53,16 +58,58 @@ function SuccessPanel({
 	identity: RowIdentity;
 	adapter: RowPanelAdapter;
 }) {
-	const fields = adapter.resolveFields(row);
+	const [activeTab, setActiveTab] = useState<PanelTab>("overview");
+	const fields = useMemo(() => adapter.resolveFields(row), [adapter, row]);
+	const overview = useMemo(
+		() => adapter.getOverview?.(row, fields) ?? null,
+		[adapter, row, fields],
+	);
 	const columnValues = adapter.getColumnValues?.(row) ?? row;
-	const columnValuesLabel = adapter.getColumnValuesLabel?.(row, fields);
+	const columnValuesLabel =
+		adapter.getColumnValuesLabel?.(row, fields) ?? "Log/trace Values";
+	const tabs: Array<{ id: PanelTab; label: string }> = overview
+		? [
+				{ id: "overview", label: "Overview" },
+				{ id: "values", label: columnValuesLabel },
+			]
+		: [{ id: "values", label: columnValuesLabel }];
+
+	useEffect(() => {
+		setActiveTab(overview ? "overview" : "values");
+	}, [identity.selectedRowKey, overview]);
+
+	const selectedTab = overview ? activeTab : "values";
 
 	return (
 		<div className="flex min-h-0 flex-1 flex-col overflow-hidden">
 			<RowHeader fields={fields} tableLabel={identity.tableLabel} />
 			<BodyBlock fields={fields} />
+			<div className="scrollbar-hide overflow-x-auto border-[color:var(--surface-border)] border-b px-5">
+				<nav
+					aria-label="Row detail sections"
+					className="flex min-w-max items-end gap-2"
+				>
+					{tabs.map((tab) => (
+						<button
+							key={tab.id}
+							type="button"
+							className={cn(
+								"relative -mb-px h-11 overflow-hidden border-transparent border-b-2 px-3 font-medium text-muted-foreground text-sm transition-colors",
+								selectedTab === tab.id && "border-primary text-foreground",
+							)}
+							onClick={() => setActiveTab(tab.id)}
+						>
+							{tab.label}
+						</button>
+					))}
+				</nav>
+			</div>
 			<div className="min-h-0 flex-1 overflow-auto">
-				<ColumnValuesSection row={columnValues} label={columnValuesLabel} />
+				{selectedTab === "overview" && overview ? (
+					<OverviewSection overview={overview} />
+				) : (
+					<ColumnValuesSection row={columnValues} />
+				)}
 				{adapter.renderExtraSections?.(row)}
 			</div>
 		</div>
