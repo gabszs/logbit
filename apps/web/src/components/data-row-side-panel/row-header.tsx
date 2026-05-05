@@ -37,15 +37,32 @@ function parseDate(value: unknown) {
 }
 
 function formatCompactTimeAgo(date: Date) {
-	const diffMs = Math.max(0, Date.now() - date.getTime());
-	const diffSeconds = Math.max(1, Math.floor(diffMs / 1000));
-	if (diffSeconds < 60) return `${diffSeconds}s ago`;
+	const diffSeconds = Math.round((date.getTime() - Date.now()) / 1000);
+	const absDiffSeconds = Math.abs(diffSeconds);
 
-	const diffMinutes = Math.floor(diffSeconds / 60);
-	if (diffMinutes < 60) return `${diffMinutes}m ago`;
+	if (absDiffSeconds < 60) {
+		return diffSeconds >= 0
+			? `in ${Math.max(1, absDiffSeconds)}s`
+			: `${Math.max(1, absDiffSeconds)}s ago`;
+	}
 
-	const diffHours = Math.floor(diffMinutes / 60);
-	return `${diffHours}h ago`;
+	const diffMinutes = Math.round(diffSeconds / 60);
+	const absDiffMinutes = Math.abs(diffMinutes);
+	if (absDiffMinutes < 60) {
+		return diffMinutes >= 0
+			? `in ${absDiffMinutes}m`
+			: `${absDiffMinutes}m ago`;
+	}
+
+	const diffHours = Math.round(diffSeconds / 3600);
+	const absDiffHours = Math.abs(diffHours);
+	if (absDiffHours < 24) {
+		return diffHours >= 0 ? `in ${absDiffHours}h` : `${absDiffHours}h ago`;
+	}
+
+	const diffDays = Math.round(diffSeconds / 86400);
+	const absDiffDays = Math.abs(diffDays);
+	return diffDays >= 0 ? `in ${absDiffDays}d` : `${absDiffDays}d ago`;
 }
 
 export function RowHeader({
@@ -84,7 +101,9 @@ export function RowHeader({
 						getSeverityBadgeClass(level),
 					)}
 				>
-					{level}
+					<span className="flex h-full items-center justify-center leading-none">
+						{level}
+					</span>
 				</span>
 				<span className="font-mono text-muted-foreground text-xs">-</span>
 				<span className="min-w-0 font-mono text-foreground text-xs tabular-nums">
@@ -95,8 +114,15 @@ export function RowHeader({
 					{timeAgo}
 				</span>
 				<span className="font-mono text-muted-foreground text-xs">-</span>
-				<span className="inline-flex h-5 max-w-full items-center gap-1 rounded-md border border-[color:var(--surface-border)] bg-[color:var(--surface-background)] pr-1 pl-2 font-mono text-[11px] leading-none text-foreground">
-					<span className="truncate leading-none">{displayedServiceName}</span>
+				<span
+					className={cn(
+						"inline-flex h-5 max-w-full items-center gap-1 rounded-md border border-[color:var(--surface-border)] bg-[color:var(--surface-background)] font-mono text-[11px] leading-none text-foreground",
+						hasServiceName ? "pr-1 pl-2" : "px-2",
+					)}
+				>
+					<span className="flex h-full items-center truncate leading-none">
+						{displayedServiceName}
+					</span>
 					{hasServiceName ? (
 						<CopyButton
 							aria-label="Copy service name"

@@ -55,13 +55,14 @@ function SuccessPanel({
 }) {
 	const fields = adapter.resolveFields(row);
 	const columnValues = adapter.getColumnValues?.(row) ?? row;
+	const columnValuesLabel = adapter.getColumnValuesLabel?.(row, fields);
 
 	return (
 		<div className="flex min-h-0 flex-1 flex-col overflow-hidden">
 			<RowHeader fields={fields} tableLabel={identity.tableLabel} />
 			<BodyBlock fields={fields} />
 			<div className="min-h-0 flex-1 overflow-auto">
-				<ColumnValuesSection row={columnValues} />
+				<ColumnValuesSection row={columnValues} label={columnValuesLabel} />
 				{adapter.renderExtraSections?.(row)}
 			</div>
 		</div>

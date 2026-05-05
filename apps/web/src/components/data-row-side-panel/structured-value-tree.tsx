@@ -7,6 +7,7 @@ import {
 	TooltipContent,
 	TooltipTrigger,
 } from "@/web/components/ui/tooltip";
+import { copyToClipboard } from "@/web/utils/clipboard";
 import { cn } from "@/web/utils/cn";
 import type { DataRow } from "./types";
 import {
@@ -78,16 +79,21 @@ function CopyAction({ label, value }: { label: string; value: string }) {
 	return (
 		<Tooltip>
 			<TooltipTrigger asChild>
-				<CopyButton
-					aria-label={label}
-					onCopy={async () => {
-						await navigator.clipboard.writeText(value);
-					}}
-					className="size-7 border border-transparent bg-transparent text-muted-foreground opacity-0 shadow-none transition-all group-hover/row:opacity-100 hover:border-[color:var(--surface-border)] hover:bg-[color:var(--surface-background)] hover:text-foreground"
-					iconClassName="size-3.5"
-				>
-					<span className="sr-only">{label}</span>
-				</CopyButton>
+				<span className="inline-flex">
+					<CopyButton
+						aria-label={label}
+						onMouseDown={(event) => {
+							event.stopPropagation();
+						}}
+						onCopy={async () => {
+							await copyToClipboard(value);
+						}}
+						className="size-7 border border-transparent bg-transparent text-muted-foreground opacity-0 shadow-none transition-all hover:border-[color:var(--surface-border)] hover:bg-[color:var(--surface-background)] hover:text-foreground group-hover/row:opacity-100"
+						iconClassName="size-3.5"
+					>
+						<span className="sr-only">{label}</span>
+					</CopyButton>
+				</span>
 			</TooltipTrigger>
 			<TooltipContent sideOffset={6}>{label}</TooltipContent>
 		</Tooltip>
@@ -130,58 +136,56 @@ function ValueNode({
 
 	return (
 		<div>
-			<div
-				className="group/row flex min-h-8 items-center gap-2 border-[color:var(--surface-border)] border-b px-3 py-1.5 last:border-b-0 hover:bg-muted/30"
-				style={{ paddingLeft: `${12 + depth * 16}px` }}
-			>
-				<div className="flex min-w-0 flex-1 items-center gap-1.5 font-mono text-[12px] leading-5">
-					{hasChildren ? (
-						<Button
-							type="button"
-							variant="ghost"
-							size="icon"
-							className="size-5 shrink-0 text-muted-foreground"
-							onClick={() => onToggle(path)}
-							aria-label={isExpanded ? "Collapse value" : "Expand value"}
-						>
-							{isExpanded ? (
-								<ChevronDown className="size-3.5" />
-							) : (
-								<ChevronRight className="size-3.5" />
-							)}
-						</Button>
-					) : (
-						<span className="size-5 shrink-0" />
-					)}
-					<span className="flex min-w-0 shrink items-center">
-						<span className="min-w-0 truncate text-[#f6821f] dark:text-[#f6821f]">
-							{keyName}
+			<div className="group/row border-[color:var(--surface-border)] border-b px-1 py-0 last:border-b-0">
+				<div
+					className="flex min-h-6 items-center gap-2 rounded-md px-1 py-0.5 transition-colors hover:bg-muted/35"
+					style={{ paddingLeft: `${depth * 12}px` }}
+				>
+					<div className="flex min-w-0 flex-1 items-center gap-1 font-mono text-[12px] leading-4">
+						{hasChildren ? (
+							<Button
+								type="button"
+								variant="ghost"
+								size="icon"
+								className="size-5 shrink-0 text-muted-foreground"
+								onClick={() => onToggle(path)}
+								aria-label={isExpanded ? "Collapse value" : "Expand value"}
+							>
+								{isExpanded ? (
+									<ChevronDown className="size-3.5" />
+								) : (
+									<ChevronRight className="size-3.5" />
+								)}
+							</Button>
+						) : (
+							<span className="size-5 shrink-0" />
+						)}
+						<span className="flex min-w-0 shrink items-center gap-0.5">
+							<span className="min-w-0 truncate text-[#f6821f] dark:text-[#f6821f]">
+								{keyName}
+							</span>
+							<span className="shrink-0 text-muted-foreground">:</span>
 						</span>
-						<span className="shrink-0 text-muted-foreground">:</span>
-					</span>
-					{showSummary ? (
-						<span
-							className={cn(
-								"min-w-0",
-								getValueColorClass(value),
-								isWrapped
-									? "whitespace-pre-wrap break-words"
-									: "overflow-hidden text-ellipsis whitespace-nowrap",
-							)}
-						>
-							{summary}
-						</span>
-					) : null}
-				</div>
-				<div className="ml-auto flex shrink-0 items-center gap-1">
-					<CopyAction
-						label="Copy value"
-						value={formatPrimitiveValue(tryParseJsonString(value))}
-					/>
-					<CopyAction label="Copy row" value={rowCopyValue} />
-					{hasChildren ? (
-						<CopyAction label="Copy object" value={objectCopyValue} />
-					) : null}
+						{showSummary ? (
+							<span
+								className={cn(
+									"min-w-0 flex-1",
+									getValueColorClass(value),
+									isWrapped
+										? "whitespace-pre-wrap break-words"
+										: "overflow-hidden text-ellipsis whitespace-nowrap",
+								)}
+							>
+								{summary}
+							</span>
+						) : null}
+					</div>
+					<div className="ml-auto flex shrink-0 items-center gap-1">
+						<CopyAction
+							label={hasChildren ? "Copy object" : "Copy row"}
+							value={hasChildren ? objectCopyValue : rowCopyValue}
+						/>
+					</div>
 				</div>
 			</div>
 			{hasChildren && isExpanded
@@ -258,11 +262,11 @@ export function StructuredValueTree({
 
 	return (
 		<div className="overflow-hidden rounded-md border border-[color:var(--surface-border)] bg-[color:var(--surface-background)]">
-			<div className="flex items-center gap-2 border-[color:var(--surface-border)] border-b bg-muted/30 px-3 py-2 font-medium text-muted-foreground text-[10px] uppercase tracking-[0.16em]">
+			<div className="flex items-center gap-2 border-[color:var(--surface-border)] border-b bg-muted/30 px-3 py-2 font-medium text-[10px] text-muted-foreground uppercase tracking-[0.16em]">
 				<Braces className="size-3.5" />
 				Attributes
 			</div>
-			<div className="max-h-[48vh] overflow-auto">
+			<div className="max-h-[48vh] overflow-auto px-0 py-2">
 				{visibleEntries.map(([keyName, nestedValue]) => (
 					<ValueNode
 						key={keyName}

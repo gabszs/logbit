@@ -93,6 +93,26 @@ const FIELD_FALLBACKS = {
 	body: ["Body", "body", "message", "Message", "msg"],
 } as const;
 
+const SPAN_ROW_FIELD_HINTS = [
+	"SpanName",
+	"spanName",
+	"span_name",
+	"SpanKind",
+	"spanKind",
+	"span_kind",
+	"ParentSpanId",
+	"parentSpanId",
+	"parent_span_id",
+	"Duration",
+	"duration",
+	"DurationNano",
+	"durationNano",
+	"StatusCode",
+	"statusCode",
+	"StatusMessage",
+	"statusMessage",
+] as const;
+
 function getLogsRowSelectors(source: LogSourceEntity): LogsRowSelector[] {
 	return LOG_SELECTOR_CONFIGS.map((config, index) => {
 		const configuredExpression = normalizeSqlExpression(
@@ -222,6 +242,33 @@ function fallbackValue(row: DataRow, fallbackKeys: readonly string[]) {
 	return fallbackKey ? row[fallbackKey] : undefined;
 }
 
+function hasMeaningfulValue(value: unknown) {
+	return value != null && String(value).trim().length > 0;
+}
+
+function expressionLooksLikeSpanName(expression: string | null | undefined) {
+	return normalizeSqlExpression(expression)
+		.replaceAll("`", "")
+		.replaceAll('"', "")
+		.toLowerCase()
+		.includes("spanname");
+}
+
+function isSpanLikeRow(source: LogSourceEntity, row: DataRow) {
+	const tableName = source.config.table?.toLowerCase() ?? "";
+	if (tableName.includes("trace") || tableName.includes("span")) return true;
+	if (expressionLooksLikeSpanName(source.config.bodyField)) return true;
+
+	return SPAN_ROW_FIELD_HINTS.some((fieldName) => {
+		const rowKey = findKeyCaseInsensitive(row, [fieldName]);
+		return rowKey ? hasMeaningfulValue(row[rowKey]) : false;
+	});
+}
+
+function getLogsColumnValuesLabel(source: LogSourceEntity, row: DataRow) {
+	return isSpanLikeRow(source, row) ? "Span Values" : "Log Values";
+}
+
 export function resolveLogsRowFields(
 	source: LogSourceEntity,
 	row: DataRow,
@@ -270,6 +317,7 @@ export function createLogsRowPanelAdapter(
 		},
 		resolveFields: (row) => resolveLogsRowFields(source, row),
 		getColumnValues: stripTechnicalAliases,
+		getColumnValuesLabel: (row) => getLogsColumnValuesLabel(source, row),
 		formatError: formatClickhouseQueryError,
 	};
 }

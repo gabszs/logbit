@@ -13,7 +13,13 @@ import { StructuredValueTree } from "./structured-value-tree";
 import type { DataRow } from "./types";
 import { safeStringify } from "./value-formatting";
 
-export function ColumnValuesSection({ row }: { row: DataRow }) {
+export function ColumnValuesSection({
+	row,
+	label = "Log/trace Values",
+}: {
+	row: DataRow;
+	label?: string;
+}) {
 	const [search, setSearch] = useState("");
 	const [isWrapped, setIsWrapped] = useState(false);
 	const serializedRow = safeStringify(row);
@@ -29,7 +35,7 @@ export function ColumnValuesSection({ row }: { row: DataRow }) {
 						type="button"
 						className="relative overflow-hidden rounded-t-lg border-primary border-b-2 bg-[color:var(--surface-background)] px-4 py-3 font-semibold text-foreground text-sm transition-all duration-150"
 					>
-						Log/trace Values
+						{label}
 					</button>
 				</nav>
 			</div>

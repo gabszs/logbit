@@ -33,6 +33,7 @@ export type RowPanelAdapter = {
 	fetchRow: (identity: RowIdentity) => Promise<RowPanelQueryResult>;
 	resolveFields: (row: DataRow) => ResolvedRowFields;
 	getColumnValues?: (row: DataRow) => DataRow;
+	getColumnValuesLabel?: (row: DataRow, fields: ResolvedRowFields) => string;
 	formatError?: (error: unknown) => string;
 	renderExtraSections?: (row: DataRow) => ReactNode;
 };

@@ -87,6 +87,7 @@ export type RowPanelAdapter = {
 	fetchRow: (identity: RowIdentity) => Promise<RowPanelQueryResult>;
 	resolveFields: (row: DataRow) => ResolvedRowFields;
 	getColumnValues?: (row: DataRow) => DataRow;
+	getColumnValuesLabel?: (row: DataRow, fields: ResolvedRowFields) => string;
 	formatError?: (error: unknown) => string;
 	renderExtraSections?: (row: DataRow) => ReactNode;
 };
@@ -101,7 +102,7 @@ export type RowPanelAdapter = {
 5. `DataRowSidePanel` chama `adapter.fetchRow(identity)`.
 6. O adapter faz uma nova query no ClickHouse para buscar a linha completa.
 7. O resultado deve ter exatamente uma linha.
-8. A UI resolve header/body a partir da linha completa e renderiza `Log/trace Values`.
+8. A UI resolve header/body a partir da linha completa e renderiza a secao de valores com label definida pelo adapter.
 
 ## Seletores tecnicos
 
@@ -227,9 +228,12 @@ Body:
 - O botao de copy fica dentro do campo do valor.
 - Copy tem feedback visual pelo `CopyButton` compartilhado.
 
-`Log/trace Values`:
+Values:
 
 - E a unica aba/secao extra no v1.
+- A label vem do adapter.
+- Em logs, a label fica `Log Values`.
+- Em spans, a label fica `Span Values`.
 - Tem busca por coluna, path ou valor.
 - Campo de busca fica a esquerda.
 - Botoes ficam alinhados a direita.
@@ -280,7 +284,7 @@ Implementado agora:
 - Clique em linha abre panel.
 - Query propria para linha completa.
 - Highlight da linha selecionada.
-- Header, Body e `Log/trace Values`.
+- Header, Body e values dinamico (`Log Values` ou `Span Values`).
 - Busca, unwrap, copy JSON e viewer estruturado.
 - Estados loading, erro, vazio e ambiguo.
 
