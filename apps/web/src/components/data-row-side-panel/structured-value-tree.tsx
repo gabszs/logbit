@@ -32,6 +32,18 @@ function getSummary(value: unknown) {
 	return formatPrimitiveValue(inspectable);
 }
 
+function getCollapsedSummary(keyName: string, value: unknown) {
+	const inspectable = tryParseJsonString(value);
+	if (
+		keyName.toLowerCase() === "body" &&
+		typeof inspectable === "object" &&
+		inspectable !== null
+	) {
+		return safeStringify(inspectable, 0);
+	}
+	return getSummary(value);
+}
+
 function getValueColorClass(value: unknown) {
 	const inspectable = tryParseJsonString(value);
 	if (typeof inspectable === "string") {
@@ -47,6 +59,18 @@ function getValueColorClass(value: unknown) {
 		return "text-stone-500 dark:text-stone-400";
 	}
 	return "text-foreground";
+}
+
+function getSummaryColorClass(keyName: string, value: unknown) {
+	const inspectable = tryParseJsonString(value);
+	if (
+		keyName.toLowerCase() === "body" &&
+		typeof inspectable === "object" &&
+		inspectable !== null
+	) {
+		return "text-emerald-700 dark:text-emerald-300";
+	}
+	return getValueColorClass(value);
 }
 
 function valueMatchesSearch(
@@ -129,16 +153,21 @@ function ValueNode({
 		return null;
 	}
 
-	const summary = getSummary(value);
+	const summary = getCollapsedSummary(keyName, value);
 	const showSummary = !(hasChildren && isExpanded);
 	const objectCopyValue = safeStringify(tryParseJsonString(value));
 	const rowCopyValue = `${path}: ${objectCopyValue}`;
 
 	return (
 		<div>
-			<div className="group/row border-[color:var(--surface-border)] border-b px-1 py-0 last:border-b-0">
+			<div
+				className={cn(
+					"group/row border-[color:var(--surface-border)] px-1 py-0 last:border-b-0",
+					!(hasChildren && isExpanded) && "border-b",
+				)}
+			>
 				<div
-					className="flex min-h-6 items-center gap-2 rounded-md px-1 py-0.5 transition-colors hover:bg-muted/35"
+					className="relative flex min-h-6 items-center gap-2 rounded-md px-1 py-0.5 pr-2 transition-colors hover:bg-muted/35"
 					style={{ paddingLeft: `${depth * 12}px` }}
 				>
 					<div className="flex min-w-0 flex-1 items-center gap-1 font-mono text-[12px] leading-4">
@@ -170,7 +199,7 @@ function ValueNode({
 							<span
 								className={cn(
 									"min-w-0 flex-1",
-									getValueColorClass(value),
+									getSummaryColorClass(keyName, value),
 									isWrapped
 										? "whitespace-pre-wrap break-words"
 										: "overflow-hidden text-ellipsis whitespace-nowrap",
@@ -180,7 +209,7 @@ function ValueNode({
 							</span>
 						) : null}
 					</div>
-					<div className="ml-auto flex shrink-0 items-center gap-1">
+					<div className="absolute top-1/2 right-0.5 flex -translate-y-1/2 items-center gap-1">
 						<CopyAction
 							label={hasChildren ? "Copy object" : "Copy row"}
 							value={hasChildren ? objectCopyValue : rowCopyValue}
@@ -227,7 +256,11 @@ export function StructuredValueTree({
 		setExpandedPaths(
 			new Set(
 				entries
-					.filter(([, nestedValue]) => getValueEntries(nestedValue).length > 0)
+					.filter(
+						([keyName, nestedValue]) =>
+							keyName.toLowerCase() !== "body" &&
+							getValueEntries(nestedValue).length > 0,
+					)
 					.map(([keyName]) => keyName),
 			),
 		);
