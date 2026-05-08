@@ -540,7 +540,6 @@ export function AddSourceDialog({
 								onChange={(value) => set("metricSourceId", value)}
 								disabled
 								sources={[]}
-								emptyMessage="Metric sources are not available yet."
 							/>
 						</div>
 					</div>
@@ -875,7 +874,6 @@ function SourceSelectField({
 	onChange,
 	disabled,
 	sources,
-	emptyMessage = "No other sources available yet.",
 }: {
 	id: string;
 	label: string;
@@ -883,7 +881,6 @@ function SourceSelectField({
 	onChange: (value: string) => void;
 	disabled: boolean;
 	sources: SourceEntity[];
-	emptyMessage?: string;
 }) {
 	return (
 		<div className="space-y-2">
@@ -907,9 +904,6 @@ function SourceSelectField({
 					))}
 				</SelectContent>
 			</Select>
-			{sources.length === 0 && (
-				<p className="text-muted-foreground text-xs">{emptyMessage}</p>
-			)}
 		</div>
 	);
 }
