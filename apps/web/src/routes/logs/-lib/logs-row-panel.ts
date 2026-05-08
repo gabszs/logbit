@@ -44,7 +44,7 @@ type LogsRowSelector = {
 const LOG_SELECTOR_CONFIGS: Array<{
 	role: LogsSelectorRole;
 	configKey:
-		| "timestampField"
+		| "timestampQueryExpression"
 		| "bodyField"
 		| "severityField"
 		| "serviceNameField"
@@ -57,7 +57,7 @@ const LOG_SELECTOR_CONFIGS: Array<{
 }> = [
 	{
 		role: "timestamp",
-		configKey: "timestampField",
+		configKey: "timestampQueryExpression",
 		fallbackExpression: "Timestamp",
 		includeInRowWhere: true,
 	},

@@ -37,7 +37,7 @@ Implementar uma nova página `/logs` para leitura de logs no ClickHouse, usando 
 - [ ] Criar `buildLogsTableQuery`.
 - [ ] Criar `buildLogsVolumeQuery`.
 - [ ] Usar `source.config.database` e `source.config.table`.
-- [ ] Usar `source.config.timestampField` para filtro de tempo.
+- [ ] Usar `source.config.timestampQueryExpression` para filtro de tempo.
 - [ ] Popular `SELECT` com `source.config.defaultSelectQuery`.
 - [ ] Popular `ORDER BY` com `source.config.defaultOrderByQuery`.
 - [ ] Permitir `WHERE` opcional.

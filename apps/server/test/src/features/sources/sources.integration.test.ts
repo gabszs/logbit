@@ -218,7 +218,7 @@ describe("Sources integration", () => {
 			severityField: "level",
 			resourceAttributesField: "ResourceAttributes",
 			logAttributesField: "LogAttributes",
-			timestampField: "Timestamp",
+			timestampQueryExpression: "Timestamp",
 			serviceNameField: "ServiceName",
 			bodyField: "Body",
 			traceIdField: "TraceId",

@@ -141,11 +141,13 @@ function resolveTimeBounds(
 }
 
 function buildTimePredicate(
-	timestampField: string,
+	timestampQueryExpression: string,
 	startIso: string,
 	endIso: string,
 ) {
-	const timestamp = quoteIdentifier(normalizeSqlExpression(timestampField));
+	const timestamp = quoteIdentifier(
+		normalizeSqlExpression(timestampQueryExpression),
+	);
 	return [
 		`${timestamp} >= parseDateTimeBestEffortOrNull('${startIso}')`,
 		`${timestamp} < parseDateTimeBestEffortOrNull('${endIso}')`,
@@ -153,13 +155,17 @@ function buildTimePredicate(
 }
 
 function buildWhereClauses(
-	timestampField: string,
+	timestampQueryExpression: string,
 	startIso: string,
 	endIso: string,
 	whereClause?: string,
 	additionalWhereClauses: string[] = [],
 ) {
-	const clauses = buildTimePredicate(timestampField, startIso, endIso);
+	const clauses = buildTimePredicate(
+		timestampQueryExpression,
+		startIso,
+		endIso,
+	);
 	const normalizedWhere = normalizeSqlExpression(whereClause);
 	if (normalizedWhere) {
 		clauses.push(`(${normalizedWhere})`);
@@ -249,14 +255,15 @@ function buildLogsQueryConfig(
 	source: LogSourceEntity,
 	options: LogsQueryBaseOptions,
 ) {
-	const timestampField = source.config.timestampField ?? "Timestamp";
+	const timestampQueryExpression =
+		source.config.timestampQueryExpression ?? "Timestamp";
 	const { start, end } = resolveTimeBounds(
 		options.timeRange,
 		options.now,
 		options.absoluteTimeRange,
 	);
 	const clauses = buildWhereClauses(
-		timestampField,
+		timestampQueryExpression,
 		start,
 		end,
 		options.whereQuery,
@@ -264,7 +271,9 @@ function buildLogsQueryConfig(
 	);
 
 	return {
-		timestampField: quoteIdentifier(normalizeSqlExpression(timestampField)),
+		timestampQueryExpression: quoteIdentifier(
+			normalizeSqlExpression(timestampQueryExpression),
+		),
 		start,
 		end,
 		clauses,
@@ -322,10 +331,13 @@ export function buildLogsVolumeQuery(
 	if (!isConfiguredLogSource(source)) return null;
 
 	const { amount, unit } = RANGE_BUCKET[options.timeRange];
-	const { timestampField, clauses } = buildLogsQueryConfig(source, options);
+	const { timestampQueryExpression, clauses } = buildLogsQueryConfig(
+		source,
+		options,
+	);
 	const severityGroupExpression = buildSeverityGroupExpression(source);
 	const selectClauses = [
-		`toStartOfInterval(${timestampField}, INTERVAL ${amount} ${unit}) AS bucket`,
+		`toStartOfInterval(${timestampQueryExpression}, INTERVAL ${amount} ${unit}) AS bucket`,
 	];
 	const groupByClauses = ["bucket"];
 
