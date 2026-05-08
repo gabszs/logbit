@@ -45,6 +45,7 @@ const RANGE_BUCKET = {
 
 const SEVERITY_ORDER = [
 	"FATAL",
+	"CRITICAL",
 	"ERROR",
 	"WARN",
 	"WARNING",

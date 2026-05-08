@@ -1,3 +1,7 @@
+import { queryOptions, useQuery } from "@tanstack/react-query";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { AlertTriangle, PanelLeft } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
 	DataRowSidePanel,
 	type RowIdentity,
@@ -14,11 +18,7 @@ import {
 import { useContentSidebar } from "@/web/hooks/use-content-sidebar";
 import { useLogsCanvasSidebar } from "@/web/hooks/use-logs-canvas-sidebar";
 import { requireAuthenticated } from "@/web/lib/route-guards";
-import { getLogSources } from "@/web/lib/sources";
-import { queryOptions, useQuery } from "@tanstack/react-query";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { AlertTriangle, PanelLeft } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { getLogSources, getSourcesForSourceSelect } from "@/web/lib/sources";
 import {
 	type ClickhouseJsonResult,
 	createProxyClient,
@@ -63,6 +63,11 @@ const logSourcesQueryOptions = queryOptions({
 	queryFn: getLogSources,
 });
 
+const allSourcesQueryOptions = queryOptions({
+	queryKey: ["sources", "all"],
+	queryFn: getSourcesForSourceSelect,
+});
+
 export const Route = createFileRoute("/logs")({
 	validateSearch: (search: Record<string, unknown>) => {
 		const sourceId = search.sourceId;
@@ -93,7 +98,10 @@ export const Route = createFileRoute("/logs")({
 		});
 	},
 	loader: async ({ context }) => {
-		await context.queryClient.ensureQueryData(logSourcesQueryOptions);
+		await Promise.all([
+			context.queryClient.ensureQueryData(logSourcesQueryOptions),
+			context.queryClient.ensureQueryData(allSourcesQueryOptions),
+		]);
 	},
 	component: LogsRoute,
 	pendingComponent: LogsSkeleton,
@@ -103,6 +111,7 @@ export const Route = createFileRoute("/logs")({
 function LogsRoute() {
 	const navigate = useNavigate();
 	const { data: logSources = [] } = useQuery(logSourcesQueryOptions);
+	const { data: allSources = [] } = useQuery(allSourcesQueryOptions);
 	const { isExpanded: isAppSidebarExpanded } = useContentSidebar();
 	const { isExpanded: isLogsCanvasSidebarExpanded } = useLogsCanvasSidebar();
 	const search = Route.useSearch();
@@ -140,8 +149,11 @@ function LogsRoute() {
 		[logSources, search.sourceId],
 	);
 	const rowPanelAdapter = useMemo(
-		() => (selectedSource ? createLogsRowPanelAdapter(selectedSource) : null),
-		[selectedSource],
+		() =>
+			selectedSource
+				? createLogsRowPanelAdapter(selectedSource, allSources)
+				: null,
+		[allSources, selectedSource],
 	);
 	const hiddenRowSelectorAliases = useMemo(
 		() => (selectedSource ? getLogsRowSelectorAliases(selectedSource) : []),
@@ -298,7 +310,6 @@ function LogsRoute() {
 		Boolean(
 			selectedSource?.config.database &&
 				selectedSource.config.table &&
-				selectedSource.config.timestampQueryField &&
 				selectQuery.trim() &&
 				orderByQuery.trim(),
 		) && !isRunning;

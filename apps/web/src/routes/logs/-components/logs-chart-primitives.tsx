@@ -8,6 +8,7 @@ export type LogsBarsSparklinePoint = {
 
 const LOG_CHART_COLORS: Record<string, string> = {
 	FATAL: "#ff5d73",
+	CRITICAL: "#fb7185",
 	ERROR: "#ff7a59",
 	WARN: "#f4b942",
 	INFO: "#2dd4bf",

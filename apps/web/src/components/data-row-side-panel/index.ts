@@ -8,4 +8,8 @@ export type {
 	RowPanelOverview,
 	RowPanelOverviewSection,
 	RowPanelQueryResult,
+	RowTracePanelAvailable,
+	RowTracePanelDescriptor,
+	RowTracePanelQueryResult,
+	RowTracePanelSetupRequired,
 } from "./types";

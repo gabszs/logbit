@@ -141,6 +141,8 @@ function getSeverityBadgeClass(level: string) {
 		case "WARN":
 		case "WARNING":
 			return "border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-900/80 dark:bg-amber-950/70 dark:text-amber-300";
+		case "CRITICAL":
+			return "border-rose-400 bg-rose-50 text-rose-800 dark:border-rose-900/80 dark:bg-rose-950/80 dark:text-rose-300";
 		case "ERROR":
 			return "border-red-300 bg-red-50 text-red-700 dark:border-red-900/80 dark:bg-red-950/70 dark:text-red-300";
 		case "FATAL":
@@ -153,11 +155,12 @@ function getSeverityBadgeClass(level: string) {
 function SeverityBadge({ value }: { value: unknown }) {
 	const label = typeof value === "string" ? value.trim().toUpperCase() : "";
 	const className = getSeverityBadgeClass(label);
+	const displayValue = renderCellValue(value, "level");
 
 	if (!label || !className) {
 		return (
 			<div className="truncate font-mono text-[13px] text-foreground">
-				{renderCellValue(value, "level")}
+				{displayValue}
 			</div>
 		);
 	}
@@ -169,7 +172,7 @@ function SeverityBadge({ value }: { value: unknown }) {
 				className,
 			)}
 		>
-			{label}
+			{displayValue}
 		</span>
 	);
 }

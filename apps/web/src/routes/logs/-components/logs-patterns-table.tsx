@@ -21,6 +21,8 @@ function getSeverityBadgeClass(level: string) {
 			return "border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-900/80 dark:bg-emerald-950/70 dark:text-emerald-300";
 		case "WARN":
 			return "border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-900/80 dark:bg-amber-950/70 dark:text-amber-300";
+		case "CRITICAL":
+			return "border-rose-400 bg-rose-50 text-rose-800 dark:border-rose-900/80 dark:bg-rose-950/80 dark:text-rose-300";
 		case "ERROR":
 			return "border-red-300 bg-red-50 text-red-700 dark:border-red-900/80 dark:bg-red-950/70 dark:text-red-300";
 		case "FATAL":

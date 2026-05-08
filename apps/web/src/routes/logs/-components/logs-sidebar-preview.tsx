@@ -16,6 +16,7 @@ import type { LogsResultsView } from "../-lib/logs-patterns";
 
 const LOG_LEVELS = [
 	"FATAL",
+	"CRITICAL",
 	"ERROR",
 	"WARN",
 	"INFO",
@@ -35,6 +36,8 @@ function getSeverityTextClass(level: string) {
 		case "WARN":
 		case "WARNING":
 			return "text-amber-600 dark:text-amber-500";
+		case "CRITICAL":
+			return "text-rose-600 dark:text-rose-400";
 		case "ERROR":
 			return "text-red-600 dark:text-red-400";
 		case "FATAL":

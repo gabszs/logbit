@@ -5,17 +5,24 @@ import type {
 	RowPanelAdapter,
 	RowPanelAttribute,
 	RowPanelOverview,
+	RowTracePanelAvailable,
 } from "@/web/components/data-row-side-panel";
 import {
 	isDataRecord,
 	tryParseJsonString,
 } from "@/web/components/data-row-side-panel/value-formatting";
+import { TRACE_ALIASES } from "@/web/components/trace-waterfall";
 import {
 	createProxyClient,
 	executeClickhouseJsonQuery,
 	formatClickhouseQueryError,
 } from "@/web/lib/clickhouse-client";
-import type { LogSourceEntity } from "@/web/lib/sources";
+import {
+	isTraceSource,
+	type LogSourceEntity,
+	type SourceEntity,
+	type TraceSourceEntity,
+} from "@/web/lib/sources";
 import {
 	escapeSqlString,
 	normalizeSqlExpression,
@@ -153,6 +160,8 @@ const SPAN_ROW_FIELD_HINTS = [
 	"statusMessage",
 ] as const;
 
+const DEFAULT_TRACE_WATERFALL_LIMIT = 5000;
+
 function getLogsRowSelectors(source: LogSourceEntity): LogsRowSelector[] {
 	return LOG_SELECTOR_CONFIGS.map((config, index) => {
 		const configuredExpression = normalizeSqlExpression(
@@ -166,6 +175,19 @@ function getLogsRowSelectors(source: LogSourceEntity): LogsRowSelector[] {
 			includeInRowWhere: config.includeInRowWhere,
 		};
 	}).filter((selector) => selector.expression.trim().length > 0);
+}
+
+function getTraceWaterfallLimit() {
+	const env = (
+		import.meta as ImportMeta & {
+			env?: Record<string, string | undefined>;
+		}
+	).env;
+	const parsed = Number(env?.VITE_LOGLOG_TRACE_WATERFALL_LIMIT);
+	if (!Number.isInteger(parsed) || parsed <= 0) {
+		return DEFAULT_TRACE_WATERFALL_LIMIT;
+	}
+	return parsed;
 }
 
 export function getLogsRowSelectorAliases(source: LogSourceEntity) {
@@ -286,6 +308,11 @@ function hasMeaningfulValue(value: unknown) {
 	return value != null && String(value).trim().length > 0;
 }
 
+function meaningfulString(value: unknown) {
+	if (!hasMeaningfulValue(value)) return undefined;
+	return String(value).trim();
+}
+
 function expressionLooksLikeSpanName(expression: string | null | undefined) {
 	return normalizeSqlExpression(expression)
 		.replaceAll("`", "")
@@ -307,6 +334,10 @@ function isSpanLikeRow(source: LogSourceEntity, row: DataRow) {
 
 function getLogsColumnValuesLabel(source: LogSourceEntity, row: DataRow) {
 	return isSpanLikeRow(source, row) ? "Span Values" : "Log Values";
+}
+
+function sourceTableLabel(source: SourceEntity) {
+	return `${source.name} · ${source.config.database ?? "?"}.${source.config.table ?? "?"}`;
 }
 
 function pushAttribute(
@@ -439,8 +470,163 @@ export function resolveLogsRowFields(
 	};
 }
 
+function traceSetupDescription(source: LogSourceEntity) {
+	return [
+		"Trace attributes were detected on this row, but no correlated trace source is configured.",
+		`Open the source settings for "${source.name}" and set Trace source to the ClickHouse source that contains spans for the same TraceId.`,
+	].join("\n");
+}
+
+function unavailableTraceSourceDescription(
+	source: LogSourceEntity,
+	traceSourceId: string,
+) {
+	return [
+		`This log source points to trace source ${traceSourceId}, but that source is not available in the current source list.`,
+		`Open the source settings for "${source.name}" and choose a valid trace source.`,
+	].join("\n");
+}
+
+function missingTraceIdDescription(source: LogSourceEntity) {
+	return [
+		"Trace/span attributes were detected, but this row does not contain a TraceId value.",
+		`Check the Trace ID field configured for "${source.name}" before opening the waterfall.`,
+	].join("\n");
+}
+
+function findTraceSource(
+	allSources: SourceEntity[],
+	traceSourceId: string | null | undefined,
+) {
+	if (!traceSourceId) return null;
+	const source = allSources.find((candidate) => candidate.id === traceSourceId);
+	return source && isTraceSource(source) ? source : null;
+}
+
+function configuredExpression(
+	value: string | null | undefined,
+	fallback: string,
+) {
+	return normalizeSqlExpression(value) || fallback;
+}
+
+function aliasedSelect(valueExpression: string, alias: string) {
+	return `${valueExpression} AS ${quoteIdentifier(alias)}`;
+}
+
+function buildTraceWaterfallSpansQuery(
+	source: TraceSourceEntity,
+	traceId: string,
+	limit: number,
+) {
+	if (!source.config.database || !source.config.table) {
+		throw new Error("Trace source is missing database or table configuration");
+	}
+
+	const timestamp = configuredExpression(
+		source.config.timestampQueryField,
+		"Timestamp",
+	);
+	const traceIdExpression = configuredExpression(
+		source.config.traceIdField,
+		"TraceId",
+	);
+	const spanId = configuredExpression(source.config.spanIdField, "SpanId");
+	const parentSpanId = configuredExpression(
+		source.config.parentSpanIdField,
+		"ParentSpanId",
+	);
+	const serviceName = configuredExpression(
+		source.config.serviceNameField,
+		"ServiceName",
+	);
+	const name = configuredExpression(source.config.spanNameField, "SpanName");
+	const duration = configuredExpression(
+		source.config.durationField,
+		"Duration",
+	);
+	const statusCode = configuredExpression(
+		source.config.statusCodeField,
+		"StatusCode",
+	);
+	const statusMessage = configuredExpression(
+		source.config.statusMessageField,
+		"StatusMessage",
+	);
+	const spanKind = configuredExpression(
+		source.config.spanKindField,
+		"SpanKind",
+	);
+
+	return [
+		[
+			"SELECT *",
+			aliasedSelect(timestamp, TRACE_ALIASES.timestamp),
+			aliasedSelect(traceIdExpression, TRACE_ALIASES.traceId),
+			aliasedSelect(spanId, TRACE_ALIASES.spanId),
+			aliasedSelect(parentSpanId, TRACE_ALIASES.parentSpanId),
+			aliasedSelect(name, TRACE_ALIASES.name),
+			aliasedSelect(serviceName, TRACE_ALIASES.serviceName),
+			aliasedSelect(duration, TRACE_ALIASES.duration),
+			aliasedSelect(statusCode, TRACE_ALIASES.statusCode),
+			aliasedSelect(statusMessage, TRACE_ALIASES.statusMessage),
+			aliasedSelect(spanKind, TRACE_ALIASES.spanKind),
+		].join(", "),
+		`FROM ${quoteIdentifier(source.config.database)}.${quoteIdentifier(source.config.table)}`,
+		`WHERE toString(${traceIdExpression}) = '${escapeSqlString(traceId)}'`,
+		`ORDER BY ${timestamp} ASC`,
+		`LIMIT ${limit}`,
+	].join("\n");
+}
+
+function buildTraceWaterfallLogsQuery(
+	source: LogSourceEntity,
+	traceId: string,
+	limit: number,
+) {
+	if (!source.config.database || !source.config.table) {
+		throw new Error("Log source is missing database or table configuration");
+	}
+
+	const timestamp = configuredExpression(
+		source.config.timestampQueryField,
+		"Timestamp",
+	);
+	const traceIdExpression = configuredExpression(
+		source.config.traceIdField,
+		"TraceId",
+	);
+	const spanId = configuredExpression(source.config.spanIdField, "SpanId");
+	const serviceName = configuredExpression(
+		source.config.serviceNameField,
+		"ServiceName",
+	);
+	const body = configuredExpression(source.config.bodyField, "Body");
+	const severityText = configuredExpression(
+		source.config.severityField,
+		"SeverityText",
+	);
+
+	return [
+		[
+			"SELECT *",
+			aliasedSelect(timestamp, TRACE_ALIASES.timestamp),
+			aliasedSelect(traceIdExpression, TRACE_ALIASES.traceId),
+			aliasedSelect(spanId, TRACE_ALIASES.spanId),
+			aliasedSelect(serviceName, TRACE_ALIASES.serviceName),
+			aliasedSelect(body, TRACE_ALIASES.body),
+			aliasedSelect(severityText, TRACE_ALIASES.severityText),
+		].join(", "),
+		`FROM ${quoteIdentifier(source.config.database)}.${quoteIdentifier(source.config.table)}`,
+		`WHERE toString(${traceIdExpression}) = '${escapeSqlString(traceId)}'`,
+		`ORDER BY ${timestamp} ASC`,
+		`LIMIT ${limit}`,
+	].join("\n");
+}
+
 export function createLogsRowPanelAdapter(
 	source: LogSourceEntity,
+	allSources: SourceEntity[] = [source],
 ): RowPanelAdapter {
 	return {
 		getQueryKey: (identity) => [
@@ -456,6 +642,103 @@ export function createLogsRowPanelAdapter(
 			return { rows: result.data };
 		},
 		resolveFields: (row) => resolveLogsRowFields(source, row),
+		getTracePanel: (_row, fields) => {
+			const traceId = meaningfulString(fields.traceId);
+			const spanId = meaningfulString(fields.spanId);
+			if (!traceId && !spanId) return null;
+
+			const traceSourceId = source.config.traceSourceId;
+			if (!traceSourceId) {
+				return {
+					kind: "setup-required",
+					traceId,
+					spanId,
+					title: "Trace source not configured",
+					description: traceSetupDescription(source),
+				};
+			}
+
+			if (!traceId) {
+				return {
+					kind: "setup-required",
+					spanId,
+					title: "Trace ID missing",
+					description: missingTraceIdDescription(source),
+				};
+			}
+
+			const traceSource = findTraceSource(allSources, traceSourceId);
+			if (!traceSource) {
+				return {
+					kind: "setup-required",
+					traceId,
+					spanId,
+					title: "Trace source unavailable",
+					description: unavailableTraceSourceDescription(source, traceSourceId),
+				};
+			}
+
+			return {
+				kind: "available",
+				traceId,
+				spanId,
+				traceSourceId: traceSource.id,
+				logSourceId: source.id,
+				traceSourceName: sourceTableLabel(traceSource),
+				logSourceName: sourceTableLabel(source),
+			};
+		},
+		getTraceQueryKey: (_identity, tracePanel) => [
+			"logs",
+			"trace-waterfall",
+			source.id,
+			tracePanel.traceSourceId,
+			tracePanel.traceId,
+			getTraceWaterfallLimit(),
+		],
+		fetchTrace: async (_identity, tracePanel: RowTracePanelAvailable) => {
+			const traceSource = findTraceSource(allSources, tracePanel.traceSourceId);
+			if (!traceSource) {
+				throw new Error("Correlated trace source is not available");
+			}
+
+			const limit = getTraceWaterfallLimit();
+			const spansQuery = buildTraceWaterfallSpansQuery(
+				traceSource,
+				tracePanel.traceId,
+				limit,
+			);
+			const logsQuery = buildTraceWaterfallLogsQuery(
+				source,
+				tracePanel.traceId,
+				limit,
+			);
+			const [spansResult, logsResult] = await Promise.all([
+				executeClickhouseJsonQuery<DataRow>(
+					createProxyClient(traceSource.connectionId),
+					spansQuery,
+				),
+				executeClickhouseJsonQuery<DataRow>(
+					createProxyClient(source.connectionId),
+					logsQuery,
+				),
+			]);
+
+			return {
+				traceId: tracePanel.traceId,
+				spans: spansResult.data,
+				logs: logsResult.data,
+				traceSourceName: sourceTableLabel(traceSource),
+				logSourceName: sourceTableLabel(source),
+				durationPrecision: traceSource.config.durationPrecisionField ?? 9,
+				limit,
+				truncated:
+					spansResult.data.length >= limit ||
+					logsResult.data.length >= limit ||
+					Boolean(spansResult.rows_before_limit_at_least) ||
+					Boolean(logsResult.rows_before_limit_at_least),
+			};
+		},
 		getOverview: (row, fields) => getLogsOverview(source, row, fields),
 		getColumnValues: stripTechnicalAliases,
 		getColumnValuesLabel: (row) => getLogsColumnValuesLabel(source, row),

@@ -56,6 +56,7 @@ const ALL_LOGS_GROUP_KEY = "__all__";
 const ALL_LOGS_GROUP_LABEL = "All logs";
 const SEVERITY_GROUP_ORDER = [
 	"FATAL",
+	"CRITICAL",
 	"ERROR",
 	"WARN",
 	"INFO",
@@ -230,6 +231,12 @@ function normalizeSeverityGroupValue(value: string | null | undefined) {
 	if (!trimmed) return UNKNOWN_GROUP_KEY;
 
 	const upperValue = trimmed.toUpperCase();
+	if (upperValue === "UNKNOWN") {
+		return UNKNOWN_GROUP_KEY;
+	}
+	if (upperValue === "WARNING") {
+		return "WARN";
+	}
 	if (SEVERITY_GROUP_SET.has(upperValue)) {
 		return upperValue;
 	}
@@ -242,7 +249,9 @@ function buildSeverityGroupExpression(source: LogSourceEntity) {
 	if (!severityField) return null;
 
 	const fieldExpression = quoteIdentifier(severityField);
-	return `coalesce(nullIf(toString(${fieldExpression}), ''), '${UNKNOWN_GROUP_KEY}')`;
+	const textExpression = `toString(${fieldExpression})`;
+	const normalizedExpression = `upper(${textExpression})`;
+	return `multiIf(nullIf(${textExpression}, '') IS NULL, '${UNKNOWN_GROUP_KEY}', ${normalizedExpression} = 'WARNING', 'WARN', ${normalizedExpression})`;
 }
 
 function buildLogsQueryConfig(
