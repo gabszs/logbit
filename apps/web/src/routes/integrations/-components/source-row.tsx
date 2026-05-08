@@ -1,6 +1,3 @@
-import { Database, Loader2, Pencil, Trash2 } from "lucide-react";
-import { useState } from "react";
-import { toast } from "sonner";
 import { Badge } from "@/web/components/ui/badge";
 import { Button } from "@/web/components/ui/button";
 import { DetailCard } from "@/web/components/ui/detail-card";
@@ -17,6 +14,9 @@ import {
 	TooltipContent,
 	TooltipTrigger,
 } from "@/web/components/ui/tooltip";
+import { Database, Loader2, Pencil, Trash2 } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
 import {
 	type ConnectionOption,
 	deleteSource,
@@ -164,15 +164,13 @@ export function SourceRow({ source, connections, onRefresh }: SourceRowProps) {
 							/>
 							<DetailCard
 								label="Timestamp query expression"
-								value={displayConfigValue(
-									source.config.timestampQueryExpression,
-								)}
+								value={displayConfigValue(source.config.timestampQueryField)}
 								className="font-mono"
 							/>
 							<DetailCard
 								label="Displayed timestamp expression"
 								value={displayConfigValue(
-									source.config.displayedTimestampExpression,
+									source.config.displayedTimestampField,
 								)}
 								className="font-mono"
 							/>

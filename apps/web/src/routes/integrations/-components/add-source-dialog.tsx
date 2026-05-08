@@ -1,14 +1,3 @@
-import { useQuery } from "@tanstack/react-query";
-import {
-	ChevronDown,
-	Circle,
-	CircleDot,
-	Loader2,
-	Settings2,
-} from "lucide-react";
-import type { ReactNode } from "react";
-import { useEffect, useState } from "react";
-import { toast } from "sonner";
 import type {
 	SourcesUpsertInput,
 	SourceUpdateInput,
@@ -34,6 +23,17 @@ import {
 } from "@/web/components/ui/select";
 import { Textarea } from "@/web/components/ui/textarea";
 import { cn } from "@/web/utils/cn";
+import { useQuery } from "@tanstack/react-query";
+import {
+	ChevronDown,
+	Circle,
+	CircleDot,
+	Loader2,
+	Settings2,
+} from "lucide-react";
+import type { ReactNode } from "react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import {
 	type ConnectionOption,
 	createSource,
@@ -57,8 +57,8 @@ type FormState = {
 	defaultSelectQuery: string;
 	defaultOrderByQuery: string;
 	resourceAttributesField: string;
-	timestampQueryExpression: string;
-	displayedTimestampExpression: string;
+	timestampQueryField: string;
+	displayedTimestampField: string;
 	serviceNameField: string;
 	bodyField: string;
 	traceIdField: string;
@@ -91,8 +91,8 @@ const LOG_DEFAULT_FORM: FormState = {
 		"Timestamp, ServiceName as service, SeverityText as level, Body",
 	defaultOrderByQuery: "Timestamp DESC",
 	resourceAttributesField: "ResourceAttributes",
-	timestampQueryExpression: "Timestamp",
-	displayedTimestampExpression: "Timestamp",
+	timestampQueryField: "Timestamp",
+	displayedTimestampField: "Timestamp",
 	serviceNameField: "ServiceName",
 	bodyField: "Body",
 	traceIdField: "TraceId",
@@ -170,11 +170,9 @@ function formFromSource(source: SourceEntity): FormState {
 		resourceAttributesField: nullableString(
 			source.config.resourceAttributesField,
 		),
-		timestampQueryExpression: nullableString(
-			source.config.timestampQueryExpression,
-		),
-		displayedTimestampExpression: nullableString(
-			source.config.displayedTimestampExpression,
+		timestampQueryField: nullableString(source.config.timestampQueryField),
+		displayedTimestampField: nullableString(
+			source.config.displayedTimestampField,
 		),
 		serviceNameField: nullableString(source.config.serviceNameField),
 		bodyField: nullableString(source.config.bodyField),
@@ -291,8 +289,8 @@ export function AddSourceDialog({
 			defaultSelectQuery: form.defaultSelectQuery.trim(),
 			defaultOrderByQuery: form.defaultOrderByQuery.trim(),
 			resourceAttributesField: form.resourceAttributesField.trim(),
-			timestampQueryExpression: form.timestampQueryExpression.trim(),
-			displayedTimestampExpression: form.displayedTimestampExpression.trim(),
+			timestampQueryField: form.timestampQueryField.trim(),
+			displayedTimestampField: form.displayedTimestampField.trim(),
 			serviceNameField: form.serviceNameField.trim(),
 			bodyField: form.bodyField.trim(),
 			traceIdField: form.traceIdField.trim(),
@@ -594,17 +592,15 @@ export function AddSourceDialog({
 								<FieldInput
 									id="source-timestamp"
 									label="Timestamp query expression"
-									value={form.timestampQueryExpression}
-									onChange={(value) => set("timestampQueryExpression", value)}
+									value={form.timestampQueryField}
+									onChange={(value) => set("timestampQueryField", value)}
 									disabled={isPending}
 								/>
 								<FieldInput
 									id="source-displayed-timestamp"
 									label="Displayed timestamp expression"
-									value={form.displayedTimestampExpression}
-									onChange={(value) =>
-										set("displayedTimestampExpression", value)
-									}
+									value={form.displayedTimestampField}
+									onChange={(value) => set("displayedTimestampField", value)}
 									disabled={isPending}
 								/>
 								<FieldInput

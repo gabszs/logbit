@@ -118,7 +118,7 @@ Eles existem apenas para transporte e identidade da linha. Nao sao usados como c
 
 Os seletores sao derivados das expressoes reais da source, com fallbacks OTEL:
 
-- `timestamp`: source `timestampQueryExpression`, fallback `Timestamp`.
+- `timestamp`: source `timestampQueryField`, fallback `Timestamp`.
 - `body`: source `bodyField`, fallback `Body`.
 - `severityText`: source `severityField`, fallback `SeverityText`.
 - `serviceName`: source `serviceNameField`, fallback `ServiceName`.

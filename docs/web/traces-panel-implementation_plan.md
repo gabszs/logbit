@@ -54,7 +54,7 @@ Para buscar a árvore completa do trace, precisaremos estender o `RowPanelAdapte
 
 1. **Diferenciação Log vs Span**: Na sua tabela atual do ClickHouse, como distinguimos exatamente um "log" de um "span" quando ambos estão no mesmo resultado da query e compartilham um `traceId`? (ex: Presença de `SpanKind`, falta de `duration`, nome de tabela?).
 2. **Identificação de Parentesco**: Devemos assumir que o campo `parentSpanId` ou `ParentSpanId` sempre estará presente nos dados brutos se o nó for filho de outro? Existe algum "fallback" esperado se a coluna se chamar diferente?
-3. **Query de Trace**: Para o `fetchTrace`, posso simplesmente executar uma query `SELECT * FROM <database>.<table> WHERE <traceIdField> = '<traceId>' ORDER BY <timestampQueryExpression> ASC LIMIT 5000` usando os mesmos campos da source configurada?
+3. **Query de Trace**: Para o `fetchTrace`, posso simplesmente executar uma query `SELECT * FROM <database>.<table> WHERE <traceIdField> = '<traceId>' ORDER BY <timestampQueryField> ASC LIMIT 5000` usando os mesmos campos da source configurada?
 
 ## Verification Plan
 

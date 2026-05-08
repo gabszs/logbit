@@ -196,7 +196,7 @@ function resolveFieldKeys(
 			findKeyCaseInsensitive(keys, source?.config.severityField) ??
 			findFallbackKey(keys, FIELD_FALLBACKS.level),
 		timestampKey:
-			findKeyCaseInsensitive(keys, source?.config.timestampQueryExpression) ??
+			findKeyCaseInsensitive(keys, source?.config.timestampQueryField) ??
 			findTimestampFallbackKey(keys),
 		serviceKey:
 			findKeyCaseInsensitive(keys, source?.config.serviceNameField) ??

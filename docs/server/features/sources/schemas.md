@@ -21,7 +21,7 @@ O discriminador sempre seleciona o schema de `config` correspondente. Isso evita
 
 - localizacao: `database`, `table`
 - query padrao: `defaultOrderByQuery`
-- timestamp: `timestampQueryExpression`, `displayedTimestampExpression`
+- timestamp: `timestampQueryField`, `displayedTimestampField`
 - identidade OTEL: `serviceNameField`, `traceIdField`, `spanIdField`
 - busca: `luceneImplicitColumnField`
 - correlacao futura: `metricSourceId`
@@ -33,8 +33,8 @@ Defaults importantes:
 - `database`: `null`
 - `table`: `null`
 - `defaultOrderByQuery`: `Timestamp DESC`
-- `timestampQueryExpression`: `Timestamp`
-- `displayedTimestampExpression`: `Timestamp`
+- `timestampQueryField`: `Timestamp`
+- `displayedTimestampField`: `Timestamp`
 - `serviceNameField`: `ServiceName`
 - `traceIdField`: `TraceId`
 - `spanIdField`: `SpanId`

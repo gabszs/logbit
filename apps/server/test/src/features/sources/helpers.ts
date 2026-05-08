@@ -22,7 +22,7 @@ const defaultLogConfig = {
 	severityField: "SeverityText",
 	resourceAttributesField: "ResourceAttributes",
 	logAttributesField: "LogAttributes",
-	timestampQueryExpression: "Timestamp",
+	timestampQueryField: "Timestamp",
 	serviceNameField: "ServiceName",
 	bodyField: "Body",
 	traceIdField: "TraceId",
@@ -54,7 +54,7 @@ export const buildLogSourcePayload = (
 			severityField: string;
 			resourceAttributesField: string;
 			logAttributesField: string;
-			timestampQueryExpression: string;
+			timestampQueryField: string;
 			serviceNameField: string;
 			bodyField: string;
 			traceIdField: string;
@@ -106,7 +106,7 @@ export const createSource = async ({
 				severityField: string;
 				resourceAttributesField: string;
 				logAttributesField: string;
-				timestampQueryExpression: string;
+				timestampQueryField: string;
 				serviceNameField: string;
 				bodyField: string;
 				traceIdField: string;

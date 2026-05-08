@@ -1,5 +1,5 @@
-import { z } from "zod";
 import { BaseSourceConfigSchema } from "@/features/sources/base/schemas";
+import { z } from "zod";
 
 export const logsConfigSchema = BaseSourceConfigSchema.extend({
 	defaultSelectQuery: z
@@ -34,11 +34,12 @@ export const patchLogsConfigSchema = z
 		logAttributesField: logsConfigSchema.shape.logAttributesField
 			.unwrap()
 			.optional(),
-		timestampQueryExpression: logsConfigSchema.shape.timestampQueryExpression
+		timestampQueryField: logsConfigSchema.shape.timestampQueryField
 			.unwrap()
 			.optional(),
-		displayedTimestampExpression:
-			logsConfigSchema.shape.displayedTimestampExpression.unwrap().optional(),
+		displayedTimestampField: logsConfigSchema.shape.displayedTimestampField
+			.unwrap()
+			.optional(),
 		serviceNameField: logsConfigSchema.shape.serviceNameField
 			.unwrap()
 			.optional(),

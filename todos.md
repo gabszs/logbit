@@ -1,5 +1,7 @@
 ## Integrations
 
+-- implementar displayedTimestampField
+
 -- implemntar o trace no sources
 
 -- fazer ajsuter para o panel definisir se e log ou trace a partir do source.type
