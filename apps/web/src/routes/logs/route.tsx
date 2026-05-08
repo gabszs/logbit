@@ -1,3 +1,7 @@
+import { queryOptions, useQuery } from "@tanstack/react-query";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { AlertTriangle, PanelLeft } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
 	DataRowSidePanel,
 	type RowIdentity,
@@ -15,10 +19,6 @@ import { useContentSidebar } from "@/web/hooks/use-content-sidebar";
 import { useLogsCanvasSidebar } from "@/web/hooks/use-logs-canvas-sidebar";
 import { requireAuthenticated } from "@/web/lib/route-guards";
 import { getLogSources } from "@/web/lib/sources";
-import { queryOptions, useQuery } from "@tanstack/react-query";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { AlertTriangle, PanelLeft } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
 	type ClickhouseJsonResult,
 	createProxyClient,

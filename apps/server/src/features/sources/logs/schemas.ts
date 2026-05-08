@@ -1,24 +1,15 @@
 import { z } from "zod";
+import { BaseSourceConfigSchema } from "@/features/sources/base/schemas";
 
-export const logsConfigSchema = z.object({
-	database: z.string().nullable().default(null),
-	table: z.string().nullable().default(null),
+export const logsConfigSchema = BaseSourceConfigSchema.extend({
 	defaultSelectQuery: z
 		.string()
 		.nullable()
 		.default("Timestamp, ServiceName as service, SeverityText as level, Body"),
-	defaultOrderByQuery: z.string().nullable().default("Timestamp DESC"),
 	severityField: z.string().nullable().default("SeverityText"),
-	resourceAttributesField: z.string().nullable().default("ResourceAttributes"),
 	logAttributesField: z.string().nullable().default("LogAttributes"),
-	timestampField: z.string().nullable().default("Timestamp"),
-	serviceNameField: z.string().nullable().default("ServiceName"),
 	bodyField: z.string().nullable().default("Body"),
-	traceIdField: z.string().nullable().default("TraceId"),
-	spanIdField: z.string().nullable().default("SpanId"),
-	luceneImplicitColumnField: z.string().nullable().default("Body"),
 	traceSourceId: z.uuidv7().nullable().default(null),
-	metricSourceId: z.uuidv7().nullable().default(null),
 	// profilesSourceId: z.uuidv7().nullable(),
 });
 export type LogsConfigType = z.infer<typeof logsConfigSchema>;
@@ -43,7 +34,11 @@ export const patchLogsConfigSchema = z
 		logAttributesField: logsConfigSchema.shape.logAttributesField
 			.unwrap()
 			.optional(),
-		timestampField: logsConfigSchema.shape.timestampField.unwrap().optional(),
+		timestampQueryExpression: logsConfigSchema.shape.timestampQueryExpression
+			.unwrap()
+			.optional(),
+		displayedTimestampExpression:
+			logsConfigSchema.shape.displayedTimestampExpression.unwrap().optional(),
 		serviceNameField: logsConfigSchema.shape.serviceNameField
 			.unwrap()
 			.optional(),
@@ -53,7 +48,19 @@ export const patchLogsConfigSchema = z
 		luceneImplicitColumnField: logsConfigSchema.shape.luceneImplicitColumnField
 			.unwrap()
 			.optional(),
+		querySettings: logsConfigSchema.shape.querySettings.unwrap().optional(),
 		traceSourceId: logsConfigSchema.shape.traceSourceId.unwrap().optional(),
 		metricSourceId: logsConfigSchema.shape.metricSourceId.unwrap().optional(),
+		materializedViews: logsConfigSchema.shape.materializedViews
+			.unwrap()
+			.optional(),
+		highlightedRowAttributeExpressions:
+			logsConfigSchema.shape.highlightedRowAttributeExpressions
+				.unwrap()
+				.optional(),
+		highlightedTraceAttributeExpressions:
+			logsConfigSchema.shape.highlightedTraceAttributeExpressions
+				.unwrap()
+				.optional(),
 	})
 	.openapi("PatchLogsConfig");

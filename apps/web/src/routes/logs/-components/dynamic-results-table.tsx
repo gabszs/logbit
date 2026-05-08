@@ -432,9 +432,7 @@ export function DynamicResultsTable({
 									})}
 								/>
 							))}
-							{hasHeaderToolbar ? (
-								<col className="w-0" />
-							) : null}
+							{hasHeaderToolbar ? <col className="w-0" /> : null}
 						</colgroup>
 						<thead className="sticky top-0 z-10 bg-[color:var(--surface-background)]/95 backdrop-blur-sm">
 							{headerGroups.map((headerGroup) => (
@@ -466,7 +464,7 @@ export function DynamicResultsTable({
 											aria-label="Table actions"
 											className="sticky right-0 z-20 w-0 border-0 p-0"
 										>
-											<div className="absolute right-0 top-0 bottom-0 flex items-center justify-end gap-1 bg-[color:var(--surface-background)]/95 px-2 backdrop-blur-sm">
+											<div className="absolute top-0 right-0 bottom-0 flex items-center justify-end gap-1 bg-[color:var(--surface-background)]/95 px-2 backdrop-blur-sm">
 												{statistics ? (
 													<Tooltip>
 														<TooltipTrigger asChild>
@@ -620,10 +618,7 @@ export function DynamicResultsTable({
 											</td>
 										))}
 										{hasHeaderToolbar ? (
-											<td
-												aria-hidden="true"
-												className="w-0 border-0 p-0"
-											/>
+											<td aria-hidden="true" className="w-0 border-0 p-0" />
 										) : null}
 									</tr>
 								);

@@ -1,5 +1,11 @@
 ## Integrations
 
+-- implemntar o trace no sources
+
+-- fazer ajsuter para o panel definisir se e log ou trace a partir do source.type
+
+-- dentro de results table, nos botoes finais, ele apagando a linha abaixo
+
 -- analisar o open-observe e ver qual lib eles usam na visualizacao
 
 -- adicione rbac nas rotas, hoje, qualquer user que tenha a organiztion consegue esse acessoa as rotas
@@ -9,8 +15,6 @@
 -- adicionar UI de paginacao no invitations e organizations
 
 -- adiconar erro para o failed to fetch quando o server cai, para deixar claro isso
-
--- adicionar protecao, para que o user nao passe o schema de trace e um source.type=log
 
 -- fazer instrumentacao otel-http funcionar, alem disso o que sao os spans de pre-hook do better-auth?
 

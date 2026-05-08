@@ -57,7 +57,7 @@ type FormState = {
 	severityField: string;
 	resourceAttributesField: string;
 	logAttributesField: string;
-	timestampField: string;
+	timestampQueryExpression: string;
 	serviceNameField: string;
 	bodyField: string;
 	traceIdField: string;
@@ -79,7 +79,7 @@ const DEFAULT_FORM: FormState = {
 	severityField: "SeverityText",
 	resourceAttributesField: "ResourceAttributes",
 	logAttributesField: "LogAttributes",
-	timestampField: "Timestamp",
+	timestampQueryExpression: "Timestamp",
 	serviceNameField: "ServiceName",
 	bodyField: "Body",
 	traceIdField: "TraceId",
@@ -108,7 +108,9 @@ function formFromSource(source: SourceEntity): FormState {
 			source.config.resourceAttributesField,
 		),
 		logAttributesField: nullableString(source.config.logAttributesField),
-		timestampField: nullableString(source.config.timestampField),
+		timestampQueryExpression: nullableString(
+			source.config.timestampQueryExpression,
+		),
 		serviceNameField: nullableString(source.config.serviceNameField),
 		bodyField: nullableString(source.config.bodyField),
 		traceIdField: nullableString(source.config.traceIdField),
@@ -198,12 +200,18 @@ export function AddSourceDialog({
 				severityField: form.severityField.trim(),
 				resourceAttributesField: form.resourceAttributesField.trim(),
 				logAttributesField: form.logAttributesField.trim(),
-				timestampField: form.timestampField.trim(),
+				timestampQueryExpression: form.timestampQueryExpression.trim(),
 				serviceNameField: form.serviceNameField.trim(),
 				bodyField: form.bodyField.trim(),
 				traceIdField: form.traceIdField.trim(),
 				spanIdField: form.spanIdField.trim(),
 				luceneImplicitColumnField: form.luceneImplicitColumnField.trim(),
+				querySettings: source?.config.querySettings ?? [],
+				materializedViews: source?.config.materializedViews ?? [],
+				highlightedRowAttributeExpressions:
+					source?.config.highlightedRowAttributeExpressions ?? [],
+				highlightedTraceAttributeExpressions:
+					source?.config.highlightedTraceAttributeExpressions ?? [],
 				traceSourceId: optionalUuid(form.traceSourceId),
 				metricSourceId: optionalUuid(form.metricSourceId),
 			},
@@ -456,9 +464,9 @@ export function AddSourceDialog({
 								/>
 								<LogField
 									id="source-timestamp"
-									label="Timestamp field"
-									value={form.timestampField}
-									onChange={(value) => set("timestampField", value)}
+									label="Timestamp query expression"
+									value={form.timestampQueryExpression}
+									onChange={(value) => set("timestampQueryExpression", value)}
 									disabled={isPending}
 								/>
 								<LogField
