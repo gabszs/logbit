@@ -34,7 +34,7 @@ describe("Connections (clickhouse) integration", () => {
 				id: string;
 				type: string;
 				config: {
-					host: string;
+					url: string;
 					database: string;
 					username: string;
 					password: string;
@@ -43,16 +43,16 @@ describe("Connections (clickhouse) integration", () => {
 		};
 		expect(body.data.type).toBe("clickhouse");
 		expect(body.data.config).toEqual({
-			host: "http://localhost:8123",
+			url: "http://localhost:8123",
 			database: "loglog_test",
 			username: "default",
 			password: "",
 		});
 	});
 
-	it("returns 400 when clickhouse host is not a valid URL", async () => {
+	it("returns 400 when clickhouse url is not a valid URL", async () => {
 		const ctx = await createAuthContextWithActiveOrganization(
-			"clickhouse-create-invalid-host@example.com",
+			"clickhouse-create-invalid-url@example.com",
 		);
 		const payload = buildIntegrationPayload("clickhouse");
 
@@ -62,7 +62,7 @@ describe("Connections (clickhouse) integration", () => {
 			body: {
 				...payload,
 				config: {
-					host: "not-a-valid-url",
+					url: "not-a-valid-url",
 					database: "loglog_test",
 					username: "default",
 					password: "",
@@ -88,7 +88,7 @@ describe("Connections (clickhouse) integration", () => {
 			headers: ctx.headers,
 			body: {
 				config: {
-					host: "http://clickhouse.local:8123",
+					url: "http://clickhouse.local:8123",
 					database: "observability",
 					username: "analytics",
 					password: "secret",
@@ -110,7 +110,7 @@ describe("Connections (clickhouse) integration", () => {
 
 		expect(row[0]?.type).toBe("clickhouse");
 		expect(row[0]?.config).toEqual({
-			host: "http://clickhouse.local:8123",
+			url: "http://clickhouse.local:8123",
 			database: "observability",
 			username: "analytics",
 			password: "secret",

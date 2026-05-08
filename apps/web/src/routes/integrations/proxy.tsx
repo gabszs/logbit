@@ -136,7 +136,7 @@ function ProxyTestPage() {
 	const [connectionId, setConnectionId] = useState("");
 
 	// manual mode
-	const [host, setHost] = useState("http://localhost:8123");
+	const [url, setUrl] = useState("http://localhost:8123");
 	const [username, setUsername] = useState("default");
 	const [password, setPassword] = useState("");
 
@@ -151,7 +151,7 @@ function ProxyTestPage() {
 	const [result, setResult] = useState<ClickhouseResult | null>(null);
 	const [error, setError] = useState<string | null>(null);
 
-	const canRun = mode === "saved" ? !!connectionId : !!host && !!username;
+	const canRun = mode === "saved" ? !!connectionId : !!url && !!username;
 
 	const handleModeChange = (next: Mode) => {
 		setMode(next);
@@ -165,7 +165,7 @@ function ProxyTestPage() {
 		const client =
 			mode === "saved"
 				? createProxyClient(connectionId)
-				: createManualClient(host, username, password);
+				: createManualClient(url, username, password);
 		const ok = await pingClient(client);
 		setPingStatus(ok ? "ok" : "fail");
 	};
@@ -179,7 +179,7 @@ function ProxyTestPage() {
 			const client =
 				mode === "saved"
 					? createProxyClient(connectionId)
-					: createManualClient(host, username, password);
+					: createManualClient(url, username, password);
 			const data = await executeQuery(client, query);
 			setResult(data);
 		} catch (err) {
@@ -266,11 +266,11 @@ function ProxyTestPage() {
 						<div className="space-y-4">
 							<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
 								<div className="space-y-1.5">
-									<Label>Host</Label>
+									<Label>URL</Label>
 									<Input
 										placeholder="http://localhost:8123"
-										value={host}
-										onChange={(e) => setHost(e.target.value)}
+										value={url}
+										onChange={(e) => setUrl(e.target.value)}
 										className="font-mono text-sm"
 									/>
 								</div>
@@ -298,7 +298,7 @@ function ProxyTestPage() {
 								</div>
 							</div>
 							<PingButton
-								disabled={!host || !username}
+								disabled={!url || !username}
 								status={pingStatus}
 								onPing={handlePing}
 							/>

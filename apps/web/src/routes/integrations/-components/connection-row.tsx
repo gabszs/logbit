@@ -144,8 +144,8 @@ export function ConnectionRow({ connection, onRefresh }: ConnectionRowProps) {
 							{connection.type === "clickhouse" && (
 								<>
 									<DetailCard
-										label="Host"
-										value={connection.config.host}
+										label="URL"
+										value={connection.config.url}
 										className="font-mono sm:col-span-2"
 									/>
 									<DetailCard

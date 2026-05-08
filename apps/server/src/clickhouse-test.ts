@@ -3,7 +3,7 @@ import { createClickhouseClient } from "./integrations/clickhouse";
 async function run() {
 	// --- sem database ---
 	const clientNoDB = createClickhouseClient({
-		host: "http://192.168.1.3:8125",
+		url: "http://192.168.1.3:8125",
 		database: null,
 		username: "default",
 		password: "clickhouse",
@@ -19,7 +19,7 @@ async function run() {
 
 	// --- com database ---
 	const clientWithDB = createClickhouseClient({
-		host: "http://192.168.1.3:8125",
+		url: "http://192.168.1.3:8125",
 		database: "default",
 		username: "default",
 		password: "clickhouse",

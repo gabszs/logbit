@@ -9,7 +9,7 @@ export function createClickhouseClient(
 ): ClickhouseClient {
 	const normalizedConfig = normalizeClickhouseConfig(config);
 	return createClient({
-		host: normalizedConfig.host,
+		url: normalizedConfig.url,
 		database: normalizedConfig.database ?? undefined,
 		username: normalizedConfig.username,
 		password: normalizedConfig.password ?? undefined,

@@ -169,7 +169,7 @@ export const insertClickhouseConnectionForOrganization = async ({
 		type: "clickhouse",
 		organizationId,
 		config: {
-			host: "http://localhost:8123",
+			url: "http://localhost:8123",
 			database: "loglog_test",
 			username: "default",
 			password: "",

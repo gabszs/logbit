@@ -118,7 +118,7 @@ export class ConnectionService extends BaseService<ConnectionType> {
 		let client = null;
 		try {
 			client = createClient({
-				host: config.host,
+				url: config.url,
 				username: config.username,
 				...(config.database != null ? { database: config.database } : {}),
 				...(config.password != null ? { password: config.password } : {}),
@@ -150,7 +150,7 @@ export class ConnectionService extends BaseService<ConnectionType> {
 		let client = null;
 		try {
 			client = createClient({
-				host: config.host,
+				url: config.url,
 				username: config.username,
 				...(config.database != null ? { database: config.database } : {}),
 				...(config.password != null ? { password: config.password } : {}),

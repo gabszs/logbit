@@ -51,7 +51,7 @@ type FormState = {
 	cfApiKey: string;
 	cfZoneId: string;
 	// clickhouse
-	chHost: string;
+	chUrl: string;
 	chDatabase: string;
 	chUsername: string;
 	chPassword: string;
@@ -66,7 +66,7 @@ const EMPTY_FORM: FormState = {
 	resendApiKey: "",
 	cfApiKey: "",
 	cfZoneId: "",
-	chHost: "",
+	chUrl: "",
 	chDatabase: "",
 	chUsername: "",
 	chPassword: "",
@@ -88,7 +88,7 @@ function formFromConnection(c: ConnectionEntityType): FormState {
 	if (c.type === "clickhouse") {
 		return {
 			...base,
-			chHost: c.config.host,
+			chUrl: c.config.url,
 			chDatabase: c.config.database ?? "",
 			chUsername: c.config.username,
 			chPassword: c.config.password ?? "",
@@ -141,7 +141,7 @@ export function AddConnectionDialog({
 	};
 
 	const getClickhouseTestPayload = () => ({
-		host: form.chHost.trim(),
+		url: form.chUrl.trim(),
 		username: form.chUsername.trim(),
 		password: form.chPassword || null,
 		database: form.chDatabase.trim() || null,
@@ -150,13 +150,13 @@ export function AddConnectionDialog({
 	const getClickhouseErrorMessage = (error: unknown) =>
 		error instanceof Error
 			? error.message
-			: "Could not reach the ClickHouse host";
+			: "Could not reach the ClickHouse URL";
 
 	const handleClickhousePingTest = async () => {
 		if (form.type !== "clickhouse") return;
 
-		if (!form.chHost.trim() || !form.chUsername.trim()) {
-			setFormError("Host and username are required to test ClickHouse");
+		if (!form.chUrl.trim() || !form.chUsername.trim()) {
+			setFormError("URL and username are required to test ClickHouse");
 			return;
 		}
 
@@ -166,7 +166,7 @@ export function AddConnectionDialog({
 			const result = await pingClickhouseConnection(getClickhouseTestPayload());
 			setClickhousePingStatus(result.success ? "ok" : "fail");
 			if (!result.success) {
-				toast.error(result.error ?? "Could not reach the ClickHouse host");
+				toast.error(result.error ?? "Could not reach the ClickHouse URL");
 			} else {
 				toast.success("ClickHouse ping successful");
 			}
@@ -179,8 +179,8 @@ export function AddConnectionDialog({
 	const handleClickhouseQueryTest = async () => {
 		if (form.type !== "clickhouse") return;
 
-		if (!form.chHost.trim() || !form.chUsername.trim()) {
-			setFormError("Host and username are required to test ClickHouse");
+		if (!form.chUrl.trim() || !form.chUsername.trim()) {
+			setFormError("URL and username are required to test ClickHouse");
 			return;
 		}
 
@@ -244,8 +244,8 @@ export function AddConnectionDialog({
 		}
 
 		if (form.type === "clickhouse") {
-			if (!form.chHost.trim()) {
-				setFormError("Host is required");
+			if (!form.chUrl.trim()) {
+				setFormError("URL is required");
 				return null;
 			}
 			if (!form.chUsername.trim()) {
@@ -257,7 +257,7 @@ export function AddConnectionDialog({
 				isActive: form.isActive,
 				type: "clickhouse",
 				config: {
-					host: form.chHost.trim(),
+					url: form.chUrl.trim(),
 					database: form.chDatabase.trim() || null,
 					username: form.chUsername.trim(),
 					password: form.chPassword,
@@ -419,11 +419,11 @@ export function AddConnectionDialog({
 					{form.type === "clickhouse" && (
 						<div className="space-y-4 border-t pt-4">
 							<div className="grid gap-4 sm:grid-cols-[15rem_1fr] sm:items-center">
-								<Label htmlFor="conn-ch-host">Host</Label>
+								<Label htmlFor="conn-ch-url">URL</Label>
 								<Input
-									id="conn-ch-host"
-									value={form.chHost}
-									onChange={(e) => set("chHost", e.target.value)}
+									id="conn-ch-url"
+									value={form.chUrl}
+									onChange={(e) => set("chUrl", e.target.value)}
 									disabled={isPending}
 									placeholder="http://localhost:8123"
 								/>

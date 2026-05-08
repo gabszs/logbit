@@ -66,7 +66,7 @@ export function formatClickhouseQueryError(error: unknown) {
 
 	const message = error.message.trim();
 	if (looksLikeHtmlError(message)) {
-		return "The ClickHouse host returned a bad gateway response. Check the source connection host, proxy reachability, and TLS/Cloudflare configuration.";
+		return "The ClickHouse URL returned a bad gateway response. Check the source connection URL, proxy reachability, and TLS/Cloudflare configuration.";
 	}
 
 	return message || "Failed to run the ClickHouse query";
@@ -108,12 +108,12 @@ export async function queryTestClickhouseConnection(
 
 // Manual client — aponta direto para o ClickHouse com X-ClickHouse-User/Key.
 export function createManualClient(
-	host: string,
+	url: string,
 	username: string,
 	password: string,
 ) {
 	return createClient({
-		url: host,
+		url,
 		username: username || "default",
 		...(password ? { password } : {}),
 	});

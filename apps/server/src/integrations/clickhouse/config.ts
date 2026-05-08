@@ -1,8 +1,8 @@
 import type { ClickhouseConfigType } from "./schemas";
 
-export function normalizeClickhouseHost(host: string) {
-	const url = new URL(host);
-	return url.origin;
+export function normalizeClickhouseUrl(url: string) {
+	const parsedUrl = new URL(url);
+	return parsedUrl.origin;
 }
 
 export function normalizeClickhouseConfig(
@@ -10,6 +10,6 @@ export function normalizeClickhouseConfig(
 ): ClickhouseConfigType {
 	return {
 		...config,
-		host: normalizeClickhouseHost(config.host),
+		url: normalizeClickhouseUrl(config.url),
 	};
 }

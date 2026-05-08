@@ -52,7 +52,7 @@ async function createProxyFixture(ctxHeaders: Headers) {
 	const database = createProxyTestDatabase("proxy_db");
 	const table = createProxyTestTable("proxy_table");
 	const connectionId = await createProxyClickhouseConnection(ctxHeaders, {
-		host: getProxyClickhouseBaseUrl(),
+		url: getProxyClickhouseBaseUrl(),
 		database,
 		username: "default",
 		password: "clickhouse",
@@ -103,7 +103,7 @@ describe("ClickHouse proxy integration", () => {
 		);
 		const database = createProxyTestDatabase("proxy_unreachable_db");
 		const connectionId = await createProxyClickhouseConnection(ctx.headers, {
-			host: "http://127.0.0.1:65534",
+			url: "http://127.0.0.1:65534",
 			database,
 			username: "default",
 			password: "clickhouse",
@@ -243,16 +243,16 @@ describe("ClickHouse proxy integration", () => {
 		expect(row.current_database).toBe(database);
 	});
 
-	it("normalizes saved ClickHouse host to base URL", async () => {
+	it("normalizes saved ClickHouse URL to base URL", async () => {
 		const ctx = await createAuthContextWithActiveOrganization(
-			"proxy-host-normalization@example.com",
+			"proxy-url-normalization@example.com",
 		);
-		const database = createProxyTestDatabase("proxy_host_db");
-		const table = createProxyTestTable("proxy_host_table");
+		const database = createProxyTestDatabase("proxy_url_db");
+		const table = createProxyTestTable("proxy_url_table");
 		const baseUrl = getProxyClickhouseBaseUrl();
-		const noisyHost = `${baseUrl}/${database}?database=shadow_db`;
+		const noisyUrl = `${baseUrl}/${database}?database=shadow_db`;
 		const connectionId = await createProxyClickhouseConnection(ctx.headers, {
-			host: noisyHost,
+			url: noisyUrl,
 			database,
 			username: "default",
 			password: "clickhouse",
@@ -273,9 +273,9 @@ describe("ClickHouse proxy integration", () => {
 
 		expect(response.status).toBe(200);
 		const connection = (await response.json()) as {
-			config: { host: string; database: string | null };
+			config: { url: string; database: string | null };
 		};
-		expect(connection.config.host).toBe(baseUrl);
+		expect(connection.config.url).toBe(baseUrl);
 		expect(connection.config.database).toBe(database);
 
 		const result = await queryJson(client, "SHOW DATABASES");

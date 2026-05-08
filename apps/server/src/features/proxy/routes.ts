@@ -56,7 +56,7 @@ async function forwardClickhouseRequest(
 		});
 	} catch {
 		throw httpErrors.badGateway({
-			detail: "Could not reach the ClickHouse host for this connection",
+			detail: "Could not reach the ClickHouse URL for this connection",
 		});
 	}
 
@@ -88,7 +88,7 @@ async function handleProxy(c: Context<ProxyContext>): Promise<Response> {
 	const incomingUrl = new URL(c.req.raw.url);
 	const targetUrl = new URL(
 		(wildcard ? `/${wildcard}` : "/") + incomingUrl.search,
-		config.host,
+		config.url,
 	);
 	if (config.database == null) {
 		targetUrl.searchParams.delete("database");

@@ -21,7 +21,7 @@ export type ProxyClickhouseTableSeed = {
 };
 
 type ProxyConnectionConfig = {
-	host: string;
+	url: string;
 	database: string | null;
 	username: string;
 	password: string | null;
@@ -92,7 +92,7 @@ export function createProxyClickhouseAdminClient() {
 	}
 	const baseUrl = getProxyClickhouseBaseUrl();
 	adminClient = createClickhouseClient({
-		host: baseUrl,
+		url: baseUrl,
 		database: "default",
 		username: "default",
 		password: "clickhouse",
@@ -143,7 +143,7 @@ export async function createProxyClickhouseConnection(
 		type: "clickhouse" as const,
 		isActive: config.isActive ?? true,
 		config: {
-			host: config.host,
+			url: config.url,
 			database: config.database,
 			username: config.username,
 			password: config.password ?? "",

@@ -8,7 +8,7 @@ const ResendConfigSchema = integrationRegistry.resend.configSchema;
 const CloudflareConfigSchema = integrationRegistry.cloudflare.configSchema;
 
 export const testClickhouseConfigSchema = z.object({
-	host: z.string().max(200),
+	url: z.string().max(200),
 	username: z.string().max(200),
 	database: z.string().max(200).nullable().optional(),
 	password: z.string().max(200).nullable().optional(),
