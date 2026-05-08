@@ -1,10 +1,6 @@
 import { ChevronDown, Tags } from "lucide-react";
 import { useEffect, useState } from "react";
-import {
-	Tooltip,
-	TooltipContent,
-	TooltipTrigger,
-} from "@/web/components/ui/tooltip";
+import { CopyButton } from "@/web/components/ui/copy-button";
 import { cn } from "@/web/utils/cn";
 import type { RowPanelAttribute, RowPanelOverview } from "./types";
 import { toDisplayText } from "./value-formatting";
@@ -15,30 +11,25 @@ function isEmptyDisplayValue(value: unknown) {
 
 function AttributeChip({ attribute }: { attribute: RowPanelAttribute }) {
 	const value = toDisplayText(attribute.value);
-	const tooltipValue =
-		value.length > 600 ? `${value.slice(0, 600).trimEnd()}...` : value;
 
 	return (
-		<Tooltip>
-			<TooltipTrigger asChild>
-				<span className="inline-flex h-7 max-w-full items-center gap-1.5 rounded border border-[color:var(--surface-border)] bg-muted/30 px-2 font-mono text-[11px] leading-none">
-					<span className="max-w-[12rem] shrink-0 truncate text-muted-foreground">
-						{attribute.key}
-					</span>
-					<span className="shrink-0 text-muted-foreground">:</span>
-					<span className="min-w-0 max-w-[24rem] truncate text-foreground">
-						{value}
-					</span>
-				</span>
-			</TooltipTrigger>
-			<TooltipContent
-				sideOffset={6}
-				className="max-w-[32rem] whitespace-pre-wrap break-words font-mono text-xs"
-			>
-				<span className="text-muted-foreground">{attribute.key}: </span>
-				{tooltipValue}
-			</TooltipContent>
-		</Tooltip>
+		<span className="group relative inline-flex h-7 max-w-full items-center gap-1.5 rounded border border-[color:var(--surface-border)] bg-muted/30 px-2 font-mono text-[11px] leading-none">
+			<span className="max-w-[12rem] shrink-0 truncate text-muted-foreground">
+				{attribute.key}
+			</span>
+			<span className="shrink-0 text-muted-foreground">:</span>
+			<span className="min-w-0 max-w-[24rem] truncate text-foreground">
+				{value}
+			</span>
+			<CopyButton
+				aria-label={`Copy ${attribute.key}`}
+				onCopy={async () => {
+					await navigator.clipboard.writeText(`${attribute.key}: ${value}`);
+				}}
+				className="absolute top-1/2 right-0.5 z-10 size-6 -translate-y-1/2 border border-[color:var(--surface-border)] bg-[color:var(--surface-background)]/95 text-muted-foreground opacity-0 shadow-none transition-opacity hover:text-foreground group-focus-within:opacity-100 group-hover:opacity-100"
+				iconClassName="size-3"
+			/>
+		</span>
 	);
 }
 
