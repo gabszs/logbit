@@ -1,10 +1,16 @@
 import type { ErrorComponentProps } from "@tanstack/react-router";
 import { useRouter } from "@tanstack/react-router";
 import { AlertCircle, Home, RefreshCw } from "lucide-react";
+import { BackendUnavailableError } from "@/web/components/backend-unavailable-error";
 import { Button } from "@/web/components/ui/button";
+import { isBackendUnavailableError } from "@/web/lib/backend-error";
 
 export function ErrorBoundary({ error, reset }: ErrorComponentProps) {
 	const router = useRouter();
+
+	if (isBackendUnavailableError(error)) {
+		return <BackendUnavailableError error={error} />;
+	}
 
 	return (
 		<div className="flex min-h-screen items-center justify-center p-4">

@@ -63,4 +63,5 @@ export const patchLogsConfigSchema = z
 				.unwrap()
 				.optional(),
 	})
+	.strict()
 	.openapi("PatchLogsConfig");

@@ -1,6 +1,7 @@
 import type { ErrorComponentProps } from "@tanstack/react-router";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { BookOpenText, House, Settings2, ShieldCheck } from "lucide-react";
+import { BackendUnavailableError } from "@/web/components/backend-unavailable-error";
 import { Badge } from "@/web/components/ui/badge";
 import { Button } from "@/web/components/ui/button";
 import {
@@ -12,6 +13,7 @@ import {
 } from "@/web/components/ui/card";
 import { Skeleton } from "@/web/components/ui/skeleton";
 import { useProfile } from "@/web/hooks/use-profile";
+import { isBackendUnavailableError } from "@/web/lib/backend-error";
 import { orpc } from "@/web/lib/orpc";
 import { requireAuthenticated } from "@/web/lib/route-guards";
 
@@ -201,6 +203,10 @@ function HomeSkeleton() {
 }
 
 function HomeError({ error, reset }: ErrorComponentProps) {
+	if (isBackendUnavailableError(error)) {
+		return <BackendUnavailableError error={error} />;
+	}
+
 	return (
 		<div className="flex flex-1 items-center justify-center px-4 pt-20">
 			<Card className="w-full max-w-lg">

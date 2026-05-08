@@ -10,6 +10,7 @@ type SourceQuery = {
 
 export type SourceEntity = SourcesListSuccessType["data"][number];
 export type LogSourceEntity = Extract<SourceEntity, { type: "log" }>;
+export type TraceSourceEntity = Extract<SourceEntity, { type: "trace" }>;
 export type ConnectionEntity = ConnectionEntityType;
 
 type SourceWireEntity = Omit<SourceEntity, "createdAt" | "updatedAt"> & {
@@ -39,11 +40,21 @@ function hydrateDates<T extends { createdAt: string; updatedAt: string }>(
 }
 
 function hydrateSource(source: SourceWireEntity): SourceEntity {
-	return hydrateDates(source);
+	return hydrateDates(source) as SourceEntity;
 }
 
 function hydrateConnection(connection: ConnectionWireEntity): ConnectionEntity {
 	return hydrateDates(connection) as ConnectionEntity;
+}
+
+export function isLogSource(source: SourceEntity): source is LogSourceEntity {
+	return source.type === "log";
+}
+
+export function isTraceSource(
+	source: SourceEntity,
+): source is TraceSourceEntity {
+	return source.type === "trace";
 }
 
 async function listSources(query: SourceQuery) {
@@ -94,5 +105,5 @@ export async function getLogSources() {
 			page_size: "all",
 			ordering: "name",
 		})
-	).filter((source) => source.type === "log");
+	).filter(isLogSource);
 }

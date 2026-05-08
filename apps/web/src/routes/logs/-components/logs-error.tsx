@@ -1,6 +1,7 @@
 import type { ErrorComponentProps } from "@tanstack/react-router";
 import { Link } from "@tanstack/react-router";
 import { AlertTriangle, ArrowLeft, RotateCcw } from "lucide-react";
+import { BackendUnavailableError } from "@/web/components/backend-unavailable-error";
 import { Button } from "@/web/components/ui/button";
 import {
 	Card,
@@ -9,8 +10,13 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/web/components/ui/card";
+import { isBackendUnavailableError } from "@/web/lib/backend-error";
 
 export function LogsError({ error, reset }: ErrorComponentProps) {
+	if (isBackendUnavailableError(error)) {
+		return <BackendUnavailableError error={error} />;
+	}
+
 	return (
 		<div className="flex flex-1 items-start justify-center px-4 pt-20 pb-10">
 			<Card className="w-full max-w-2xl border-stone-200 bg-[#faf9f6] shadow-sm backdrop-blur-sm dark:border-stone-800 dark:bg-stone-950">

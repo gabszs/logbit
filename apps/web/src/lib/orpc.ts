@@ -6,10 +6,23 @@ import type { QueryClient as TanStackQueryClient } from "@tanstack/react-query";
 import { QueryCache, QueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import type { AppRouter } from "@/index";
+import { isBackendUnavailableError } from "@/web/lib/backend-error";
 
 export const queryClient = new QueryClient({
 	queryCache: new QueryCache({
 		onError: (error) => {
+			if (isBackendUnavailableError(error)) {
+				toast.error("Server is not responding", {
+					action: {
+						label: "reload",
+						onClick: () => {
+							window.location.reload();
+						},
+					},
+				});
+				return;
+			}
+
 			toast.error(error.message, {
 				action: {
 					label: "retry",

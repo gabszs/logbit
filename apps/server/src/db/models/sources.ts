@@ -8,10 +8,11 @@ import {
 	varchar,
 } from "drizzle-orm/pg-core";
 import type { LogsConfigType } from "@/features/sources/logs/schemas";
+import type { TracesConfigType } from "@/features/sources/traces/schemas";
 import { organizations } from "./authModels";
 import { connections } from "./connections";
 
-export const sourceTypeEnum = pgEnum("source_type", ["log"]);
+export const sourceTypeEnum = pgEnum("source_type", ["trace", "log", "metric"]);
 
 export const sources = pgTable(
 	"sources",
@@ -27,7 +28,9 @@ export const sources = pgTable(
 		connectionId: uuid("integration_id")
 			.notNull()
 			.references(() => connections.id, { onDelete: "cascade" }),
-		config: jsonb("config").$type<LogsConfigType>().notNull(),
+		config: jsonb("config")
+			.$type<LogsConfigType | TracesConfigType>()
+			.notNull(),
 		createdAt: timestamp("created_at").defaultNow().notNull(),
 		updatedAt: timestamp("updated_at")
 			.defaultNow()

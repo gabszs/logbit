@@ -2,6 +2,8 @@ import { BaseService } from "@/common/services/baseService";
 import { checkForChanges } from "@/common/utils";
 import type { LogsConfigType } from "@/features/sources/logs/schemas";
 import { logsConfigSchema } from "@/features/sources/logs/schemas";
+import type { TracesConfigType } from "@/features/sources/traces/schemas";
+import { tracesConfigSchema } from "@/features/sources/traces/schemas";
 import { httpErrors } from "@/lib/errors";
 import type { ConnectionRepository } from "../connections/repository";
 import type { SourceRepository } from "./repository";
@@ -64,15 +66,25 @@ export class SourceService extends BaseService<SourcesType> {
 
 		const { config, ...rest } = input;
 		const updateData: Omit<SourceUpdateInput, "config"> & {
-			config?: LogsConfigType;
+			config?: LogsConfigType | TracesConfigType;
 		} = { ...rest };
 
 		if (config !== undefined) {
 			try {
-				updateData.config = logsConfigSchema.parse({
+				const nextConfig = {
 					...existingSource.config,
 					...config,
-				});
+				};
+				switch (existingSource.type) {
+					case "log":
+						updateData.config = logsConfigSchema.parse(nextConfig);
+						break;
+					case "trace":
+						updateData.config = tracesConfigSchema.parse(nextConfig);
+						break;
+					default:
+						throw new Error("Unsupported source type");
+				}
 			} catch {
 				throw httpErrors.badRequest({
 					detail: `Invalid config for source type "${existingSource.type}"`,

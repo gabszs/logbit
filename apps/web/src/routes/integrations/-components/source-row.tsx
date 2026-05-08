@@ -30,8 +30,12 @@ type SourceRowProps = {
 	onRefresh: () => void;
 };
 
-function displayConfigValue(value: string | null) {
-	return value ?? "—";
+function displayConfigValue(value: number | string | null | undefined) {
+	return value == null ? "—" : String(value);
+}
+
+function sourceTypeLabel(type: SourceEntity["type"]) {
+	return type === "trace" ? "Trace" : "Log";
 }
 
 export function SourceRow({ source, connections, onRefresh }: SourceRowProps) {
@@ -72,7 +76,7 @@ export function SourceRow({ source, connections, onRefresh }: SourceRowProps) {
 						<Database className="size-5 shrink-0 text-foreground" />
 						<span className="font-semibold text-base">{source.name}</span>
 						<Badge variant="secondary" className="shrink-0">
-							Log
+							{sourceTypeLabel(source.type)}
 						</Badge>
 						{connection && (
 							<Badge variant="outline" className="shrink-0">
@@ -136,7 +140,7 @@ export function SourceRow({ source, connections, onRefresh }: SourceRowProps) {
 							{connection && (
 								<DetailCard label="Connection" value={connection.name} />
 							)}
-							<DetailCard label="Type" value="Log" />
+							<DetailCard label="Type" value={sourceTypeLabel(source.type)} />
 							<DetailCard
 								label="Database"
 								value={displayConfigValue(source.config.database)}
@@ -159,14 +163,16 @@ export function SourceRow({ source, connections, onRefresh }: SourceRowProps) {
 								className="font-mono sm:col-span-2"
 							/>
 							<DetailCard
-								label="Severity field"
-								value={displayConfigValue(source.config.severityField)}
-								className="font-mono"
-							/>
-							<DetailCard
 								label="Timestamp query expression"
 								value={displayConfigValue(
 									source.config.timestampQueryExpression,
+								)}
+								className="font-mono"
+							/>
+							<DetailCard
+								label="Displayed timestamp expression"
+								value={displayConfigValue(
+									source.config.displayedTimestampExpression,
 								)}
 								className="font-mono"
 							/>
@@ -198,27 +204,103 @@ export function SourceRow({ source, connections, onRefresh }: SourceRowProps) {
 								className="font-mono"
 							/>
 							<DetailCard
-								label="Log attributes field"
-								value={displayConfigValue(source.config.logAttributesField)}
-								className="font-mono"
-							/>
-							<DetailCard
 								label="Lucene implicit column field"
 								value={displayConfigValue(
 									source.config.luceneImplicitColumnField,
 								)}
 								className="font-mono"
 							/>
-							<DetailCard
-								label="Trace source ID"
-								value={source.config.traceSourceId ?? "—"}
-								className="font-mono"
-							/>
-							<DetailCard
-								label="Metric source ID"
-								value={source.config.metricSourceId ?? "—"}
-								className="font-mono"
-							/>
+							{source.type === "log" ? (
+								<>
+									<DetailCard
+										label="Severity field"
+										value={displayConfigValue(source.config.severityField)}
+										className="font-mono"
+									/>
+									<DetailCard
+										label="Log attributes field"
+										value={displayConfigValue(source.config.logAttributesField)}
+										className="font-mono"
+									/>
+									<DetailCard
+										label="Trace source ID"
+										value={source.config.traceSourceId ?? "—"}
+										className="font-mono"
+									/>
+									<DetailCard
+										label="Metric source ID"
+										value={source.config.metricSourceId ?? "—"}
+										className="font-mono"
+									/>
+								</>
+							) : (
+								<>
+									<DetailCard
+										label="Sample rate field"
+										value={displayConfigValue(source.config.sampleRateField)}
+										className="font-mono"
+									/>
+									<DetailCard
+										label="Span attributes field"
+										value={displayConfigValue(
+											source.config.spanAttributesField,
+										)}
+										className="font-mono"
+									/>
+									<DetailCard
+										label="Duration field"
+										value={displayConfigValue(source.config.durationField)}
+										className="font-mono"
+									/>
+									<DetailCard
+										label="Duration precision field"
+										value={displayConfigValue(
+											source.config.durationPrecisionField,
+										)}
+										className="font-mono"
+									/>
+									<DetailCard
+										label="Parent span ID field"
+										value={displayConfigValue(source.config.parentSpanIdField)}
+										className="font-mono"
+									/>
+									<DetailCard
+										label="Span events field"
+										value={displayConfigValue(source.config.spanEventsField)}
+										className="font-mono"
+									/>
+									<DetailCard
+										label="Span kind field"
+										value={displayConfigValue(source.config.spanKindField)}
+										className="font-mono"
+									/>
+									<DetailCard
+										label="Span name field"
+										value={displayConfigValue(source.config.spanNameField)}
+										className="font-mono"
+									/>
+									<DetailCard
+										label="Status code field"
+										value={displayConfigValue(source.config.statusCodeField)}
+										className="font-mono"
+									/>
+									<DetailCard
+										label="Status message field"
+										value={displayConfigValue(source.config.statusMessageField)}
+										className="font-mono"
+									/>
+									<DetailCard
+										label="Log source ID"
+										value={source.config.logSourceId ?? "—"}
+										className="font-mono"
+									/>
+									<DetailCard
+										label="Metric source ID"
+										value={source.config.metricSourceId ?? "—"}
+										className="font-mono"
+									/>
+								</>
+							)}
 						</div>
 					</div>
 				)}

@@ -44,30 +44,44 @@ import {
 
 const NO_SOURCE_VALUE = "__none__";
 const DEFAULT_DATABASE_OPTIONS = ["default"];
-const DEFAULT_TABLE_OPTIONS = ["otel_logs", "logs"];
+const DEFAULT_TABLE_OPTIONS = ["otel_logs", "logs", "otel_traces", "traces"];
+
+type SourceKind = SourcesUpsertInput["type"];
 
 type FormState = {
 	name: string;
-	type: "log";
+	type: SourceKind;
 	connectionId: string;
 	database: string;
 	table: string;
 	defaultSelectQuery: string;
 	defaultOrderByQuery: string;
-	severityField: string;
 	resourceAttributesField: string;
-	logAttributesField: string;
 	timestampQueryExpression: string;
+	displayedTimestampExpression: string;
 	serviceNameField: string;
 	bodyField: string;
 	traceIdField: string;
 	spanIdField: string;
 	luceneImplicitColumnField: string;
-	traceSourceId: string;
 	metricSourceId: string;
+	severityField: string;
+	logAttributesField: string;
+	traceSourceId: string;
+	sampleRateField: string;
+	spanAttributesField: string;
+	durationField: string;
+	durationPrecisionField: string;
+	parentSpanIdField: string;
+	spanEventsField: string;
+	spanKindField: string;
+	spanNameField: string;
+	statusCodeField: string;
+	statusMessageField: string;
+	logSourceId: string;
 };
 
-const DEFAULT_FORM: FormState = {
+const LOG_DEFAULT_FORM: FormState = {
 	name: "",
 	type: "log",
 	connectionId: "",
@@ -76,54 +90,60 @@ const DEFAULT_FORM: FormState = {
 	defaultSelectQuery:
 		"Timestamp, ServiceName as service, SeverityText as level, Body",
 	defaultOrderByQuery: "Timestamp DESC",
-	severityField: "SeverityText",
 	resourceAttributesField: "ResourceAttributes",
-	logAttributesField: "LogAttributes",
 	timestampQueryExpression: "Timestamp",
+	displayedTimestampExpression: "Timestamp",
 	serviceNameField: "ServiceName",
 	bodyField: "Body",
 	traceIdField: "TraceId",
 	spanIdField: "SpanId",
 	luceneImplicitColumnField: "Body",
-	traceSourceId: "",
 	metricSourceId: "",
+	severityField: "SeverityText",
+	logAttributesField: "LogAttributes",
+	traceSourceId: "",
+	sampleRateField: "",
+	spanAttributesField: "SpanAttributes",
+	durationField: "Duration",
+	durationPrecisionField: "9",
+	parentSpanIdField: "ParentSpanId",
+	spanEventsField: "Events",
+	spanKindField: "SpanKind",
+	spanNameField: "SpanName",
+	statusCodeField: "StatusCode",
+	statusMessageField: "StatusMessage",
+	logSourceId: "",
 };
 
-function nullableString(value: string | null) {
+const TRACE_DEFAULT_FORM: FormState = {
+	...LOG_DEFAULT_FORM,
+	type: "trace",
+	defaultSelectQuery:
+		"Timestamp, ServiceName as service, StatusCode as level, round(Duration / 1e6) as duration, SpanName",
+	bodyField: "SpanName",
+	luceneImplicitColumnField: "SpanName",
+	severityField: "",
+	logAttributesField: "",
+	traceSourceId: "",
+};
+
+function sourceTypeLabel(type: SourceKind) {
+	return type === "trace" ? "Trace" : "Log";
+}
+
+function defaultFormForType(type: SourceKind) {
+	return type === "trace" ? TRACE_DEFAULT_FORM : LOG_DEFAULT_FORM;
+}
+
+function nullableString(value: string | null | undefined) {
 	return value ?? "";
 }
 
-function formFromSource(source: SourceEntity): FormState {
-	return {
-		...DEFAULT_FORM,
-		name: source.name,
-		type: source.type,
-		connectionId: source.connectionId,
-		database: nullableString(source.config.database),
-		table: nullableString(source.config.table),
-		defaultSelectQuery: nullableString(source.config.defaultSelectQuery),
-		defaultOrderByQuery: nullableString(source.config.defaultOrderByQuery),
-		severityField: nullableString(source.config.severityField),
-		resourceAttributesField: nullableString(
-			source.config.resourceAttributesField,
-		),
-		logAttributesField: nullableString(source.config.logAttributesField),
-		timestampQueryExpression: nullableString(
-			source.config.timestampQueryExpression,
-		),
-		serviceNameField: nullableString(source.config.serviceNameField),
-		bodyField: nullableString(source.config.bodyField),
-		traceIdField: nullableString(source.config.traceIdField),
-		spanIdField: nullableString(source.config.spanIdField),
-		luceneImplicitColumnField: nullableString(
-			source.config.luceneImplicitColumnField,
-		),
-		traceSourceId: source.config.traceSourceId ?? "",
-		metricSourceId: source.config.metricSourceId ?? "",
-	};
+function optionalUuid(value: string) {
+	return value.trim() || null;
 }
 
-function optionalUuid(value: string) {
+function optionalString(value: string) {
 	return value.trim() || null;
 }
 
@@ -135,6 +155,60 @@ function uniqueOptions(values: Array<string | null | undefined>) {
 				.filter((value): value is string => Boolean(value)),
 		),
 	);
+}
+
+function formFromSource(source: SourceEntity): FormState {
+	const base = {
+		...defaultFormForType(source.type),
+		name: source.name,
+		type: source.type,
+		connectionId: source.connectionId,
+		database: nullableString(source.config.database),
+		table: nullableString(source.config.table),
+		defaultSelectQuery: nullableString(source.config.defaultSelectQuery),
+		defaultOrderByQuery: nullableString(source.config.defaultOrderByQuery),
+		resourceAttributesField: nullableString(
+			source.config.resourceAttributesField,
+		),
+		timestampQueryExpression: nullableString(
+			source.config.timestampQueryExpression,
+		),
+		displayedTimestampExpression: nullableString(
+			source.config.displayedTimestampExpression,
+		),
+		serviceNameField: nullableString(source.config.serviceNameField),
+		bodyField: nullableString(source.config.bodyField),
+		traceIdField: nullableString(source.config.traceIdField),
+		spanIdField: nullableString(source.config.spanIdField),
+		luceneImplicitColumnField: nullableString(
+			source.config.luceneImplicitColumnField,
+		),
+		metricSourceId: source.config.metricSourceId ?? "",
+	};
+
+	if (source.type === "trace") {
+		return {
+			...base,
+			sampleRateField: nullableString(source.config.sampleRateField),
+			spanAttributesField: nullableString(source.config.spanAttributesField),
+			durationField: nullableString(source.config.durationField),
+			durationPrecisionField: String(source.config.durationPrecisionField ?? 9),
+			parentSpanIdField: nullableString(source.config.parentSpanIdField),
+			spanEventsField: nullableString(source.config.spanEventsField),
+			spanKindField: nullableString(source.config.spanKindField),
+			spanNameField: nullableString(source.config.spanNameField),
+			statusCodeField: nullableString(source.config.statusCodeField),
+			statusMessageField: nullableString(source.config.statusMessageField),
+			logSourceId: source.config.logSourceId ?? "",
+		};
+	}
+
+	return {
+		...base,
+		severityField: nullableString(source.config.severityField),
+		logAttributesField: nullableString(source.config.logAttributesField),
+		traceSourceId: source.config.traceSourceId ?? "",
+	};
 }
 
 type AddSourceDialogProps = {
@@ -154,7 +228,7 @@ export function AddSourceDialog({
 	mode = "create",
 	source,
 }: AddSourceDialogProps) {
-	const [form, setForm] = useState<FormState>(DEFAULT_FORM);
+	const [form, setForm] = useState<FormState>(LOG_DEFAULT_FORM);
 	const [isPending, setIsPending] = useState(false);
 	const [formError, setFormError] = useState<string | null>(null);
 	const [showOptionalFields, setShowOptionalFields] = useState(false);
@@ -166,15 +240,38 @@ export function AddSourceDialog({
 
 	useEffect(() => {
 		if (!open) return;
-		setForm(mode === "edit" && source ? formFromSource(source) : DEFAULT_FORM);
+		setForm(
+			mode === "edit" && source ? formFromSource(source) : LOG_DEFAULT_FORM,
+		);
 		setFormError(null);
 		setIsPending(false);
 		setShowOptionalFields(false);
 	}, [open, mode, source]);
 
-	const set = (field: keyof FormState, value: string) => {
+	const set = <K extends keyof FormState>(field: K, value: FormState[K]) => {
 		setFormError(null);
 		setForm((prev) => ({ ...prev, [field]: value }));
+	};
+
+	const handleTypeChange = (type: SourceKind) => {
+		setFormError(null);
+		setForm((prev) => ({
+			...defaultFormForType(type),
+			name: prev.name,
+			type,
+			connectionId: prev.connectionId,
+			database: prev.database,
+			table: prev.table,
+		}));
+	};
+
+	const parseDurationPrecision = () => {
+		const value = Number(form.durationPrecisionField.trim());
+		if (!Number.isInteger(value) || value < 0 || value > 9) {
+			setFormError("Duration precision must be an integer from 0 to 9");
+			return null;
+		}
+		return value;
 	};
 
 	const buildPayload = (): SourcesUpsertInput | null => {
@@ -188,32 +285,62 @@ export function AddSourceDialog({
 			return null;
 		}
 
+		const commonConfig = {
+			database: form.database.trim() || null,
+			table: form.table.trim() || null,
+			defaultSelectQuery: form.defaultSelectQuery.trim(),
+			defaultOrderByQuery: form.defaultOrderByQuery.trim(),
+			resourceAttributesField: form.resourceAttributesField.trim(),
+			timestampQueryExpression: form.timestampQueryExpression.trim(),
+			displayedTimestampExpression: form.displayedTimestampExpression.trim(),
+			serviceNameField: form.serviceNameField.trim(),
+			bodyField: form.bodyField.trim(),
+			traceIdField: form.traceIdField.trim(),
+			spanIdField: form.spanIdField.trim(),
+			luceneImplicitColumnField: form.luceneImplicitColumnField.trim(),
+			querySettings: source?.config.querySettings ?? [],
+			materializedViews: source?.config.materializedViews ?? [],
+			highlightedRowAttributeExpressions:
+				source?.config.highlightedRowAttributeExpressions ?? [],
+			highlightedTraceAttributeExpressions:
+				source?.config.highlightedTraceAttributeExpressions ?? [],
+			metricSourceId: optionalUuid(form.metricSourceId),
+		};
+
+		if (form.type === "trace") {
+			const durationPrecisionField = parseDurationPrecision();
+			if (durationPrecisionField == null) return null;
+
+			return {
+				name,
+				type: "trace",
+				connectionId: form.connectionId,
+				config: {
+					...commonConfig,
+					sampleRateField: optionalString(form.sampleRateField),
+					spanAttributesField: form.spanAttributesField.trim(),
+					durationField: form.durationField.trim(),
+					durationPrecisionField,
+					parentSpanIdField: form.parentSpanIdField.trim(),
+					spanEventsField: form.spanEventsField.trim(),
+					spanKindField: form.spanKindField.trim(),
+					spanNameField: form.spanNameField.trim(),
+					statusCodeField: form.statusCodeField.trim(),
+					statusMessageField: form.statusMessageField.trim(),
+					logSourceId: optionalUuid(form.logSourceId),
+				},
+			};
+		}
+
 		return {
 			name,
 			type: "log",
 			connectionId: form.connectionId,
 			config: {
-				database: form.database.trim() || null,
-				table: form.table.trim() || null,
-				defaultSelectQuery: form.defaultSelectQuery.trim(),
-				defaultOrderByQuery: form.defaultOrderByQuery.trim(),
+				...commonConfig,
 				severityField: form.severityField.trim(),
-				resourceAttributesField: form.resourceAttributesField.trim(),
 				logAttributesField: form.logAttributesField.trim(),
-				timestampQueryExpression: form.timestampQueryExpression.trim(),
-				serviceNameField: form.serviceNameField.trim(),
-				bodyField: form.bodyField.trim(),
-				traceIdField: form.traceIdField.trim(),
-				spanIdField: form.spanIdField.trim(),
-				luceneImplicitColumnField: form.luceneImplicitColumnField.trim(),
-				querySettings: source?.config.querySettings ?? [],
-				materializedViews: source?.config.materializedViews ?? [],
-				highlightedRowAttributeExpressions:
-					source?.config.highlightedRowAttributeExpressions ?? [],
-				highlightedTraceAttributeExpressions:
-					source?.config.highlightedTraceAttributeExpressions ?? [],
 				traceSourceId: optionalUuid(form.traceSourceId),
-				metricSourceId: optionalUuid(form.metricSourceId),
 			},
 		};
 	};
@@ -262,6 +389,12 @@ export function AddSourceDialog({
 	const selectableSources = sourceOptions.filter(
 		(option) => option.id !== source?.id,
 	);
+	const selectableLogSources = selectableSources.filter(
+		(option) => option.type === "log",
+	);
+	const selectableTraceSources = selectableSources.filter(
+		(option) => option.type === "trace",
+	);
 	const selectedConnectionDatabase =
 		selectedConnection && selectedConnection.type === "clickhouse"
 			? selectedConnection.config.database
@@ -299,7 +432,11 @@ export function AddSourceDialog({
 								value={form.name}
 								onChange={(e) => set("name", e.target.value)}
 								disabled={isPending}
-								placeholder="Production logs"
+								placeholder={
+									form.type === "trace"
+										? "Production traces"
+										: "Production logs"
+								}
 							/>
 						</div>
 
@@ -307,12 +444,14 @@ export function AddSourceDialog({
 							<Label>Type</Label>
 							{isEdit ? (
 								<div className="flex h-9 items-center">
-									<Badge variant="secondary">Log</Badge>
+									<Badge variant="secondary">
+										{sourceTypeLabel(form.type)}
+									</Badge>
 								</div>
 							) : (
 								<SourceTypePicker
 									value={form.type}
-									onChange={(value) => set("type", value)}
+									onChange={handleTypeChange}
 									disabled={isPending}
 								/>
 							)}
@@ -375,21 +514,33 @@ export function AddSourceDialog({
 							<div className="flex-1 border-t" />
 						</div>
 						<div className="grid gap-4 sm:grid-cols-2">
-							<SourceSelectField
-								id="source-trace-source"
-								label="Trace source"
-								value={form.traceSourceId}
-								onChange={(value) => set("traceSourceId", value)}
-								disabled={isPending || isSourcesFetching}
-								sources={selectableSources}
-							/>
+							{form.type === "log" ? (
+								<SourceSelectField
+									id="source-trace-source"
+									label="Trace source"
+									value={form.traceSourceId}
+									onChange={(value) => set("traceSourceId", value)}
+									disabled={isPending || isSourcesFetching}
+									sources={selectableTraceSources}
+								/>
+							) : (
+								<SourceSelectField
+									id="source-log-source"
+									label="Log source"
+									value={form.logSourceId}
+									onChange={(value) => set("logSourceId", value)}
+									disabled={isPending || isSourcesFetching}
+									sources={selectableLogSources}
+								/>
+							)}
 							<SourceSelectField
 								id="source-metric-source"
 								label="Metric source"
 								value={form.metricSourceId}
 								onChange={(value) => set("metricSourceId", value)}
-								disabled={isPending || isSourcesFetching}
-								sources={selectableSources}
+								disabled
+								sources={[]}
+								emptyMessage="Metric sources are not available yet."
 							/>
 						</div>
 					</div>
@@ -441,69 +592,157 @@ export function AddSourceDialog({
 									/>
 								</div>
 
-								<LogField
-									id="source-severity"
-									label="Severity field"
-									value={form.severityField}
-									onChange={(value) => set("severityField", value)}
-									disabled={isPending}
-								/>
-								<LogField
-									id="source-resource-attrs"
-									label="Resource attributes field"
-									value={form.resourceAttributesField}
-									onChange={(value) => set("resourceAttributesField", value)}
-									disabled={isPending}
-								/>
-								<LogField
-									id="source-log-attrs"
-									label="Log attributes field"
-									value={form.logAttributesField}
-									onChange={(value) => set("logAttributesField", value)}
-									disabled={isPending}
-								/>
-								<LogField
+								<FieldInput
 									id="source-timestamp"
 									label="Timestamp query expression"
 									value={form.timestampQueryExpression}
 									onChange={(value) => set("timestampQueryExpression", value)}
 									disabled={isPending}
 								/>
-								<LogField
+								<FieldInput
+									id="source-displayed-timestamp"
+									label="Displayed timestamp expression"
+									value={form.displayedTimestampExpression}
+									onChange={(value) =>
+										set("displayedTimestampExpression", value)
+									}
+									disabled={isPending}
+								/>
+								<FieldInput
+									id="source-resource-attrs"
+									label="Resource attributes field"
+									value={form.resourceAttributesField}
+									onChange={(value) => set("resourceAttributesField", value)}
+									disabled={isPending}
+								/>
+								<FieldInput
 									id="source-service"
 									label="Service name field"
 									value={form.serviceNameField}
 									onChange={(value) => set("serviceNameField", value)}
 									disabled={isPending}
 								/>
-								<LogField
+								<FieldInput
 									id="source-body"
 									label="Body field"
 									value={form.bodyField}
 									onChange={(value) => set("bodyField", value)}
 									disabled={isPending}
 								/>
-								<LogField
+								<FieldInput
 									id="source-trace-id"
 									label="Trace ID field"
 									value={form.traceIdField}
 									onChange={(value) => set("traceIdField", value)}
 									disabled={isPending}
 								/>
-								<LogField
+								<FieldInput
 									id="source-span-id"
 									label="Span ID field"
 									value={form.spanIdField}
 									onChange={(value) => set("spanIdField", value)}
 									disabled={isPending}
 								/>
-								<LogField
+								<FieldInput
 									id="source-lucene"
 									label="Lucene implicit column field"
 									value={form.luceneImplicitColumnField}
 									onChange={(value) => set("luceneImplicitColumnField", value)}
 									disabled={isPending}
 								/>
+
+								{form.type === "log" ? (
+									<>
+										<FieldInput
+											id="source-severity"
+											label="Severity field"
+											value={form.severityField}
+											onChange={(value) => set("severityField", value)}
+											disabled={isPending}
+										/>
+										<FieldInput
+											id="source-log-attrs"
+											label="Log attributes field"
+											value={form.logAttributesField}
+											onChange={(value) => set("logAttributesField", value)}
+											disabled={isPending}
+										/>
+									</>
+								) : (
+									<>
+										<FieldInput
+											id="source-sample-rate"
+											label="Sample rate field"
+											value={form.sampleRateField}
+											onChange={(value) => set("sampleRateField", value)}
+											disabled={isPending}
+										/>
+										<FieldInput
+											id="source-span-attrs"
+											label="Span attributes field"
+											value={form.spanAttributesField}
+											onChange={(value) => set("spanAttributesField", value)}
+											disabled={isPending}
+										/>
+										<FieldInput
+											id="source-duration"
+											label="Duration field"
+											value={form.durationField}
+											onChange={(value) => set("durationField", value)}
+											disabled={isPending}
+										/>
+										<FieldInput
+											id="source-duration-precision"
+											label="Duration precision field"
+											value={form.durationPrecisionField}
+											onChange={(value) => set("durationPrecisionField", value)}
+											disabled={isPending}
+											type="number"
+										/>
+										<FieldInput
+											id="source-parent-span-id"
+											label="Parent span ID field"
+											value={form.parentSpanIdField}
+											onChange={(value) => set("parentSpanIdField", value)}
+											disabled={isPending}
+										/>
+										<FieldInput
+											id="source-span-events"
+											label="Span events field"
+											value={form.spanEventsField}
+											onChange={(value) => set("spanEventsField", value)}
+											disabled={isPending}
+										/>
+										<FieldInput
+											id="source-span-kind"
+											label="Span kind field"
+											value={form.spanKindField}
+											onChange={(value) => set("spanKindField", value)}
+											disabled={isPending}
+										/>
+										<FieldInput
+											id="source-span-name"
+											label="Span name field"
+											value={form.spanNameField}
+											onChange={(value) => set("spanNameField", value)}
+											disabled={isPending}
+										/>
+										<FieldInput
+											id="source-status-code"
+											label="Status code field"
+											value={form.statusCodeField}
+											onChange={(value) => set("statusCodeField", value)}
+											disabled={isPending}
+										/>
+										<FieldInput
+											id="source-status-message"
+											label="Status message field"
+											value={form.statusMessageField}
+											onChange={(value) => set("statusMessageField", value)}
+											disabled={isPending}
+										/>
+									</>
+								)}
 							</div>
 						)}
 					</div>
@@ -542,13 +781,14 @@ export function AddSourceDialog({
 	);
 }
 
-function LogField({
+function FieldInput({
 	id,
 	label,
 	value,
 	onChange,
 	disabled,
 	placeholder,
+	type = "text",
 }: {
 	id: string;
 	label: string;
@@ -556,17 +796,21 @@ function LogField({
 	onChange: (value: string) => void;
 	disabled: boolean;
 	placeholder?: string;
+	type?: "text" | "number";
 }) {
 	return (
 		<div className="space-y-2">
 			<Label htmlFor={id}>{label}</Label>
 			<Input
 				id={id}
+				type={type}
 				value={value}
 				onChange={(e) => onChange(e.target.value)}
 				disabled={disabled}
 				placeholder={placeholder}
 				className="font-mono"
+				min={type === "number" ? 0 : undefined}
+				max={type === "number" ? 9 : undefined}
 			/>
 		</div>
 	);
@@ -631,6 +875,7 @@ function SourceSelectField({
 	onChange,
 	disabled,
 	sources,
+	emptyMessage = "No other sources available yet.",
 }: {
 	id: string;
 	label: string;
@@ -638,6 +883,7 @@ function SourceSelectField({
 	onChange: (value: string) => void;
 	disabled: boolean;
 	sources: SourceEntity[];
+	emptyMessage?: string;
 }) {
 	return (
 		<div className="space-y-2">
@@ -662,9 +908,7 @@ function SourceSelectField({
 				</SelectContent>
 			</Select>
 			{sources.length === 0 && (
-				<p className="text-muted-foreground text-xs">
-					No other sources available yet.
-				</p>
+				<p className="text-muted-foreground text-xs">{emptyMessage}</p>
 			)}
 		</div>
 	);
@@ -675,13 +919,13 @@ function SourceTypePicker({
 	onChange,
 	disabled,
 }: {
-	value: "log";
-	onChange: (value: "log") => void;
+	value: SourceKind;
+	onChange: (value: SourceKind) => void;
 	disabled: boolean;
 }) {
 	const options = [
 		{ value: "log", label: "Log", enabled: true },
-		{ value: "trace", label: "Trace", enabled: false },
+		{ value: "trace", label: "Trace", enabled: true },
 		{ value: "metric", label: "Metrics", enabled: false },
 	] as const;
 
@@ -694,7 +938,7 @@ function SourceTypePicker({
 						key={option.value}
 						type="button"
 						onClick={() => {
-							if (option.enabled) onChange("log");
+							if (option.enabled) onChange(option.value);
 						}}
 						disabled={disabled || !option.enabled}
 						className={cn(

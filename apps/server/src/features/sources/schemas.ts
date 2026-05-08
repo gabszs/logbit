@@ -7,6 +7,11 @@ import {
 	patchLogsConfigSchema,
 	upsertLogsConfigSchema,
 } from "@/features/sources/logs/schemas";
+import {
+	patchTracesConfigSchema,
+	tracesConfigSchema,
+	upsertTracesConfigSchema,
+} from "@/features/sources/traces/schemas";
 
 export const baseSourcesSchema = createSelectSchema(models.sources).extend({
 	id: z.uuidv7(),
@@ -27,7 +32,15 @@ const logSourceSchema = sourceCommonSchema.extend({
 	config: logsConfigSchema,
 });
 
-export const sourcesSchema = z.discriminatedUnion("type", [logSourceSchema]);
+const traceSourceSchema = sourceCommonSchema.extend({
+	type: z.literal("trace"),
+	config: tracesConfigSchema,
+});
+
+export const sourcesSchema = z.discriminatedUnion("type", [
+	logSourceSchema,
+	traceSourceSchema,
+]);
 
 const sourceCommonUpsertSchema = sourceCommonSchema.omit({
 	id: true,
@@ -41,19 +54,28 @@ const logSourceUpsertSchema = sourceCommonUpsertSchema.extend({
 	config: upsertLogsConfigSchema,
 });
 
+const traceSourceUpsertSchema = sourceCommonUpsertSchema.extend({
+	type: z.literal("trace"),
+	config: upsertTracesConfigSchema,
+});
+
 export const sourcesUpsertSchema = z
-	.discriminatedUnion("type", [logSourceUpsertSchema])
+	.discriminatedUnion("type", [logSourceUpsertSchema, traceSourceUpsertSchema])
 	.openapi("SourcesUpsert");
 
 const partialSourceFieldsSchema = sourceCommonUpsertSchema.partial();
+const patchSourceConfigSchema = z.union([
+	patchLogsConfigSchema,
+	patchTracesConfigSchema,
+]);
 
 type PartialSourceUpdate = z.infer<typeof partialSourceFieldsSchema> & {
-	config?: z.infer<typeof patchLogsConfigSchema>;
+	config?: z.infer<typeof patchSourceConfigSchema>;
 };
 
 export const sourceUpdateSchema = partialSourceFieldsSchema
 	.extend({
-		config: patchLogsConfigSchema.optional(),
+		config: patchSourceConfigSchema.optional(),
 	})
 	.strict()
 	.superRefine((value: PartialSourceUpdate, ctx: z.RefinementCtx) => {
