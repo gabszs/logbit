@@ -3,8 +3,9 @@ import type {
 	TraceWaterfallInitialHighlightHint,
 	TraceWaterfallNodeSelection,
 } from "@/web/components/trace-waterfall";
+import type { DataRow } from "@/web/lib/data-row";
 
-export type DataRow = Record<string, unknown>;
+export type { DataRow } from "@/web/lib/data-row";
 
 export type RowIdentity = {
 	sourceId: string;

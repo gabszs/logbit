@@ -1,4 +1,4 @@
-import type { DataRow } from "@/web/components/data-row-side-panel";
+import type { DataRow } from "@/web/lib/data-row";
 
 const TRACE_ALIAS_PREFIX = "__loglog_trace_";
 

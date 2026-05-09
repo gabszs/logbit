@@ -1,5 +1,4 @@
 import type {
-	DataRow,
 	ResolvedRowFields,
 	RowIdentity,
 	RowPanelAdapter,
@@ -18,6 +17,7 @@ import {
 	executeClickhouseJsonQuery,
 	formatClickhouseQueryError,
 } from "@/web/lib/clickhouse-client";
+import type { DataRow } from "@/web/lib/data-row";
 import {
 	isTraceSource,
 	type LogSourceEntity,
@@ -605,6 +605,56 @@ function aliasedSelect(valueExpression: string, alias: string) {
 	return `${valueExpression} AS ${quoteIdentifier(alias)}`;
 }
 
+function getTraceFieldExpressions(source: TraceSourceEntity) {
+	return {
+		timestamp: configuredExpression(
+			source.config.timestampQueryField,
+			"Timestamp",
+		),
+		traceId: configuredExpression(source.config.traceIdField, "TraceId"),
+		spanId: configuredExpression(source.config.spanIdField, "SpanId"),
+		parentSpanId: configuredExpression(
+			source.config.parentSpanIdField,
+			"ParentSpanId",
+		),
+		serviceName: configuredExpression(
+			source.config.serviceNameField,
+			"ServiceName",
+		),
+		name: configuredExpression(source.config.spanNameField, "SpanName"),
+		duration: configuredExpression(source.config.durationField, "Duration"),
+		statusCode: configuredExpression(
+			source.config.statusCodeField,
+			"StatusCode",
+		),
+		statusMessage: configuredExpression(
+			source.config.statusMessageField,
+			"StatusMessage",
+		),
+		spanKind: configuredExpression(source.config.spanKindField, "SpanKind"),
+	};
+}
+
+function getLogFieldExpressions(source: LogSourceEntity) {
+	return {
+		timestamp: configuredExpression(
+			source.config.timestampQueryField,
+			"Timestamp",
+		),
+		traceId: configuredExpression(source.config.traceIdField, "TraceId"),
+		spanId: configuredExpression(source.config.spanIdField, "SpanId"),
+		serviceName: configuredExpression(
+			source.config.serviceNameField,
+			"ServiceName",
+		),
+		body: configuredExpression(source.config.bodyField, "Body"),
+		severityText: configuredExpression(
+			source.config.severityField,
+			"SeverityText",
+		),
+	};
+}
+
 function buildTraceWaterfallSpansQuery(
 	source: TraceSourceEntity,
 	traceId: string,
@@ -614,58 +664,25 @@ function buildTraceWaterfallSpansQuery(
 		throw new Error("Trace source is missing database or table configuration");
 	}
 
-	const timestamp = configuredExpression(
-		source.config.timestampQueryField,
-		"Timestamp",
-	);
-	const traceIdExpression = configuredExpression(
-		source.config.traceIdField,
-		"TraceId",
-	);
-	const spanId = configuredExpression(source.config.spanIdField, "SpanId");
-	const parentSpanId = configuredExpression(
-		source.config.parentSpanIdField,
-		"ParentSpanId",
-	);
-	const serviceName = configuredExpression(
-		source.config.serviceNameField,
-		"ServiceName",
-	);
-	const name = configuredExpression(source.config.spanNameField, "SpanName");
-	const duration = configuredExpression(
-		source.config.durationField,
-		"Duration",
-	);
-	const statusCode = configuredExpression(
-		source.config.statusCodeField,
-		"StatusCode",
-	);
-	const statusMessage = configuredExpression(
-		source.config.statusMessageField,
-		"StatusMessage",
-	);
-	const spanKind = configuredExpression(
-		source.config.spanKindField,
-		"SpanKind",
-	);
+	const fields = getTraceFieldExpressions(source);
 
 	return [
 		[
 			"SELECT *",
-			aliasedSelect(timestamp, TRACE_ALIASES.timestamp),
-			aliasedSelect(traceIdExpression, TRACE_ALIASES.traceId),
-			aliasedSelect(spanId, TRACE_ALIASES.spanId),
-			aliasedSelect(parentSpanId, TRACE_ALIASES.parentSpanId),
-			aliasedSelect(name, TRACE_ALIASES.name),
-			aliasedSelect(serviceName, TRACE_ALIASES.serviceName),
-			aliasedSelect(duration, TRACE_ALIASES.duration),
-			aliasedSelect(statusCode, TRACE_ALIASES.statusCode),
-			aliasedSelect(statusMessage, TRACE_ALIASES.statusMessage),
-			aliasedSelect(spanKind, TRACE_ALIASES.spanKind),
+			aliasedSelect(fields.timestamp, TRACE_ALIASES.timestamp),
+			aliasedSelect(fields.traceId, TRACE_ALIASES.traceId),
+			aliasedSelect(fields.spanId, TRACE_ALIASES.spanId),
+			aliasedSelect(fields.parentSpanId, TRACE_ALIASES.parentSpanId),
+			aliasedSelect(fields.name, TRACE_ALIASES.name),
+			aliasedSelect(fields.serviceName, TRACE_ALIASES.serviceName),
+			aliasedSelect(fields.duration, TRACE_ALIASES.duration),
+			aliasedSelect(fields.statusCode, TRACE_ALIASES.statusCode),
+			aliasedSelect(fields.statusMessage, TRACE_ALIASES.statusMessage),
+			aliasedSelect(fields.spanKind, TRACE_ALIASES.spanKind),
 		].join(", "),
 		`FROM ${quoteIdentifier(source.config.database)}.${quoteIdentifier(source.config.table)}`,
-		`WHERE toString(${traceIdExpression}) = '${escapeSqlString(traceId)}'`,
-		`ORDER BY ${timestamp} ASC`,
+		`WHERE toString(${fields.traceId}) = '${escapeSqlString(traceId)}'`,
+		`ORDER BY ${fields.timestamp} ASC`,
 		`LIMIT ${limit}`,
 	].join("\n");
 }
@@ -679,38 +696,21 @@ function buildTraceWaterfallLogsQuery(
 		throw new Error("Log source is missing database or table configuration");
 	}
 
-	const timestamp = configuredExpression(
-		source.config.timestampQueryField,
-		"Timestamp",
-	);
-	const traceIdExpression = configuredExpression(
-		source.config.traceIdField,
-		"TraceId",
-	);
-	const spanId = configuredExpression(source.config.spanIdField, "SpanId");
-	const serviceName = configuredExpression(
-		source.config.serviceNameField,
-		"ServiceName",
-	);
-	const body = configuredExpression(source.config.bodyField, "Body");
-	const severityText = configuredExpression(
-		source.config.severityField,
-		"SeverityText",
-	);
+	const fields = getLogFieldExpressions(source);
 
 	return [
 		[
 			"SELECT *",
-			aliasedSelect(timestamp, TRACE_ALIASES.timestamp),
-			aliasedSelect(traceIdExpression, TRACE_ALIASES.traceId),
-			aliasedSelect(spanId, TRACE_ALIASES.spanId),
-			aliasedSelect(serviceName, TRACE_ALIASES.serviceName),
-			aliasedSelect(body, TRACE_ALIASES.body),
-			aliasedSelect(severityText, TRACE_ALIASES.severityText),
+			aliasedSelect(fields.timestamp, TRACE_ALIASES.timestamp),
+			aliasedSelect(fields.traceId, TRACE_ALIASES.traceId),
+			aliasedSelect(fields.spanId, TRACE_ALIASES.spanId),
+			aliasedSelect(fields.serviceName, TRACE_ALIASES.serviceName),
+			aliasedSelect(fields.body, TRACE_ALIASES.body),
+			aliasedSelect(fields.severityText, TRACE_ALIASES.severityText),
 		].join(", "),
 		`FROM ${quoteIdentifier(source.config.database)}.${quoteIdentifier(source.config.table)}`,
-		`WHERE toString(${traceIdExpression}) = '${escapeSqlString(traceId)}'`,
-		`ORDER BY ${timestamp} ASC`,
+		`WHERE toString(${fields.traceId}) = '${escapeSqlString(traceId)}'`,
+		`ORDER BY ${fields.timestamp} ASC`,
 		`LIMIT ${limit}`,
 	].join("\n");
 }
@@ -720,54 +720,21 @@ function buildTraceRowDetailQuery(source: TraceSourceEntity, rowWhere: string) {
 		throw new Error("Trace source is missing database or table configuration");
 	}
 
-	const timestamp = configuredExpression(
-		source.config.timestampQueryField,
-		"Timestamp",
-	);
-	const traceIdExpression = configuredExpression(
-		source.config.traceIdField,
-		"TraceId",
-	);
-	const spanId = configuredExpression(source.config.spanIdField, "SpanId");
-	const parentSpanId = configuredExpression(
-		source.config.parentSpanIdField,
-		"ParentSpanId",
-	);
-	const serviceName = configuredExpression(
-		source.config.serviceNameField,
-		"ServiceName",
-	);
-	const name = configuredExpression(source.config.spanNameField, "SpanName");
-	const duration = configuredExpression(
-		source.config.durationField,
-		"Duration",
-	);
-	const statusCode = configuredExpression(
-		source.config.statusCodeField,
-		"StatusCode",
-	);
-	const statusMessage = configuredExpression(
-		source.config.statusMessageField,
-		"StatusMessage",
-	);
-	const spanKind = configuredExpression(
-		source.config.spanKindField,
-		"SpanKind",
-	);
+	const fields = getTraceFieldExpressions(source);
 
 	return [
 		[
 			"SELECT *",
-			aliasedSelect(timestamp, TRACE_ALIASES.timestamp),
-			aliasedSelect(traceIdExpression, TRACE_ALIASES.traceId),
-			aliasedSelect(spanId, TRACE_ALIASES.spanId),
-			aliasedSelect(parentSpanId, TRACE_ALIASES.parentSpanId),
-			aliasedSelect(name, TRACE_ALIASES.name),
-			aliasedSelect(serviceName, TRACE_ALIASES.serviceName),
-			aliasedSelect(duration, TRACE_ALIASES.duration),
-			aliasedSelect(statusCode, TRACE_ALIASES.statusCode),
-			aliasedSelect(statusMessage, TRACE_ALIASES.statusMessage),
-			aliasedSelect(spanKind, TRACE_ALIASES.spanKind),
+			aliasedSelect(fields.timestamp, TRACE_ALIASES.timestamp),
+			aliasedSelect(fields.traceId, TRACE_ALIASES.traceId),
+			aliasedSelect(fields.spanId, TRACE_ALIASES.spanId),
+			aliasedSelect(fields.parentSpanId, TRACE_ALIASES.parentSpanId),
+			aliasedSelect(fields.name, TRACE_ALIASES.name),
+			aliasedSelect(fields.serviceName, TRACE_ALIASES.serviceName),
+			aliasedSelect(fields.duration, TRACE_ALIASES.duration),
+			aliasedSelect(fields.statusCode, TRACE_ALIASES.statusCode),
+			aliasedSelect(fields.statusMessage, TRACE_ALIASES.statusMessage),
+			aliasedSelect(fields.spanKind, TRACE_ALIASES.spanKind),
 		].join(", "),
 		`FROM ${quoteIdentifier(source.config.database)}.${quoteIdentifier(source.config.table)}`,
 		`WHERE ${rowWhere}`,
@@ -787,43 +754,32 @@ function rowWhereFromPredicates(
 }
 
 function buildLogTraceNodeRowWhere(source: LogSourceEntity, row: DataRow) {
-	const timestamp = configuredExpression(
-		source.config.timestampQueryField,
-		"Timestamp",
-	);
-	const traceId = configuredExpression(source.config.traceIdField, "TraceId");
-	const spanId = configuredExpression(source.config.spanIdField, "SpanId");
-	const serviceName = configuredExpression(
-		source.config.serviceNameField,
-		"ServiceName",
-	);
-	const body = configuredExpression(source.config.bodyField, "Body");
-	const severityText = configuredExpression(
-		source.config.severityField,
-		"SeverityText",
-	);
+	const fields = getLogFieldExpressions(source);
 
 	return rowWhereFromPredicates(
 		[
 			predicateForExpression(
-				traceId,
+				fields.traceId,
 				fallbackValue(row, FIELD_FALLBACKS.traceId),
 			),
 			predicateForExpression(
-				spanId,
+				fields.spanId,
 				fallbackValue(row, FIELD_FALLBACKS.spanId),
 			),
 			predicateForExpression(
-				timestamp,
+				fields.timestamp,
 				fallbackValue(row, FIELD_FALLBACKS.timestamp),
 			),
 			predicateForExpression(
-				serviceName,
+				fields.serviceName,
 				fallbackValue(row, FIELD_FALLBACKS.serviceName),
 			),
-			predicateForExpression(body, fallbackValue(row, FIELD_FALLBACKS.body)),
 			predicateForExpression(
-				severityText,
+				fields.body,
+				fallbackValue(row, FIELD_FALLBACKS.body),
+			),
+			predicateForExpression(
+				fields.severityText,
 				fallbackValue(row, FIELD_FALLBACKS.severityText),
 			),
 		],
@@ -832,62 +788,40 @@ function buildLogTraceNodeRowWhere(source: LogSourceEntity, row: DataRow) {
 }
 
 function buildSpanTraceNodeRowWhere(source: TraceSourceEntity, row: DataRow) {
-	const timestamp = configuredExpression(
-		source.config.timestampQueryField,
-		"Timestamp",
-	);
-	const traceId = configuredExpression(source.config.traceIdField, "TraceId");
-	const spanId = configuredExpression(source.config.spanIdField, "SpanId");
-	const parentSpanId = configuredExpression(
-		source.config.parentSpanIdField,
-		"ParentSpanId",
-	);
-	const serviceName = configuredExpression(
-		source.config.serviceNameField,
-		"ServiceName",
-	);
-	const name = configuredExpression(source.config.spanNameField, "SpanName");
-	const duration = configuredExpression(
-		source.config.durationField,
-		"Duration",
-	);
-	const statusCode = configuredExpression(
-		source.config.statusCodeField,
-		"StatusCode",
-	);
+	const fields = getTraceFieldExpressions(source);
 
 	return rowWhereFromPredicates(
 		[
 			predicateForExpression(
-				traceId,
+				fields.traceId,
 				fallbackValue(row, FIELD_FALLBACKS.traceId),
 			),
 			predicateForExpression(
-				spanId,
+				fields.spanId,
 				fallbackValue(row, FIELD_FALLBACKS.spanId),
 			),
 			predicateForExpression(
-				parentSpanId,
+				fields.parentSpanId,
 				fallbackValue(row, TOP_LEVEL_FIELD_FALLBACKS.ParentSpanId),
 			),
 			predicateForExpression(
-				timestamp,
+				fields.timestamp,
 				fallbackValue(row, FIELD_FALLBACKS.timestamp),
 			),
 			predicateForExpression(
-				serviceName,
+				fields.serviceName,
 				fallbackValue(row, FIELD_FALLBACKS.serviceName),
 			),
 			predicateForExpression(
-				name,
+				fields.name,
 				fallbackValue(row, TOP_LEVEL_FIELD_FALLBACKS.SpanName),
 			),
 			predicateForExpression(
-				duration,
+				fields.duration,
 				fallbackValue(row, TOP_LEVEL_FIELD_FALLBACKS.Duration),
 			),
 			predicateForExpression(
-				statusCode,
+				fields.statusCode,
 				fallbackValue(row, TOP_LEVEL_FIELD_FALLBACKS.StatusCode),
 			),
 		],

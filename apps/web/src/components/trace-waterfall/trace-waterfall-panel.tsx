@@ -14,10 +14,10 @@ import {
 	Search,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { DataRow } from "@/web/components/data-row-side-panel";
 import { Button } from "@/web/components/ui/button";
 import { Input } from "@/web/components/ui/input";
 import { usePanelResize } from "@/web/hooks/use-panel-resize";
+import type { DataRow } from "@/web/lib/data-row";
 import { cn } from "@/web/utils/cn";
 import {
 	buildTraceWaterfallTree,

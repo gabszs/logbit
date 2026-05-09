@@ -171,6 +171,7 @@ function TracePanelSlot({
 		refetchOnMount: false,
 		refetchOnReconnect: false,
 		refetchOnWindowFocus: false,
+		placeholderData: (previousData) => previousData,
 		staleTime: Number.POSITIVE_INFINITY,
 	});
 
@@ -199,7 +200,7 @@ function TracePanelSlot({
 		);
 	}
 
-	if (traceQuery.isPending || traceQuery.isFetching) {
+	if (!traceQuery.data && traceQuery.isPending) {
 		return (
 			<TraceWaterfallPanel
 				status="loading"
