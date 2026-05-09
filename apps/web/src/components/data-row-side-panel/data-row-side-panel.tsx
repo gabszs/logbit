@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { AlertTriangle, Loader2 } from "lucide-react";
+import { AlertTriangle, GripVertical, Loader2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { TraceWaterfallPanel } from "@/web/components/trace-waterfall";
 import {
@@ -9,6 +9,7 @@ import {
 	SheetHeader,
 	SheetTitle,
 } from "@/web/components/ui/sheet";
+import { usePanelResize } from "@/web/hooks/use-panel-resize";
 import { cn } from "@/web/utils/cn";
 import { BodyBlock } from "./body-block";
 import { ColumnValuesSection } from "./column-values-section";
@@ -254,12 +255,38 @@ export function DataRowSidePanel({
 				null)
 			: null;
 
+	const sheetResize = usePanelResize({
+		direction: "left",
+		defaultWidth: Math.floor(window.innerWidth * 0.7),
+		minWidth: 400,
+		maxWidth: Math.floor(window.innerWidth * 0.95),
+	});
+
 	return (
 		<Sheet open={open} onOpenChange={onOpenChange}>
 			<SheetContent
 				side="right"
-				className="flex w-[94vw] max-w-none flex-row gap-0 border-[color:var(--surface-border)] bg-[color:var(--surface-background)] p-0 sm:w-[70vw] sm:max-w-none"
+				className="flex w-[94vw] max-w-none flex-row gap-0 border-[color:var(--surface-border)] bg-[color:var(--surface-background)] p-0 sm:max-w-none"
+				style={{ width: sheetResize.width }}
 			>
+				{/* Resize handle — left edge */}
+				<div
+					ref={sheetResize.handleRef}
+					className={cn(
+						"group/resize absolute inset-y-0 -left-1 z-20 flex w-2 cursor-col-resize items-center justify-center",
+						sheetResize.isResizing && "bg-primary/10",
+					)}
+					title="Drag to resize (double-click to reset)"
+				>
+					<span
+						className={cn(
+							"flex h-8 w-4 items-center justify-center rounded-sm opacity-0 transition-opacity group-hover/resize:opacity-100",
+							sheetResize.isResizing && "opacity-100",
+						)}
+					>
+						<GripVertical className="size-3 text-muted-foreground" />
+					</span>
+				</div>
 				<SheetHeader className="sr-only">
 					<SheetTitle>Row details</SheetTitle>
 					<SheetDescription>Inspect selected row values.</SheetDescription>
