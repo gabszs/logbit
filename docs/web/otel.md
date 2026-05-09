@@ -1,6 +1,6 @@
 # Frontend OpenTelemetry
 
-O frontend (`apps/web`) tem instrumentacao OpenTelemetry opt-in para chamadas HTTP feitas via `fetch`. A configuracao fica centralizada em `apps/web/src/lib/config.ts`, e a inicializacao do SDK fica em `apps/web/src/lib/otel.ts`.
+O frontend (`apps/web`) tem instrumentacao OpenTelemetry opt-in para chamadas HTTP feitas via `fetch`, Web Vitals e contador de erros nao tratados. A configuracao fica centralizada em `apps/web/src/lib/config.ts`, e a inicializacao do SDK fica em `apps/web/src/lib/otel.ts`.
 
 ## Como habilitar
 
@@ -14,7 +14,7 @@ VITE_OTEL_SERVICE_VERSION=""
 VITE_OTEL_SAMPLE_RATIO="1"
 ```
 
-- `VITE_OTEL_EXPORTER_OTLP_ENDPOINT` deve ser a URL base do collector OTLP HTTP, sem `/v1/traces`.
+- `VITE_OTEL_EXPORTER_OTLP_ENDPOINT` deve ser a URL base do collector OTLP HTTP, sem `/v1/traces` ou `/v1/metrics`.
 - Se OTel estiver ativo e a URL do collector estiver vazia, o app nao quebra; ele emite um `console.warn` e nao inicializa a instrumentacao.
 - Nao existe default de ativacao nem default de collector no codigo. O valor padrao documentado vive apenas no `.env.example`.
 - `VITE_OTEL_SAMPLE_RATIO` aceita `0..1`; valores invalidos caem para `1`.
@@ -23,7 +23,7 @@ O `main.tsx` importa `./lib/otel` antes dos clients HTTP, para que o patch de `f
 
 ## O que e instrumentado
 
-A instrumentacao usa `@opentelemetry/instrumentation-fetch`. Portanto, qualquer chamada que passe por `window.fetch` gera span quando OTel esta ativo.
+A instrumentacao de traces usa `@opentelemetry/instrumentation-fetch`. Portanto, qualquer chamada que passe por `window.fetch` gera span quando OTel esta ativo.
 
 Hoje isso cobre:
 
@@ -33,6 +33,11 @@ Hoje isso cobre:
 - ClickHouse client via proxy (`/v1/proxy/connections/*`)
 - Export OTLP do proprio browser para o collector
 - Qualquer outro `fetch` feito pela aplicacao
+
+As metricas usam `@opentelemetry/sdk-metrics` e exportam para `${VITE_OTEL_EXPORTER_OTLP_ENDPOINT}/v1/metrics` a cada 30 segundos. Hoje elas cobrem:
+
+- Web Vitals via `web-vitals`: `TTFB`, `FCP`, `LCP`, `INP` e `CLS`
+- Erros nao tratados via `loglog.frontend.error.count`
 
 A propagacao tambem esta aberta para qualquer `fetch` com:
 
@@ -57,9 +62,17 @@ Para o server continuar o mesmo trace, ele precisa rodar com OTel ativo, por exe
 turbo -F server otel-dev
 ```
 
+## Fluxo de metricas
+
+1. O usuario carrega ou interage com o web app.
+2. `web-vitals` reporta `TTFB`, `FCP`, `LCP`, `INP` e `CLS` quando cada metrica fica disponivel.
+3. O app registra os valores em histograms OpenTelemetry.
+4. Erros capturados pelo `ErrorBoundary`, `window.error` e `unhandledrejection` incrementam `loglog.frontend.error.count`, exceto erros classificados como backend indisponivel.
+5. O browser exporta metricas em lote para `${VITE_OTEL_EXPORTER_OTLP_ENDPOINT}/v1/metrics`.
+
 ## Resource attributes
 
-Os spans do browser usam um resource com atributos do servico e do ambiente do navegador:
+Os spans e metricas do browser usam um resource com atributos do servico e do ambiente do navegador:
 
 - `service.name`: `VITE_OTEL_SERVICE_NAME`, default `loglog-web`
 - `service.version`: `VITE_OTEL_SERVICE_VERSION`, opcional
@@ -99,6 +112,28 @@ Tambem existem atributos especificos do Loglog:
 - `loglog.component`: `orpc`, `better-auth`, `clickhouse-client`, `hono-rpc`, `otel-exporter` ou `fetch`
 - `loglog.http.query.param_names`: nomes dos parametros de query, sem valores
 
+## Metric attributes
+
+Web Vitals sao exportados como histograms separados:
+
+- `web.vital.ttfb`, unidade `ms`
+- `web.vital.fcp`, unidade `ms`
+- `web.vital.lcp`, unidade `ms`
+- `web.vital.inp`, unidade `ms`
+- `web.vital.cls`, unidade `1`
+
+Cada ponto de Web Vital usa somente:
+
+- `web.vital.rating`: `good`, `needs-improvement` ou `poor`
+- `web.vital.navigation_type`: tipo de navegacao reportado por `web-vitals`
+
+Erros nao tratados sao exportados pelo counter `loglog.frontend.error.count` com:
+
+- `error.source`: `react-boundary`, `window-error` ou `unhandled-rejection`
+- `error.type`: `error.name` quando disponivel, senao `_OTHER`
+
+Metricas nao enviam `error.message`, stack trace, URL completa, query string, IDs de usuario, IDs de sessao ou detalhes de DOM. O build de attribution do `web-vitals` nao e usado.
+
 ## Sanitizacao de URL
 
 `url.full` e preenchido com uma URL sanitizada.
@@ -121,6 +156,8 @@ O `FetchInstrumentation` descarta o segundo argumento de `fetch(Request, init)` 
 
 Headers de propagacao exigem CORS. Se uma chamada externa falhar depois de habilitar OTel, confirme que o destino aceita `traceparent`, `tracestate` e `baggage` em preflight.
 
+Metricas tambem exigem CORS no collector para `/v1/metrics`. Se Web Vitals nao aparecerem, confirme que o collector aceita OTLP HTTP metrics nesse path.
+
 Como `propagateToUrls` esta em `/.*/`, destinos externos tambem recebem headers de trace quando o browser/CORS permitir. Isso e intencional nesta fase para simplificar debugging.
 
 ## Verificacao manual
@@ -140,4 +177,6 @@ turbo -F web dev
 ```
 
 5. Abra DevTools e confirme que requests para o backend incluem `traceparent`.
-6. Consulte `otel_traces` e verifique spans com `service.name = loglog-web` e `service.name = loglog-api` no mesmo `TraceId`.
+6. Confirme que o browser envia OTLP para `/v1/traces` e `/v1/metrics`.
+7. Consulte `otel_traces` e verifique spans com `service.name = loglog-web` e `service.name = loglog-api` no mesmo `TraceId`.
+8. Consulte as tabelas de metricas e confirme `web.vital.*` e `loglog.frontend.error.count` com `service.name = loglog-web`.

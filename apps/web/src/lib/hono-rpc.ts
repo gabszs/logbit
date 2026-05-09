@@ -1,6 +1,6 @@
+import { hc } from "hono/client";
 import type { AppType } from "@/index";
 import { settings } from "@/web/lib/config";
-import { hc } from "hono/client";
 
 export const honoClient = hc<AppType>(settings.serverUrl, {
 	init: {

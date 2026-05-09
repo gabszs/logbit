@@ -319,7 +319,7 @@ export function DataRowSidePanel({
 			: null;
 
 	const TRACE_PANEL_VW = 0.22;
-	const COMBINED_VW = 0.70;
+	const COMBINED_VW = 0.7;
 
 	const hasTrace = !!(tracePanel && displayIdentity && adapter);
 

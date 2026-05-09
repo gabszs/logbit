@@ -1,4 +1,3 @@
-import { type Settings, settings } from "@/env";
 import { apiKey } from "@better-auth/api-key";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
@@ -11,6 +10,7 @@ import {
 	twoFactor,
 } from "better-auth/plugins";
 import type { RedisClient } from "bun";
+import { type Settings, settings } from "@/env";
 import "dotenv/config";
 import { eq } from "drizzle-orm";
 import { db, type dbType } from "../db";

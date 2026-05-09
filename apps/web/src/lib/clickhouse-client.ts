@@ -1,7 +1,7 @@
+import { createClient } from "@clickhouse/client-web";
 import type { ClickhouseConnectionTestInput } from "@/server/features/connections/schemas";
 import { settings } from "@/web/lib/config";
 import { getResponseErrorMessage, honoClient } from "@/web/lib/hono-rpc";
-import { createClient } from "@clickhouse/client-web";
 
 // Proxy client — @clickhouse/client-web usa apenas a origin da URL,
 // descartando qualquer path. O fetch customizado reescreve cada request
