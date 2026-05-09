@@ -1,12 +1,21 @@
 import type { ErrorComponentProps } from "@tanstack/react-router";
 import { useRouter } from "@tanstack/react-router";
 import { AlertCircle, Home, RefreshCw } from "lucide-react";
+import { useEffect, useRef } from "react";
 import { BackendUnavailableError } from "@/web/components/backend-unavailable-error";
 import { Button } from "@/web/components/ui/button";
 import { isBackendUnavailableError } from "@/web/lib/backend-error";
+import { recordFrontendError } from "@/web/lib/otel";
 
 export function ErrorBoundary({ error, reset }: ErrorComponentProps) {
 	const router = useRouter();
+	const recordedError = useRef<unknown>(null);
+
+	useEffect(() => {
+		if (recordedError.current === error) return;
+		recordedError.current = error;
+		recordFrontendError(error, "react-boundary");
+	}, [error]);
 
 	if (isBackendUnavailableError(error)) {
 		return <BackendUnavailableError error={error} />;

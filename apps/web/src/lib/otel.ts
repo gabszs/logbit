@@ -1,14 +1,21 @@
+import type { Counter, Histogram } from "@opentelemetry/api";
+import { metrics } from "@opentelemetry/api";
 import { ZoneContextManager } from "@opentelemetry/context-zone";
 import {
 	CompositePropagator,
 	W3CBaggagePropagator,
 	W3CTraceContextPropagator,
 } from "@opentelemetry/core";
+import { OTLPMetricExporter } from "@opentelemetry/exporter-metrics-otlp-http";
 import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http";
 import { registerInstrumentations } from "@opentelemetry/instrumentation";
 import type { FetchCustomAttributeFunction } from "@opentelemetry/instrumentation-fetch";
 import { FetchInstrumentation } from "@opentelemetry/instrumentation-fetch";
 import { resourceFromAttributes } from "@opentelemetry/resources";
+import {
+	MeterProvider,
+	PeriodicExportingMetricReader,
+} from "@opentelemetry/sdk-metrics";
 import {
 	BatchSpanProcessor,
 	ParentBasedSampler,
@@ -42,6 +49,9 @@ import {
 	HTTP_REQUEST_METHOD_VALUE_TRACE,
 	NETWORK_TRANSPORT_VALUE_TCP,
 } from "@opentelemetry/semantic-conventions";
+import type { Metric } from "web-vitals";
+import { onCLS, onFCP, onINP, onLCP, onTTFB } from "web-vitals";
+import { isBackendUnavailableError } from "@/web/lib/backend-error";
 import { settings } from "@/web/lib/config";
 
 const KNOWN_HTTP_METHODS = new Set([
@@ -64,8 +74,23 @@ const SENSITIVE_QUERY_PARAMETERS = new Set([
 	"X-Goog-Signature",
 ]);
 
+const METRIC_EXPORT_INTERVAL_MS = 30_000;
+
+let webVitalTtfbHistogram: Histogram | undefined;
+let webVitalFcpHistogram: Histogram | undefined;
+let webVitalLcpHistogram: Histogram | undefined;
+let webVitalInpHistogram: Histogram | undefined;
+let webVitalClsHistogram: Histogram | undefined;
+let frontendErrorCounter: Counter | undefined;
+let globalErrorMetricsRegistered = false;
+const recordedErrorObjects = new WeakSet<object>();
+
 function joinOtlpTraceUrl(collectorUrl: string) {
 	return `${collectorUrl.replace(/\/+$/, "")}/v1/traces`;
+}
+
+function joinOtlpMetricUrl(collectorUrl: string) {
+	return `${collectorUrl.replace(/\/+$/, "")}/v1/metrics`;
 }
 
 function detectOs(userAgent: string) {
@@ -106,7 +131,8 @@ function getBrowserResourceAttributes() {
 function getHttpComponent(url: URL) {
 	if (
 		settings.otel.collectorUrl &&
-		url.href.startsWith(joinOtlpTraceUrl(settings.otel.collectorUrl))
+		(url.href.startsWith(joinOtlpTraceUrl(settings.otel.collectorUrl)) ||
+			url.href.startsWith(joinOtlpMetricUrl(settings.otel.collectorUrl)))
 	) {
 		return "otel-exporter";
 	}
@@ -247,25 +273,19 @@ const applyFetchSpanAttributes: FetchCustomAttributeFunction = (
 	}
 };
 
-function initializeOtel() {
-	if (!settings.otel.enabled) return;
-
-	if (!settings.otel.collectorUrl) {
-		console.warn(
-			"[otel] VITE_OTEL_EXPORTER_OTLP_ENDPOINT is required when VITE_OTEL_ENABLED=true; telemetry was not initialized.",
-		);
-		return;
-	}
-
+function initializeTracePipeline(
+	resource: ReturnType<typeof resourceFromAttributes>,
+	collectorUrl: string,
+) {
 	const provider = new WebTracerProvider({
-		resource: resourceFromAttributes(getBrowserResourceAttributes()),
+		resource,
 		sampler: new ParentBasedSampler({
 			root: new TraceIdRatioBasedSampler(settings.otel.sampleRatio),
 		}),
 		spanProcessors: [
 			new BatchSpanProcessor(
 				new OTLPTraceExporter({
-					url: joinOtlpTraceUrl(settings.otel.collectorUrl),
+					url: joinOtlpTraceUrl(collectorUrl),
 				}),
 			),
 		],
@@ -292,6 +312,164 @@ function initializeOtel() {
 			}),
 		],
 	});
+}
+
+function initializeMetricPipeline(
+	resource: ReturnType<typeof resourceFromAttributes>,
+	collectorUrl: string,
+) {
+	const meterProvider = new MeterProvider({
+		resource,
+		readers: [
+			new PeriodicExportingMetricReader({
+				exporter: new OTLPMetricExporter({
+					url: joinOtlpMetricUrl(collectorUrl),
+				}),
+				exportIntervalMillis: METRIC_EXPORT_INTERVAL_MS,
+			}),
+		],
+	});
+
+	metrics.setGlobalMeterProvider(meterProvider);
+
+	const meter = meterProvider.getMeter("loglog-web");
+
+	webVitalTtfbHistogram = meter.createHistogram("web.vital.ttfb", {
+		description: "Time to First Byte reported by the browser",
+		unit: "ms",
+	});
+	webVitalFcpHistogram = meter.createHistogram("web.vital.fcp", {
+		description: "First Contentful Paint reported by the browser",
+		unit: "ms",
+	});
+	webVitalLcpHistogram = meter.createHistogram("web.vital.lcp", {
+		description: "Largest Contentful Paint reported by the browser",
+		unit: "ms",
+	});
+	webVitalInpHistogram = meter.createHistogram("web.vital.inp", {
+		description: "Interaction to Next Paint reported by the browser",
+		unit: "ms",
+	});
+	webVitalClsHistogram = meter.createHistogram("web.vital.cls", {
+		description: "Cumulative Layout Shift reported by the browser",
+		unit: "1",
+	});
+	frontendErrorCounter = meter.createCounter("loglog.frontend.error.count", {
+		description: "Unhandled frontend errors observed by the browser",
+	});
+}
+
+function getWebVitalAttributes(metric: Metric) {
+	return {
+		"web.vital.rating": metric.rating,
+		"web.vital.navigation_type": metric.navigationType,
+	};
+}
+
+function recordWebVital(metric: Metric) {
+	const attributes = getWebVitalAttributes(metric);
+
+	if (metric.name === "TTFB") {
+		webVitalTtfbHistogram?.record(metric.value, attributes);
+		return;
+	}
+
+	if (metric.name === "FCP") {
+		webVitalFcpHistogram?.record(metric.value, attributes);
+		return;
+	}
+
+	if (metric.name === "LCP") {
+		webVitalLcpHistogram?.record(metric.value, attributes);
+		return;
+	}
+
+	if (metric.name === "INP") {
+		webVitalInpHistogram?.record(metric.value, attributes);
+		return;
+	}
+
+	if (metric.name === "CLS") {
+		webVitalClsHistogram?.record(metric.value, attributes);
+	}
+}
+
+function registerWebVitalsMetrics() {
+	onTTFB(recordWebVital);
+	onFCP(recordWebVital);
+	onLCP(recordWebVital);
+	onINP(recordWebVital);
+	onCLS(recordWebVital);
+}
+
+function getFrontendErrorType(error: unknown) {
+	if (error instanceof Error && error.name) {
+		return error.name;
+	}
+
+	if (typeof error === "object" && error !== null && "name" in error) {
+		const { name } = error;
+		if (typeof name === "string" && name) {
+			return name;
+		}
+	}
+
+	return "_OTHER";
+}
+
+function shouldRecordFrontendError(error: unknown) {
+	if (isBackendUnavailableError(error)) return false;
+
+	if (typeof error === "object" && error !== null) {
+		if (recordedErrorObjects.has(error)) return false;
+		recordedErrorObjects.add(error);
+	}
+
+	return true;
+}
+
+export function recordFrontendError(
+	error: unknown,
+	source: "react-boundary" | "window-error" | "unhandled-rejection",
+) {
+	if (!frontendErrorCounter || !shouldRecordFrontendError(error)) return;
+
+	frontendErrorCounter.add(1, {
+		"error.source": source,
+		"error.type": getFrontendErrorType(error),
+	});
+}
+
+function registerGlobalErrorMetrics() {
+	if (globalErrorMetricsRegistered) return;
+	globalErrorMetricsRegistered = true;
+
+	window.addEventListener("error", (event) => {
+		recordFrontendError(event.error, "window-error");
+	});
+
+	window.addEventListener("unhandledrejection", (event) => {
+		recordFrontendError(event.reason, "unhandled-rejection");
+	});
+}
+
+function initializeOtel() {
+	if (!settings.otel.enabled) return;
+
+	if (!settings.otel.collectorUrl) {
+		console.warn(
+			"[otel] VITE_OTEL_EXPORTER_OTLP_ENDPOINT is required when VITE_OTEL_ENABLED=true; telemetry was not initialized.",
+		);
+		return;
+	}
+
+	const resource = resourceFromAttributes(getBrowserResourceAttributes());
+	const collectorUrl = settings.otel.collectorUrl;
+
+	initializeTracePipeline(resource, collectorUrl);
+	initializeMetricPipeline(resource, collectorUrl);
+	registerWebVitalsMetrics();
+	registerGlobalErrorMetrics();
 }
 
 initializeOtel();
