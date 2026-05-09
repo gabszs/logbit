@@ -7,6 +7,7 @@ import { QueryCache, QueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import type { AppRouter } from "@/index";
 import { isBackendUnavailableError } from "@/web/lib/backend-error";
+import { settings } from "@/web/lib/config";
 
 export const queryClient = new QueryClient({
 	queryCache: new QueryCache({
@@ -36,12 +37,14 @@ export const queryClient = new QueryClient({
 });
 
 const link = new RPCLink({
-	url: `${import.meta.env.VITE_SERVER_URL}/orpc`,
+	url: `${settings.serverUrl}/orpc`,
 	fetch(request, init) {
-		return fetch(request, {
-			...init,
-			credentials: "include",
-		});
+		return fetch(
+			new Request(request, {
+				...init,
+				credentials: "include",
+			}),
+		);
 	},
 	interceptors: [
 		onError((error) => {

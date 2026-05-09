@@ -1,16 +1,16 @@
-import { createClient } from "@clickhouse/client-web";
 import type { ClickhouseConnectionTestInput } from "@/server/features/connections/schemas";
+import { settings } from "@/web/lib/config";
 import { getResponseErrorMessage, honoClient } from "@/web/lib/hono-rpc";
+import { createClient } from "@clickhouse/client-web";
 
 // Proxy client — @clickhouse/client-web usa apenas a origin da URL,
 // descartando qualquer path. O fetch customizado reescreve cada request
 // para incluir o path do proxy antes de enviá-la ao servidor.
 export function createProxyClient(connectionId: string) {
-	const serverUrl = import.meta.env.VITE_SERVER_URL as string;
 	const proxyPrefix = `/v1/proxy/connections/${connectionId}`;
 
 	return createClient({
-		url: serverUrl,
+		url: settings.serverUrl,
 		fetch: ((input, init) => {
 			const url = new URL(input.toString());
 			url.pathname = proxyPrefix + url.pathname;

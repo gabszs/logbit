@@ -1,3 +1,4 @@
+import { settings } from "@/web/lib/config";
 import {
 	adminClient,
 	organizationClient,
@@ -13,7 +14,7 @@ import { createAuthClient } from "better-auth/react";
 // ] as unknown as NonNullable<Parameters<typeof createAuthClient>[0]>["plugins"];
 
 export const authClient = createAuthClient({
-	baseURL: import.meta.env.VITE_SERVER_URL,
+	baseURL: settings.serverUrl,
 	basePath: "/v1/auth",
 	fetchOptions: {
 		credentials: "include",

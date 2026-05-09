@@ -67,6 +67,9 @@ const app = new OpenAPIHono<AppContextType>()
 			allowHeaders: [
 				"Content-Type",
 				"Authorization",
+				"traceparent",
+				"tracestate",
+				"baggage",
 				"x-client-ip",
 				"cf-connecting-ip",
 				"x-forwarded-for",

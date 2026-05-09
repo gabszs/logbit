@@ -1,13 +1,8 @@
-import { hc } from "hono/client";
 import type { AppType } from "@/index";
+import { settings } from "@/web/lib/config";
+import { hc } from "hono/client";
 
-const serverUrl = import.meta.env.VITE_SERVER_URL;
-
-if (!serverUrl) {
-	throw new Error("VITE_SERVER_URL is not defined");
-}
-
-export const honoClient = hc<AppType>(serverUrl, {
+export const honoClient = hc<AppType>(settings.serverUrl, {
 	init: {
 		credentials: "include",
 	},
