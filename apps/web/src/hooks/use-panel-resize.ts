@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 type ResizeDirection = "left" | "right";
 
@@ -24,16 +24,19 @@ interface UsePanelResizeResult {
 	isResizing: boolean;
 	/** Reset width back to the configured `defaultWidth`. */
 	resetToDefault: () => void;
-	/** Ref to attach to the drag-handle element. */
-	handleRef: React.RefObject<HTMLDivElement | null>;
+	/**
+	 * Callback ref — attach to the drag-handle element.
+	 * Automatically sets up / tears down listeners when the element
+	 * mounts / unmounts (handles conditional rendering correctly).
+	 */
+	handleRef: (node: HTMLDivElement | null) => void;
 }
 
 /**
  * Lightweight pointer-drag hook for horizontal panel resizing.
  *
- * Attaches native `pointerdown` → `pointermove` → `pointerup` listeners
- * via a ref so it works correctly with the React Compiler and avoids
- * stale-closure issues.
+ * Uses a callback ref so listeners are correctly (re-)attached even when
+ * the handle element is conditionally rendered (e.g. collapsed/expanded).
  */
 export function usePanelResize({
 	direction,
@@ -43,9 +46,9 @@ export function usePanelResize({
 }: UsePanelResizeOptions): UsePanelResizeResult {
 	const [width, setWidth] = useState(defaultWidth);
 	const [isResizing, setIsResizing] = useState(false);
-	const handleRef = useRef<HTMLDivElement | null>(null);
 
-	// Store mutable values in refs to avoid stale closures.
+	// Store mutable values in refs to avoid stale closures inside
+	// the native event listeners.
 	const stateRef = useRef({
 		direction,
 		minWidth,
@@ -59,33 +62,44 @@ export function usePanelResize({
 	stateRef.current.maxWidth = maxWidth;
 	stateRef.current.defaultWidth = defaultWidth;
 
-	useEffect(() => {
-		const handle = handleRef.current;
-		if (!handle) return;
+	// Stable listener references so we can remove them reliably.
+	const listenersRef = useRef<{
+		onPointerDown: (e: PointerEvent) => void;
+		onPointerMove: (e: PointerEvent) => void;
+		onPointerUp: () => void;
+		onDoubleClick: () => void;
+	} | null>(null);
 
-		function onPointerMove(e: PointerEvent) {
-			const s = stateRef.current;
-			const delta = e.clientX - s.startX;
-			const newWidth =
-				s.direction === "left" ? s.startWidth - delta : s.startWidth + delta;
-			setWidth(Math.min(s.maxWidth, Math.max(s.minWidth, newWidth)));
-		}
+	// Track the currently-attached DOM node so we can clean up.
+	const nodeRef = useRef<HTMLDivElement | null>(null);
 
-		function onPointerUp() {
+	// Create stable listeners once.
+	if (listenersRef.current === null) {
+		let rafId = 0;
+
+		const onPointerMove = (e: PointerEvent) => {
+			cancelAnimationFrame(rafId);
+			rafId = requestAnimationFrame(() => {
+				const s = stateRef.current;
+				const delta = e.clientX - s.startX;
+				const newWidth =
+					s.direction === "left" ? s.startWidth - delta : s.startWidth + delta;
+				setWidth(Math.min(s.maxWidth, Math.max(s.minWidth, newWidth)));
+			});
+		};
+
+		const onPointerUp = () => {
 			setIsResizing(false);
 			document.removeEventListener("pointermove", onPointerMove);
 			document.removeEventListener("pointerup", onPointerUp);
 			document.body.style.cursor = "";
 			document.body.style.userSelect = "";
-		}
+		};
 
-		function onPointerDown(e: PointerEvent) {
+		const onPointerDown = (e: PointerEvent) => {
 			e.preventDefault();
 			stateRef.current.startX = e.clientX;
-			// Read the *current* computed width of the panel's parent (the
-			// element right before the handle in DOM) so we always start from
-			// the real rendered width, not a stale React state value.
-			const panel = handle.parentElement;
+			const panel = nodeRef.current?.parentElement;
 			stateRef.current.startWidth = panel
 				? panel.getBoundingClientRect().width
 				: stateRef.current.defaultWidth;
@@ -95,22 +109,66 @@ export function usePanelResize({
 			document.addEventListener("pointerup", onPointerUp);
 			document.body.style.cursor = "col-resize";
 			document.body.style.userSelect = "none";
-		}
+		};
 
-		function onDoubleClick() {
+		const onDoubleClick = () => {
 			setWidth(stateRef.current.defaultWidth);
+		};
+
+		listenersRef.current = {
+			onPointerDown,
+			onPointerMove,
+			onPointerUp,
+			onDoubleClick,
+		};
+	}
+
+	/**
+	 * Callback ref — called by React whenever the handle element
+	 * enters or leaves the DOM (including conditional renders like
+	 * collapsed ↔ expanded).
+	 */
+	const handleRef = useCallback((node: HTMLDivElement | null) => {
+		const listeners = listenersRef.current;
+		if (!listeners) return;
+
+		// Detach from previous node (if any).
+		if (nodeRef.current) {
+			nodeRef.current.removeEventListener(
+				"pointerdown",
+				listeners.onPointerDown,
+			);
+			nodeRef.current.removeEventListener("dblclick", listeners.onDoubleClick);
 		}
 
-		handle.addEventListener("pointerdown", onPointerDown);
-		handle.addEventListener("dblclick", onDoubleClick);
+		nodeRef.current = node;
 
+		// Attach to new node (if any).
+		if (node) {
+			node.addEventListener("pointerdown", listeners.onPointerDown);
+			node.addEventListener("dblclick", listeners.onDoubleClick);
+		}
+	}, []);
+
+	// Global cleanup on unmount.
+	useEffect(() => {
 		return () => {
-			handle.removeEventListener("pointerdown", onPointerDown);
-			handle.removeEventListener("dblclick", onDoubleClick);
-			document.removeEventListener("pointermove", onPointerMove);
-			document.removeEventListener("pointerup", onPointerUp);
+			const listeners = listenersRef.current;
+			if (!listeners) return;
+			document.removeEventListener("pointermove", listeners.onPointerMove);
+			document.removeEventListener("pointerup", listeners.onPointerUp);
 			document.body.style.cursor = "";
 			document.body.style.userSelect = "";
+			if (nodeRef.current) {
+				nodeRef.current.removeEventListener(
+					"pointerdown",
+					listeners.onPointerDown,
+				);
+				nodeRef.current.removeEventListener(
+					"dblclick",
+					listeners.onDoubleClick,
+				);
+			}
 		};
 	}, []);
 

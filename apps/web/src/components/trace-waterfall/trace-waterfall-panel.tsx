@@ -1,13 +1,10 @@
-import type { DataRow } from "@/web/components/data-row-side-panel";
-import { Button } from "@/web/components/ui/button";
-import { Input } from "@/web/components/ui/input";
-import { cn } from "@/web/utils/cn";
 import {
 	AlertTriangle,
 	ChevronDown,
 	ChevronRight,
 	Download,
 	FileText,
+	GripVertical,
 	Info,
 	ListTree,
 	Loader2,
@@ -17,6 +14,11 @@ import {
 	Search,
 } from "lucide-react";
 import { useMemo, useState } from "react";
+import type { DataRow } from "@/web/components/data-row-side-panel";
+import { Button } from "@/web/components/ui/button";
+import { Input } from "@/web/components/ui/input";
+import { usePanelResize } from "@/web/hooks/use-panel-resize";
+import { cn } from "@/web/utils/cn";
 import {
 	buildTraceWaterfallTree,
 	filterTraceWaterfallTree,
@@ -384,6 +386,17 @@ export function TraceWaterfallPanel({
 		URL.revokeObjectURL(url);
 	};
 
+	const traceResize = usePanelResize({
+		direction: "right",
+		// Original: basis-[30%] of the sheet (70vw) = ~21vw, sm:min-w-[18rem], sm:max-w-[30rem]
+		defaultWidth: Math.max(
+			288,
+			Math.min(Math.floor(window.innerWidth * 0.7 * 0.3), 480),
+		),
+		minWidth: 250,
+		maxWidth: Math.floor(window.innerWidth * 0.5),
+	});
+
 	if (collapsed) {
 		return (
 			<aside
@@ -419,9 +432,10 @@ export function TraceWaterfallPanel({
 	return (
 		<aside
 			className={cn(
-				"flex min-h-0 shrink-0 basis-[30%] flex-col border-[color:var(--surface-border)] border-r bg-[color:var(--surface-background)] sm:min-w-[18rem] sm:max-w-[30rem]",
+				"relative flex min-h-0 shrink-0 flex-col border-[color:var(--surface-border)] border-r bg-[color:var(--surface-background)] sm:max-w-[60%]",
 				className,
 			)}
+			style={{ width: traceResize.width, flexBasis: traceResize.width }}
 		>
 			<div className="flex h-14 shrink-0 items-center gap-2 border-[color:var(--surface-border)] border-b px-3">
 				<div className="min-w-0 flex-1">
@@ -532,6 +546,24 @@ export function TraceWaterfallPanel({
 					) : null}
 				</div>
 			) : null}
+			{/* Resize handle — right edge */}
+			<div
+				ref={traceResize.handleRef}
+				className={cn(
+					"group/resize absolute inset-y-0 -right-1 z-20 flex w-2 cursor-col-resize items-center justify-center",
+					traceResize.isResizing && "bg-primary/10",
+				)}
+				title="Drag to resize (double-click to reset)"
+			>
+				<span
+					className={cn(
+						"flex h-8 w-4 items-center justify-center rounded-sm opacity-0 transition-opacity group-hover/resize:opacity-100",
+						traceResize.isResizing && "opacity-100",
+					)}
+				>
+					<GripVertical className="size-3 text-muted-foreground" />
+				</span>
+			</div>
 		</aside>
 	);
 }
