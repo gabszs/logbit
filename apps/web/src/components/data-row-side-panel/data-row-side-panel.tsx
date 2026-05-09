@@ -1,7 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, GripVertical, Loader2 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
-import { TraceWaterfallPanel } from "@/web/components/trace-waterfall";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+	type TraceWaterfallNodeSelection,
+	TraceWaterfallPanel,
+} from "@/web/components/trace-waterfall";
 import {
 	Sheet,
 	SheetContent,
@@ -51,6 +54,20 @@ function StateMessage({
 				<p className="mt-2 whitespace-pre-wrap break-words font-mono text-xs leading-6">
 					{description}
 				</p>
+			</div>
+		</div>
+	);
+}
+
+function MainPanelLoadingIndicator() {
+	return (
+		<div className="pointer-events-none absolute inset-x-0 top-0 z-30">
+			<div className="h-0.5 w-full overflow-hidden bg-primary/10">
+				<div className="h-full w-full animate-pulse bg-primary/50" />
+			</div>
+			<div className="absolute top-3 right-4 flex h-8 items-center gap-2 rounded-md border border-[color:var(--surface-border)] bg-[color:var(--surface-background)]/95 px-3 font-medium text-muted-foreground text-xs shadow-[var(--surface-shadow)] backdrop-blur-sm">
+				<Loader2 className="size-3.5 animate-spin" />
+				Loading selected row
 			</div>
 		</div>
 	);
@@ -127,10 +144,12 @@ function TracePanelSlot({
 	identity,
 	adapter,
 	tracePanel,
+	onIdentityChange,
 }: {
 	identity: RowIdentity;
 	adapter: RowPanelAdapter;
 	tracePanel: RowTracePanelDescriptor;
+	onIdentityChange?: (identity: RowIdentity) => void;
 }) {
 	const traceQuery = useQuery({
 		queryKey:
@@ -154,6 +173,20 @@ function TracePanelSlot({
 		refetchOnWindowFocus: false,
 		staleTime: Number.POSITIVE_INFINITY,
 	});
+
+	const handleTraceNodeSelect = (selection: TraceWaterfallNodeSelection) => {
+		if (tracePanel.kind !== "available" || !adapter.getTraceNodeRowIdentity) {
+			return;
+		}
+		const nextIdentity = adapter.getTraceNodeRowIdentity(
+			identity,
+			tracePanel,
+			selection,
+		);
+		if (nextIdentity) {
+			onIdentityChange?.(nextIdentity);
+		}
+	};
 
 	if (tracePanel.kind === "setup-required") {
 		return (
@@ -207,6 +240,9 @@ function TracePanelSlot({
 			truncated={result?.truncated}
 			traceSourceName={result?.traceSourceName ?? tracePanel.traceSourceName}
 			logSourceName={result?.logSourceName ?? tracePanel.logSourceName}
+			initialHighlightHint={tracePanel.initialHighlightHint}
+			initialHighlightKey={identity.selectedRowKey}
+			onNodeSelect={handleTraceNodeSelect}
 		/>
 	);
 }
@@ -214,11 +250,13 @@ function TracePanelSlot({
 export function DataRowSidePanel({
 	open,
 	onOpenChange,
+	onIdentityChange,
 	identity,
 	adapter,
 }: {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
+	onIdentityChange?: (identity: RowIdentity) => void;
 	identity: RowIdentity | null;
 	adapter: RowPanelAdapter | null;
 }) {
@@ -238,9 +276,11 @@ export function DataRowSidePanel({
 		refetchOnMount: false,
 		refetchOnReconnect: false,
 		refetchOnWindowFocus: false,
+		placeholderData: (previousData) => previousData,
 		staleTime: Number.POSITIVE_INFINITY,
 	});
 
+	const lastSuccessfulIdentityRef = useRef<RowIdentity | null>(null);
 	const rows = query.data?.rows ?? [];
 	const errorMessage =
 		query.error && adapter?.formatError
@@ -249,6 +289,19 @@ export function DataRowSidePanel({
 				? query.error.message
 				: "Failed to load row details";
 	const loadedRow = rows.length === 1 ? rows[0] : null;
+	const displayIdentity = query.isPlaceholderData
+		? lastSuccessfulIdentityRef.current
+		: identity;
+	const isInitialLoading =
+		loadedRow == null && (query.isPending || query.isFetching);
+	const isMainPanelRefreshing = loadedRow != null && query.isFetching;
+
+	useEffect(() => {
+		if (!query.isPlaceholderData && loadedRow && identity) {
+			lastSuccessfulIdentityRef.current = identity;
+		}
+	}, [identity, loadedRow, query.isPlaceholderData]);
+
 	const tracePanel =
 		loadedRow && adapter
 			? (adapter.getTracePanel?.(loadedRow, adapter.resolveFields(loadedRow)) ??
@@ -291,20 +344,22 @@ export function DataRowSidePanel({
 					<SheetTitle>Row details</SheetTitle>
 					<SheetDescription>Inspect selected row values.</SheetDescription>
 				</SheetHeader>
-				{tracePanel && identity && adapter ? (
+				{tracePanel && displayIdentity && adapter ? (
 					<TracePanelSlot
-						identity={identity}
+						identity={displayIdentity}
 						adapter={adapter}
 						tracePanel={tracePanel}
+						onIdentityChange={onIdentityChange}
 					/>
 				) : null}
-				<div className="flex min-w-0 flex-1 flex-col">
+				<div className="relative flex min-w-0 flex-1 flex-col">
+					{isMainPanelRefreshing ? <MainPanelLoadingIndicator /> : null}
 					{!identity || !adapter ? (
 						<StateMessage
 							title="No row selected"
 							description="Select a table row to inspect details."
 						/>
-					) : query.isPending || query.isFetching ? (
+					) : isInitialLoading ? (
 						<div className="flex min-h-[18rem] items-center justify-center gap-2 text-muted-foreground text-sm">
 							<Loader2 className="size-4 animate-spin" />
 							Loading row details
@@ -326,8 +381,17 @@ export function DataRowSidePanel({
 							description="The selected row identity matched more than one row. Add more identifying fields to the source or query before opening details."
 							variant="danger"
 						/>
+					) : loadedRow && displayIdentity ? (
+						<SuccessPanel
+							row={loadedRow}
+							identity={displayIdentity}
+							adapter={adapter}
+						/>
 					) : (
-						<SuccessPanel row={rows[0]} identity={identity} adapter={adapter} />
+						<StateMessage
+							title="No matching row"
+							description="The selected row identity did not match any row in the source table."
+						/>
 					)}
 				</div>
 			</SheetContent>

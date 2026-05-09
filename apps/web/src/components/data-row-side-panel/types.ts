@@ -1,4 +1,8 @@
 import type { ReactNode } from "react";
+import type {
+	TraceWaterfallInitialHighlightHint,
+	TraceWaterfallNodeSelection,
+} from "@/web/components/trace-waterfall";
 
 export type DataRow = Record<string, unknown>;
 
@@ -22,6 +26,7 @@ export type ResolvedRowFields = {
 	severityText?: unknown;
 	severityNumber?: unknown;
 	body?: unknown;
+	bodyLabel?: string;
 };
 
 export type RowPanelAttribute = {
@@ -59,6 +64,7 @@ export type RowTracePanelAvailable = {
 	logSourceId?: string;
 	traceSourceName?: string;
 	logSourceName?: string;
+	initialHighlightHint?: TraceWaterfallInitialHighlightHint;
 };
 
 export type RowTracePanelDescriptor =
@@ -92,6 +98,11 @@ export type RowPanelAdapter = {
 		identity: RowIdentity,
 		tracePanel: RowTracePanelAvailable,
 	) => Promise<RowTracePanelQueryResult>;
+	getTraceNodeRowIdentity?: (
+		identity: RowIdentity,
+		tracePanel: RowTracePanelAvailable,
+		selection: TraceWaterfallNodeSelection,
+	) => RowIdentity | null;
 	getOverview?: (
 		row: DataRow,
 		fields: ResolvedRowFields,

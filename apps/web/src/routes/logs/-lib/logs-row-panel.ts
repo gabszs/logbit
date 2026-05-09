@@ -11,6 +11,7 @@ import {
 	isDataRecord,
 	tryParseJsonString,
 } from "@/web/components/data-row-side-panel/value-formatting";
+import type { TraceWaterfallInitialHighlightHint } from "@/web/components/trace-waterfall";
 import { TRACE_ALIASES } from "@/web/components/trace-waterfall";
 import {
 	createProxyClient,
@@ -113,13 +114,38 @@ const LOG_SELECTOR_CONFIGS: Array<{
 ];
 
 const FIELD_FALLBACKS = {
-	timestamp: ["Timestamp", "timestamp", "time", "Time", "ts"],
-	traceId: ["TraceId", "traceId", "trace_id"],
-	spanId: ["SpanId", "spanId", "span_id"],
-	serviceName: ["ServiceName", "serviceName", "service_name", "service"],
-	severityText: ["SeverityText", "severityText", "severity", "level", "Level"],
-	severityNumber: ["SeverityNumber", "severityNumber", "severity_number"],
-	body: ["Body", "body", "message", "Message", "msg"],
+	timestamp: [
+		TRACE_ALIASES.timestamp,
+		"Timestamp",
+		"timestamp",
+		"time",
+		"Time",
+		"ts",
+	],
+	traceId: [TRACE_ALIASES.traceId, "TraceId", "traceId", "trace_id"],
+	spanId: [TRACE_ALIASES.spanId, "SpanId", "spanId", "span_id"],
+	serviceName: [
+		TRACE_ALIASES.serviceName,
+		"ServiceName",
+		"serviceName",
+		"service_name",
+		"service",
+	],
+	severityText: [
+		TRACE_ALIASES.severityText,
+		"SeverityText",
+		"severityText",
+		"severity",
+		"level",
+		"Level",
+	],
+	severityNumber: [
+		TRACE_ALIASES.severityNumber,
+		"SeverityNumber",
+		"severityNumber",
+		"severity_number",
+	],
+	body: [TRACE_ALIASES.body, "Body", "body", "message", "Message", "msg"],
 	resourceAttributes: [
 		"ResourceAttributes",
 		"resourceAttributes",
@@ -130,32 +156,59 @@ const FIELD_FALLBACKS = {
 } as const;
 
 const TOP_LEVEL_FIELD_FALLBACKS = {
-	SpanName: ["SpanName", "spanName", "span_name"],
-	Duration: ["Duration", "duration", "DurationNano", "durationNano"],
-	StatusCode: ["StatusCode", "statusCode", "status_code"],
-	StatusMessage: ["StatusMessage", "statusMessage", "status_message"],
-	SpanKind: ["SpanKind", "spanKind", "span_kind"],
-	ParentSpanId: ["ParentSpanId", "parentSpanId", "parent_span_id"],
+	SpanName: [TRACE_ALIASES.name, "SpanName", "spanName", "span_name"],
+	Duration: [
+		TRACE_ALIASES.duration,
+		"Duration",
+		"duration",
+		"DurationNano",
+		"durationNano",
+	],
+	StatusCode: [
+		TRACE_ALIASES.statusCode,
+		"StatusCode",
+		"statusCode",
+		"status_code",
+	],
+	StatusMessage: [
+		TRACE_ALIASES.statusMessage,
+		"StatusMessage",
+		"statusMessage",
+		"status_message",
+	],
+	SpanKind: [TRACE_ALIASES.spanKind, "SpanKind", "spanKind", "span_kind"],
+	ParentSpanId: [
+		TRACE_ALIASES.parentSpanId,
+		"ParentSpanId",
+		"parentSpanId",
+		"parent_span_id",
+	],
 	ScopeName: ["ScopeName", "scopeName", "scope_name"],
 	ScopeVersion: ["ScopeVersion", "scopeVersion", "scope_version"],
 } as const;
 
 const SPAN_ROW_FIELD_HINTS = [
+	TRACE_ALIASES.name,
 	"SpanName",
 	"spanName",
 	"span_name",
+	TRACE_ALIASES.spanKind,
 	"SpanKind",
 	"spanKind",
 	"span_kind",
+	TRACE_ALIASES.parentSpanId,
 	"ParentSpanId",
 	"parentSpanId",
 	"parent_span_id",
+	TRACE_ALIASES.duration,
 	"Duration",
 	"duration",
 	"DurationNano",
 	"durationNano",
+	TRACE_ALIASES.statusCode,
 	"StatusCode",
 	"statusCode",
+	TRACE_ALIASES.statusMessage,
 	"StatusMessage",
 	"statusMessage",
 ] as const;
@@ -216,10 +269,20 @@ function predicateForSelector(selector: LogsRowSelector, value: unknown) {
 	return `toString(${selector.expression}) = '${escapeSqlString(String(value))}'`;
 }
 
+function predicateForExpression(expression: string, value: unknown) {
+	const normalizedExpression = normalizeSqlExpression(expression);
+	if (!normalizedExpression || value === undefined) return null;
+	if (!isScalarPredicateValue(value)) return null;
+	if (value === null) return `isNull(${normalizedExpression})`;
+	return `toString(${normalizedExpression}) = '${escapeSqlString(String(value))}'`;
+}
+
 function stripTechnicalAliases(row: DataRow): DataRow {
 	return Object.fromEntries(
 		Object.entries(row).filter(
-			([key]) => !key.startsWith(LOGLOG_ROW_SELECTOR_PREFIX),
+			([key]) =>
+				!key.startsWith(LOGLOG_ROW_SELECTOR_PREFIX) &&
+				!key.startsWith("__loglog_trace_"),
 		),
 	);
 }
@@ -444,6 +507,7 @@ export function resolveLogsRowFields(
 	source: LogSourceEntity,
 	row: DataRow,
 ): ResolvedRowFields {
+	const isSpan = isSpanLikeRow(source, row);
 	return {
 		timestamp: valueForRole(
 			source,
@@ -459,14 +523,16 @@ export function resolveLogsRowFields(
 			"serviceName",
 			FIELD_FALLBACKS.serviceName,
 		),
-		severityText: valueForRole(
-			source,
-			row,
-			"severityText",
-			FIELD_FALLBACKS.severityText,
-		),
+		severityText: isSpan
+			? (fallbackValue(row, TOP_LEVEL_FIELD_FALLBACKS.StatusCode) ??
+				fallbackValue(row, TOP_LEVEL_FIELD_FALLBACKS.StatusMessage))
+			: valueForRole(source, row, "severityText", FIELD_FALLBACKS.severityText),
 		severityNumber: fallbackValue(row, FIELD_FALLBACKS.severityNumber),
-		body: valueForRole(source, row, "body", FIELD_FALLBACKS.body),
+		body: isSpan
+			? (fallbackValue(row, TOP_LEVEL_FIELD_FALLBACKS.SpanName) ??
+				valueForRole(source, row, "body", FIELD_FALLBACKS.body))
+			: valueForRole(source, row, "body", FIELD_FALLBACKS.body),
+		bodyLabel: isSpan ? "SpanName" : "Body",
 	};
 }
 
@@ -492,6 +558,31 @@ function missingTraceIdDescription(source: LogSourceEntity) {
 		"Trace/span attributes were detected, but this row does not contain a TraceId value.",
 		`Check the Trace ID field configured for "${source.name}" before opening the waterfall.`,
 	].join("\n");
+}
+
+function buildTraceInitialHighlightHint(
+	source: LogSourceEntity,
+	row: DataRow,
+	fields: ResolvedRowFields,
+): TraceWaterfallInitialHighlightHint {
+	const isSpan = isSpanLikeRow(source, row);
+	return {
+		kind: isSpan ? "span" : "log",
+		traceId: meaningfulString(fields.traceId),
+		spanId: meaningfulString(fields.spanId),
+		parentSpanId: isSpan
+			? meaningfulString(
+					fallbackValue(row, TOP_LEVEL_FIELD_FALLBACKS.ParentSpanId),
+				)
+			: undefined,
+		timestamp: fields.timestamp,
+		name: isSpan
+			? meaningfulString(fallbackValue(row, TOP_LEVEL_FIELD_FALLBACKS.SpanName))
+			: undefined,
+		body: isSpan ? undefined : meaningfulString(fields.body),
+		severityText: isSpan ? undefined : meaningfulString(fields.severityText),
+		serviceName: meaningfulString(fields.serviceName),
+	};
 }
 
 function findTraceSource(
@@ -624,6 +715,200 @@ function buildTraceWaterfallLogsQuery(
 	].join("\n");
 }
 
+function buildTraceRowDetailQuery(source: TraceSourceEntity, rowWhere: string) {
+	if (!source.config.database || !source.config.table) {
+		throw new Error("Trace source is missing database or table configuration");
+	}
+
+	const timestamp = configuredExpression(
+		source.config.timestampQueryField,
+		"Timestamp",
+	);
+	const traceIdExpression = configuredExpression(
+		source.config.traceIdField,
+		"TraceId",
+	);
+	const spanId = configuredExpression(source.config.spanIdField, "SpanId");
+	const parentSpanId = configuredExpression(
+		source.config.parentSpanIdField,
+		"ParentSpanId",
+	);
+	const serviceName = configuredExpression(
+		source.config.serviceNameField,
+		"ServiceName",
+	);
+	const name = configuredExpression(source.config.spanNameField, "SpanName");
+	const duration = configuredExpression(
+		source.config.durationField,
+		"Duration",
+	);
+	const statusCode = configuredExpression(
+		source.config.statusCodeField,
+		"StatusCode",
+	);
+	const statusMessage = configuredExpression(
+		source.config.statusMessageField,
+		"StatusMessage",
+	);
+	const spanKind = configuredExpression(
+		source.config.spanKindField,
+		"SpanKind",
+	);
+
+	return [
+		[
+			"SELECT *",
+			aliasedSelect(timestamp, TRACE_ALIASES.timestamp),
+			aliasedSelect(traceIdExpression, TRACE_ALIASES.traceId),
+			aliasedSelect(spanId, TRACE_ALIASES.spanId),
+			aliasedSelect(parentSpanId, TRACE_ALIASES.parentSpanId),
+			aliasedSelect(name, TRACE_ALIASES.name),
+			aliasedSelect(serviceName, TRACE_ALIASES.serviceName),
+			aliasedSelect(duration, TRACE_ALIASES.duration),
+			aliasedSelect(statusCode, TRACE_ALIASES.statusCode),
+			aliasedSelect(statusMessage, TRACE_ALIASES.statusMessage),
+			aliasedSelect(spanKind, TRACE_ALIASES.spanKind),
+		].join(", "),
+		`FROM ${quoteIdentifier(source.config.database)}.${quoteIdentifier(source.config.table)}`,
+		`WHERE ${rowWhere}`,
+		"LIMIT 2",
+	].join("\n");
+}
+
+function rowWhereFromPredicates(
+	predicates: Array<string | null>,
+	minimumPredicates: number,
+) {
+	const usablePredicates = predicates.filter(
+		(predicate): predicate is string => predicate != null,
+	);
+	if (usablePredicates.length < minimumPredicates) return null;
+	return usablePredicates.join(" AND ");
+}
+
+function buildLogTraceNodeRowWhere(source: LogSourceEntity, row: DataRow) {
+	const timestamp = configuredExpression(
+		source.config.timestampQueryField,
+		"Timestamp",
+	);
+	const traceId = configuredExpression(source.config.traceIdField, "TraceId");
+	const spanId = configuredExpression(source.config.spanIdField, "SpanId");
+	const serviceName = configuredExpression(
+		source.config.serviceNameField,
+		"ServiceName",
+	);
+	const body = configuredExpression(source.config.bodyField, "Body");
+	const severityText = configuredExpression(
+		source.config.severityField,
+		"SeverityText",
+	);
+
+	return rowWhereFromPredicates(
+		[
+			predicateForExpression(
+				traceId,
+				fallbackValue(row, FIELD_FALLBACKS.traceId),
+			),
+			predicateForExpression(
+				spanId,
+				fallbackValue(row, FIELD_FALLBACKS.spanId),
+			),
+			predicateForExpression(
+				timestamp,
+				fallbackValue(row, FIELD_FALLBACKS.timestamp),
+			),
+			predicateForExpression(
+				serviceName,
+				fallbackValue(row, FIELD_FALLBACKS.serviceName),
+			),
+			predicateForExpression(body, fallbackValue(row, FIELD_FALLBACKS.body)),
+			predicateForExpression(
+				severityText,
+				fallbackValue(row, FIELD_FALLBACKS.severityText),
+			),
+		],
+		2,
+	);
+}
+
+function buildSpanTraceNodeRowWhere(source: TraceSourceEntity, row: DataRow) {
+	const timestamp = configuredExpression(
+		source.config.timestampQueryField,
+		"Timestamp",
+	);
+	const traceId = configuredExpression(source.config.traceIdField, "TraceId");
+	const spanId = configuredExpression(source.config.spanIdField, "SpanId");
+	const parentSpanId = configuredExpression(
+		source.config.parentSpanIdField,
+		"ParentSpanId",
+	);
+	const serviceName = configuredExpression(
+		source.config.serviceNameField,
+		"ServiceName",
+	);
+	const name = configuredExpression(source.config.spanNameField, "SpanName");
+	const duration = configuredExpression(
+		source.config.durationField,
+		"Duration",
+	);
+	const statusCode = configuredExpression(
+		source.config.statusCodeField,
+		"StatusCode",
+	);
+
+	return rowWhereFromPredicates(
+		[
+			predicateForExpression(
+				traceId,
+				fallbackValue(row, FIELD_FALLBACKS.traceId),
+			),
+			predicateForExpression(
+				spanId,
+				fallbackValue(row, FIELD_FALLBACKS.spanId),
+			),
+			predicateForExpression(
+				parentSpanId,
+				fallbackValue(row, TOP_LEVEL_FIELD_FALLBACKS.ParentSpanId),
+			),
+			predicateForExpression(
+				timestamp,
+				fallbackValue(row, FIELD_FALLBACKS.timestamp),
+			),
+			predicateForExpression(
+				serviceName,
+				fallbackValue(row, FIELD_FALLBACKS.serviceName),
+			),
+			predicateForExpression(
+				name,
+				fallbackValue(row, TOP_LEVEL_FIELD_FALLBACKS.SpanName),
+			),
+			predicateForExpression(
+				duration,
+				fallbackValue(row, TOP_LEVEL_FIELD_FALLBACKS.Duration),
+			),
+			predicateForExpression(
+				statusCode,
+				fallbackValue(row, TOP_LEVEL_FIELD_FALLBACKS.StatusCode),
+			),
+		],
+		2,
+	);
+}
+
+function identityForTraceNodeSelection(
+	targetSource: LogSourceEntity | TraceSourceEntity,
+	rowWhere: string,
+): RowIdentity {
+	return {
+		sourceId: targetSource.id,
+		connectionId: targetSource.connectionId,
+		tableLabel: sourceTableLabel(targetSource),
+		rowWhere,
+		selectedRowKey: `${targetSource.id}:${rowWhere}`,
+		aliasWith: [],
+	};
+}
+
 export function createLogsRowPanelAdapter(
 	source: LogSourceEntity,
 	allSources: SourceEntity[] = [source],
@@ -632,17 +917,26 @@ export function createLogsRowPanelAdapter(
 		getQueryKey: (identity) => [
 			"logs",
 			"row-panel",
-			source.id,
+			identity.sourceId,
 			identity.rowWhere,
 		],
 		fetchRow: async (identity) => {
 			const client = createProxyClient(identity.connectionId);
-			const query = buildLogsRowDetailQuery(source, identity.rowWhere);
+			const traceSource =
+				identity.sourceId === source.id
+					? null
+					: findTraceSource(allSources, identity.sourceId);
+			if (identity.sourceId !== source.id && !traceSource) {
+				throw new Error("Selected row source is not available");
+			}
+			const query = traceSource
+				? buildTraceRowDetailQuery(traceSource, identity.rowWhere)
+				: buildLogsRowDetailQuery(source, identity.rowWhere);
 			const result = await executeClickhouseJsonQuery<DataRow>(client, query);
 			return { rows: result.data };
 		},
 		resolveFields: (row) => resolveLogsRowFields(source, row),
-		getTracePanel: (_row, fields) => {
+		getTracePanel: (row, fields) => {
 			const traceId = meaningfulString(fields.traceId);
 			const spanId = meaningfulString(fields.spanId);
 			if (!traceId && !spanId) return null;
@@ -686,6 +980,11 @@ export function createLogsRowPanelAdapter(
 				logSourceId: source.id,
 				traceSourceName: sourceTableLabel(traceSource),
 				logSourceName: sourceTableLabel(source),
+				initialHighlightHint: buildTraceInitialHighlightHint(
+					source,
+					row,
+					fields,
+				),
 			};
 		},
 		getTraceQueryKey: (_identity, tracePanel) => [
@@ -738,6 +1037,21 @@ export function createLogsRowPanelAdapter(
 					Boolean(spansResult.rows_before_limit_at_least) ||
 					Boolean(logsResult.rows_before_limit_at_least),
 			};
+		},
+		getTraceNodeRowIdentity: (_identity, tracePanel, selection) => {
+			if (selection.kind === "log") {
+				const rowWhere = buildLogTraceNodeRowWhere(source, selection.row);
+				return rowWhere
+					? identityForTraceNodeSelection(source, rowWhere)
+					: null;
+			}
+
+			const traceSource = findTraceSource(allSources, tracePanel.traceSourceId);
+			if (!traceSource) return null;
+			const rowWhere = buildSpanTraceNodeRowWhere(traceSource, selection.row);
+			return rowWhere
+				? identityForTraceNodeSelection(traceSource, rowWhere)
+				: null;
 		},
 		getOverview: (row, fields) => getLogsOverview(source, row, fields),
 		getColumnValues: stripTechnicalAliases,

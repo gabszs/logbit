@@ -13,7 +13,7 @@ import {
 	PanelLeftOpen,
 	Search,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { DataRow } from "@/web/components/data-row-side-panel";
 import { Button } from "@/web/components/ui/button";
 import { Input } from "@/web/components/ui/input";
@@ -23,8 +23,11 @@ import {
 	buildTraceWaterfallTree,
 	filterTraceWaterfallTree,
 	formatDurationNs,
+	resolveTraceWaterfallInitialHighlightNodeId,
 	stripTraceInternalAliases,
+	type TraceWaterfallInitialHighlightHint,
 	type TraceWaterfallNode,
+	type TraceWaterfallNodeSelection,
 	type TraceWaterfallStatus,
 } from "./trace-waterfall-model";
 
@@ -48,6 +51,9 @@ export type TraceWaterfallPanelProps = {
 	setupTitle?: string;
 	setupDescription?: string;
 	errorMessage?: string;
+	initialHighlightHint?: TraceWaterfallInitialHighlightHint;
+	initialHighlightKey?: string;
+	onNodeSelect?: (selection: TraceWaterfallNodeSelection) => void;
 	className?: string;
 };
 
@@ -160,6 +166,24 @@ function flattenVisibleNodes(
 	return nodes;
 }
 
+function findAncestorNodeIds(root: TraceWaterfallNode, targetNodeId: string) {
+	const ancestors: string[] = [];
+
+	function visit(node: TraceWaterfallNode): boolean {
+		if (node.id === targetNodeId) return true;
+		for (const child of node.children) {
+			if (visit(child)) {
+				ancestors.push(node.id);
+				return true;
+			}
+		}
+		return false;
+	}
+
+	visit(root);
+	return ancestors;
+}
+
 function StateBlock({
 	icon,
 	title,
@@ -201,6 +225,8 @@ function TraceRow({
 	hasSearch,
 	onToggleCollapse,
 	onSelect,
+	onNodeSelect,
+	rowRef,
 }: {
 	item: VisibleTraceNode;
 	isSelected: boolean;
@@ -208,6 +234,8 @@ function TraceRow({
 	hasSearch: boolean;
 	onToggleCollapse: (nodeId: string) => void;
 	onSelect: (nodeId: string) => void;
+	onNodeSelect?: (selection: TraceWaterfallNodeSelection) => void;
+	rowRef: (element: HTMLDivElement | null) => void;
 }) {
 	const { node } = item;
 	const hasChildren = node.children.length > 0;
@@ -228,22 +256,34 @@ function TraceRow({
 		)
 		.filter((line): line is { key: string; left: number } => line != null);
 
+	const selectRow = () => {
+		onSelect(node.id);
+		if (node.kind === "trace" || !node.raw) return;
+		onNodeSelect?.({
+			kind: node.kind,
+			nodeId: node.id,
+			row: node.raw,
+			traceId: node.traceId,
+			spanId: node.spanId,
+		});
+	};
+
 	return (
-		<button
-			type="button"
+		<div
+			ref={rowRef}
 			className={cn(
 				"group relative flex min-h-7 w-full cursor-pointer items-center gap-1.5 rounded-lg pr-2 text-left text-xs transition-colors",
-				"hover:bg-muted/60",
+				"focus-within:bg-muted/60 hover:bg-muted/60",
 				isSelected && "bg-muted/80 text-foreground",
 			)}
-			onClick={() => {
-				onSelect(node.id);
-				if (hasChildren) {
-					onToggleCollapse(node.id);
-				}
-			}}
-			title={node.warning ? "Log is not attached to a known span" : node.name}
 		>
+			<button
+				type="button"
+				className="absolute inset-0 z-20 cursor-pointer rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+				onClick={selectRow}
+				title={node.warning ? "Log is not attached to a known span" : node.name}
+				aria-label={`Inspect ${node.kind} ${node.name}`}
+			/>
 			<span
 				className="relative h-7 shrink-0 text-muted-foreground"
 				style={{ width: railWidth }}
@@ -277,14 +317,29 @@ function TraceRow({
 				) : null}
 			</span>
 			{hasChildren ? (
-				<span className="relative z-10 flex size-4 shrink-0 items-center justify-center">
-					<span className="flex size-4 items-center justify-center rounded-sm text-muted-foreground transition-colors group-hover:bg-muted group-hover:text-foreground">
+				<span className="relative z-30 flex size-4 shrink-0 items-center justify-center">
+					<button
+						type="button"
+						className="flex size-4 cursor-pointer items-center justify-center rounded-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+						aria-label={
+							isCollapsed && !hasSearch
+								? `Expand ${node.name}`
+								: `Collapse ${node.name}`
+						}
+						onClick={(event) => {
+							event.stopPropagation();
+							onToggleCollapse(node.id);
+						}}
+						onKeyDown={(event) => {
+							event.stopPropagation();
+						}}
+					>
 						{isCollapsed && !hasSearch ? (
 							<ChevronRight className="size-3" />
 						) : (
 							<ChevronDown className="size-3" />
 						)}
-					</span>
+					</button>
 				</span>
 			) : null}
 			<span className="relative z-10 flex size-4 shrink-0 items-center justify-center">
@@ -303,7 +358,7 @@ function TraceRow({
 					{duration}
 				</span>
 			) : null}
-		</button>
+		</div>
 	);
 }
 
@@ -318,14 +373,22 @@ export function TraceWaterfallPanel({
 	setupTitle = "Trace source not configured",
 	setupDescription,
 	errorMessage,
+	initialHighlightHint,
+	initialHighlightKey,
+	onNodeSelect,
 	className,
 }: TraceWaterfallPanelProps) {
 	const [collapsed, setCollapsed] = useState(false);
 	const [searchQuery, setSearchQuery] = useState("");
 	const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+	const [pendingScrollNodeId, setPendingScrollNodeId] = useState<string | null>(
+		null,
+	);
 	const [collapsedNodeIds, setCollapsedNodeIds] = useState<Set<string>>(
 		() => new Set(),
 	);
+	const appliedHighlightKeyRef = useRef<string | null>(null);
+	const rowElementsRef = useRef(new Map<string, HTMLDivElement>());
 
 	const tree = useMemo(() => {
 		if (!traceId || status !== "ready") return null;
@@ -352,6 +415,55 @@ export function TraceWaterfallPanel({
 	}, [collapsedNodeIds, searchQuery, visibleRoot]);
 
 	const selectedId = selectedNodeId ?? visibleNodes[0]?.node.id ?? null;
+
+	useEffect(() => {
+		if (!tree || !initialHighlightKey) return;
+		if (appliedHighlightKeyRef.current === initialHighlightKey) return;
+
+		const highlightedNodeId = resolveTraceWaterfallInitialHighlightNodeId(
+			tree,
+			initialHighlightHint,
+		);
+		if (!highlightedNodeId) return;
+
+		appliedHighlightKeyRef.current = initialHighlightKey;
+		setSearchQuery("");
+		setSelectedNodeId(highlightedNodeId);
+		setPendingScrollNodeId(highlightedNodeId);
+
+		const ancestorNodeIds = new Set(
+			findAncestorNodeIds(tree.root, highlightedNodeId),
+		);
+		setCollapsedNodeIds((current) => {
+			if (current.size === 0) return current;
+			const next = new Set(current);
+			for (const nodeId of ancestorNodeIds) {
+				next.delete(nodeId);
+			}
+			return next;
+		});
+	}, [initialHighlightHint, initialHighlightKey, tree]);
+
+	useEffect(() => {
+		if (!pendingScrollNodeId || collapsed) return;
+		const element = rowElementsRef.current.get(pendingScrollNodeId);
+		if (!element) return;
+
+		window.requestAnimationFrame(() => {
+			element.scrollIntoView({ block: "nearest" });
+			setPendingScrollNodeId(null);
+		});
+	}, [collapsed, pendingScrollNodeId, visibleNodes]);
+
+	const setTraceRowRef = (nodeId: string) => {
+		return (element: HTMLDivElement | null) => {
+			if (element) {
+				rowElementsRef.current.set(nodeId, element);
+			} else {
+				rowElementsRef.current.delete(nodeId);
+			}
+		};
+	};
 
 	const handleToggleCollapse = (nodeId: string) => {
 		setCollapsedNodeIds((current) => {
@@ -528,6 +640,8 @@ export function TraceWaterfallPanel({
 								hasSearch={searchQuery.trim().length > 0}
 								onToggleCollapse={handleToggleCollapse}
 								onSelect={setSelectedNodeId}
+								onNodeSelect={onNodeSelect}
+								rowRef={setTraceRowRef(item.node.id)}
 							/>
 						))}
 					</div>

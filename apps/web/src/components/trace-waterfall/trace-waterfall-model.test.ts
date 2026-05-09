@@ -3,6 +3,7 @@ import {
 	buildTraceWaterfallTree,
 	filterTraceWaterfallTree,
 	formatDurationNs,
+	resolveTraceWaterfallInitialHighlightNodeId,
 	TRACE_ALIASES,
 } from "./trace-waterfall-model";
 
@@ -147,5 +148,166 @@ describe("filterTraceWaterfallTree", () => {
 
 		const filtered = filterTraceWaterfallTree(tree.root, "needle");
 		expect(filtered?.children[0].children[0].body).toBe("needle log");
+	});
+});
+
+describe("resolveTraceWaterfallInitialHighlightNodeId", () => {
+	it("selects the clicked span", () => {
+		const tree = buildTraceWaterfallTree({
+			traceId: "trace-6",
+			spans: [
+				{
+					[TRACE_ALIASES.timestamp]: "2026-05-08 10:00:00.000000000",
+					[TRACE_ALIASES.spanId]: "root",
+					[TRACE_ALIASES.name]: "root",
+				},
+				{
+					[TRACE_ALIASES.timestamp]: "2026-05-08 10:00:00.000000010",
+					[TRACE_ALIASES.spanId]: "child",
+					[TRACE_ALIASES.parentSpanId]: "root",
+					[TRACE_ALIASES.name]: "clicked span",
+				},
+			],
+			logs: [],
+		});
+
+		expect(
+			resolveTraceWaterfallInitialHighlightNodeId(tree, {
+				kind: "span",
+				traceId: "trace-6",
+				spanId: "child",
+				parentSpanId: "root",
+				name: "clicked span",
+			}),
+		).toBe("span:child");
+	});
+
+	it("selects the clicked log among multiple logs in the same span", () => {
+		const tree = buildTraceWaterfallTree({
+			traceId: "trace-7",
+			spans: [
+				{
+					[TRACE_ALIASES.timestamp]: "2026-05-08 10:00:00.000000000",
+					[TRACE_ALIASES.spanId]: "root",
+					[TRACE_ALIASES.name]: "root",
+				},
+			],
+			logs: [
+				{
+					[TRACE_ALIASES.timestamp]: "2026-05-08 10:00:00.000000010",
+					[TRACE_ALIASES.spanId]: "root",
+					[TRACE_ALIASES.body]: "first log",
+					[TRACE_ALIASES.severityText]: "INFO",
+				},
+				{
+					[TRACE_ALIASES.timestamp]: "2026-05-08 10:00:00.000000020",
+					[TRACE_ALIASES.spanId]: "root",
+					[TRACE_ALIASES.body]: "clicked log",
+					[TRACE_ALIASES.severityText]: "ERROR",
+				},
+			],
+		});
+
+		expect(
+			resolveTraceWaterfallInitialHighlightNodeId(tree, {
+				kind: "log",
+				traceId: "trace-7",
+				spanId: "root",
+				timestamp: "2026-05-08 10:00:00.000000020",
+				body: "clicked log",
+				severityText: "ERROR",
+			}),
+		).toBe("log:root:1");
+	});
+
+	it("differentiates logs by timestamp and severity when the body matches", () => {
+		const tree = buildTraceWaterfallTree({
+			traceId: "trace-8",
+			spans: [
+				{
+					[TRACE_ALIASES.timestamp]: "2026-05-08 10:00:00.000000000",
+					[TRACE_ALIASES.spanId]: "root",
+					[TRACE_ALIASES.name]: "root",
+				},
+			],
+			logs: [
+				{
+					[TRACE_ALIASES.timestamp]: "2026-05-08 10:00:00.000000010",
+					[TRACE_ALIASES.spanId]: "root",
+					[TRACE_ALIASES.body]: "same body",
+					[TRACE_ALIASES.severityText]: "INFO",
+				},
+				{
+					[TRACE_ALIASES.timestamp]: "2026-05-08 10:00:00.000000020",
+					[TRACE_ALIASES.spanId]: "root",
+					[TRACE_ALIASES.body]: "same body",
+					[TRACE_ALIASES.severityText]: "WARN",
+				},
+			],
+		});
+
+		expect(
+			resolveTraceWaterfallInitialHighlightNodeId(tree, {
+				kind: "log",
+				traceId: "trace-8",
+				spanId: "root",
+				timestamp: "2026-05-08 10:00:00.000000020",
+				body: "same body",
+				severityText: "WARN",
+			}),
+		).toBe("log:root:1");
+	});
+
+	it("falls back to the matching span when the clicked log is not in the trace", () => {
+		const tree = buildTraceWaterfallTree({
+			traceId: "trace-9",
+			spans: [
+				{
+					[TRACE_ALIASES.timestamp]: "2026-05-08 10:00:00.000000000",
+					[TRACE_ALIASES.spanId]: "root",
+					[TRACE_ALIASES.name]: "root",
+				},
+			],
+			logs: [
+				{
+					[TRACE_ALIASES.timestamp]: "2026-05-08 10:00:00.000000010",
+					[TRACE_ALIASES.spanId]: "root",
+					[TRACE_ALIASES.body]: "other log",
+				},
+			],
+		});
+
+		expect(
+			resolveTraceWaterfallInitialHighlightNodeId(tree, {
+				kind: "log",
+				traceId: "trace-9",
+				spanId: "root",
+				timestamp: "2026-05-08 10:00:00.000000020",
+				body: "missing log",
+			}),
+		).toBe("span:root");
+	});
+
+	it("falls back to the first visible root when nothing matches", () => {
+		const tree = buildTraceWaterfallTree({
+			traceId: "trace-10",
+			spans: [
+				{
+					[TRACE_ALIASES.timestamp]: "2026-05-08 10:00:00.000000000",
+					[TRACE_ALIASES.spanId]: "root",
+					[TRACE_ALIASES.name]: "root",
+				},
+			],
+			logs: [],
+		});
+
+		expect(
+			resolveTraceWaterfallInitialHighlightNodeId(tree, {
+				kind: "span",
+				traceId: "trace-10",
+				spanId: "missing",
+				name: "missing span",
+			}),
+		).toBe("span:root");
 	});
 });

@@ -22,6 +22,37 @@ export type TraceWaterfallItemKind = "trace" | "span" | "log";
 
 export type TraceWaterfallStatus = "success" | "error" | "warning" | "unknown";
 
+/**
+ * Initial-only hint used to locate the row that opened the side panel inside
+ * the loaded waterfall. This is not controlled selection state: after the
+ * first highlight is applied, the user can freely select another trace row.
+ *
+ * `rowWhere` and `selectedRowKey` are reserved for future HyperDX-style flows
+ * where the waterfall itself opens row details by SQL identity. V1 matching
+ * intentionally uses only normalized row/event fields.
+ */
+export type TraceWaterfallInitialHighlightHint = {
+	kind: "span" | "log";
+	traceId?: string;
+	spanId?: string;
+	parentSpanId?: string;
+	timestamp?: unknown;
+	name?: string;
+	body?: string;
+	severityText?: string;
+	serviceName?: string;
+	rowWhere?: string;
+	selectedRowKey?: string;
+};
+
+export type TraceWaterfallNodeSelection = {
+	kind: "span" | "log";
+	nodeId: string;
+	row: DataRow;
+	traceId: string;
+	spanId?: string;
+};
+
 export type TraceWaterfallNode = {
 	id: string;
 	kind: TraceWaterfallItemKind;
@@ -194,6 +225,12 @@ function parseTimestampNs(value: unknown, fallbackIndex: number) {
 	return BigInt(fallbackIndex);
 }
 
+function parseHighlightTimestampNs(value: unknown) {
+	if (value == null) return undefined;
+	const timestamp = parseTimestampNs(value, -1);
+	return timestamp >= 0n ? timestamp : undefined;
+}
+
 function normalizeDurationNs(value: unknown, durationPrecision: number) {
 	const duration = parseDecimalToBigInt(value);
 	if (duration == null || duration < 0n) return undefined;
@@ -236,6 +273,11 @@ function normalizeStatus(
 	}
 
 	return kind === "span" ? "success" : "unknown";
+}
+
+function normalizedText(value: string | undefined) {
+	const text = meaningfulString(value);
+	return text?.toLowerCase();
 }
 
 function sortNodes(nodes: TraceWaterfallNode[]) {
@@ -491,6 +533,97 @@ export function buildTraceWaterfallTree({
 		startTimeNs,
 		endTimeNs,
 	};
+}
+
+function scoreTextMatch(
+	nodeValue: string | undefined,
+	hintValue: string | undefined,
+	score: number,
+) {
+	if (!hintValue) return 0;
+	return normalizedText(nodeValue) === normalizedText(hintValue) ? score : 0;
+}
+
+function scoreTimestampMatch(
+	node: TraceWaterfallNode,
+	hintTimestampNs: bigint | undefined,
+	score: number,
+) {
+	if (hintTimestampNs == null) return 0;
+	return node.startTimeNs === hintTimestampNs ? score : 0;
+}
+
+function scoreHighlightCandidate(
+	node: TraceWaterfallFlatNode,
+	hint: TraceWaterfallInitialHighlightHint,
+	hintTimestampNs: bigint | undefined,
+) {
+	if (node.kind !== hint.kind) return Number.NEGATIVE_INFINITY;
+	if (hint.traceId && node.traceId !== hint.traceId) {
+		return Number.NEGATIVE_INFINITY;
+	}
+
+	let score = 0;
+	score += scoreTextMatch(node.spanId, hint.spanId, 80);
+	score += scoreTimestampMatch(node, hintTimestampNs, 60);
+	score += scoreTextMatch(node.serviceName, hint.serviceName, 15);
+
+	if (hint.kind === "span") {
+		score += scoreTextMatch(node.parentSpanId, hint.parentSpanId, 25);
+		score += scoreTextMatch(node.name, hint.name, 35);
+		return score;
+	}
+
+	const logDiscriminatorScore =
+		scoreTimestampMatch(node, hintTimestampNs, 60) +
+		scoreTextMatch(node.body, hint.body, 35) +
+		scoreTextMatch(node.statusMessage, hint.severityText, 20);
+	if (
+		(hintTimestampNs != null || hint.body || hint.severityText) &&
+		logDiscriminatorScore === 0
+	) {
+		return Number.NEGATIVE_INFINITY;
+	}
+
+	score += scoreTextMatch(node.body, hint.body, 35);
+	score += scoreTextMatch(node.statusMessage, hint.severityText, 20);
+	return score;
+}
+
+function firstSpanWithId(tree: TraceWaterfallTree, spanId: string | undefined) {
+	if (!spanId) return null;
+	return (
+		tree.flatNodes.find(
+			(node) => node.kind === "span" && node.spanId === spanId,
+		)?.id ?? null
+	);
+}
+
+function firstVisibleRootId(tree: TraceWaterfallTree) {
+	return tree.root.children[0]?.id ?? null;
+}
+
+export function resolveTraceWaterfallInitialHighlightNodeId(
+	tree: TraceWaterfallTree,
+	hint: TraceWaterfallInitialHighlightHint | undefined,
+) {
+	if (!hint) return firstVisibleRootId(tree);
+
+	const hintTimestampNs = parseHighlightTimestampNs(hint.timestamp);
+	let bestNodeId: string | null = null;
+	let bestScore = 0;
+
+	for (const node of tree.flatNodes) {
+		const score = scoreHighlightCandidate(node, hint, hintTimestampNs);
+		if (score > bestScore) {
+			bestNodeId = node.id;
+			bestScore = score;
+		}
+	}
+
+	return (
+		bestNodeId ?? firstSpanWithId(tree, hint.spanId) ?? firstVisibleRootId(tree)
+	);
 }
 
 export function filterTraceWaterfallTree(

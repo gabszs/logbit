@@ -696,6 +696,7 @@ function LogsRoute() {
 				}}
 				identity={selectedRowIdentity}
 				adapter={rowPanelAdapter}
+				onIdentityChange={setSelectedRowIdentity}
 			/>
 			<div
 				className={`flex min-h-0 w-full flex-1 flex-col transition-[padding-left] duration-200 ease-linear ${isLogsCanvasSidebarExpanded ? "xl:pl-[280px]" : "xl:pl-0"}`}
