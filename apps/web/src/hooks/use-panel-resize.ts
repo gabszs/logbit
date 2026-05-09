@@ -9,7 +9,7 @@ interface UsePanelResizeOptions {
 	 * - `"right"`: handle is on the right edge → dragging right makes the panel wider
 	 */
 	direction: ResizeDirection;
-	/** Default (initial) width in pixels. */
+	/** Default width in pixels at the current viewport (converted to a proportion internally). */
 	defaultWidth: number;
 	/** Minimum width in pixels. */
 	minWidth: number;
@@ -18,11 +18,11 @@ interface UsePanelResizeOptions {
 }
 
 interface UsePanelResizeResult {
-	/** Current width in pixels. */
+	/** Current width in CSS pixels. */
 	width: number;
 	/** Whether the user is currently dragging. */
 	isResizing: boolean;
-	/** Reset width back to the configured `defaultWidth`. */
+	/** Reset width back to the configured `defaultWidth` proportion. */
 	resetToDefault: () => void;
 	/**
 	 * Callback ref — attach to the drag-handle element.
@@ -35,6 +35,10 @@ interface UsePanelResizeResult {
 /**
  * Lightweight pointer-drag hook for horizontal panel resizing.
  *
+ * Internally stores width as a viewport proportion so the panel maintains
+ * its visual size when the user zooms (browser zoom changes window.innerWidth).
+ * A window resize listener keeps the displayed pixel width in sync.
+ *
  * Uses a callback ref so listeners are correctly (re-)attached even when
  * the handle element is conditionally rendered (e.g. collapsed/expanded).
  */
@@ -44,8 +48,19 @@ export function usePanelResize({
 	minWidth,
 	maxWidth,
 }: UsePanelResizeOptions): UsePanelResizeResult {
-	const [width, setWidth] = useState(defaultWidth);
+	// Store width as a proportion of the viewport (0–1) so that zooming
+	// keeps the panel at the same fraction of the visible screen.
+	const [proportion, setProportion] = useState(
+		() => defaultWidth / window.innerWidth,
+	);
+	const [innerWidth, setInnerWidth] = useState(window.innerWidth);
 	const [isResizing, setIsResizing] = useState(false);
+
+	// Recompute pixel width from the stored proportion whenever the viewport changes.
+	const width = Math.min(
+		maxWidth,
+		Math.max(minWidth, Math.round(proportion * innerWidth)),
+	);
 
 	// Store mutable values in refs to avoid stale closures inside
 	// the native event listeners.
@@ -54,6 +69,7 @@ export function usePanelResize({
 		minWidth,
 		maxWidth,
 		defaultWidth,
+		innerWidth: window.innerWidth,
 		startX: 0,
 		startWidth: 0,
 	});
@@ -61,6 +77,14 @@ export function usePanelResize({
 	stateRef.current.minWidth = minWidth;
 	stateRef.current.maxWidth = maxWidth;
 	stateRef.current.defaultWidth = defaultWidth;
+	stateRef.current.innerWidth = innerWidth;
+
+	// Update innerWidth on viewport changes (window resize includes browser zoom).
+	useEffect(() => {
+		const handler = () => setInnerWidth(window.innerWidth);
+		window.addEventListener("resize", handler, { passive: true });
+		return () => window.removeEventListener("resize", handler);
+	}, []);
 
 	// Stable listener references so we can remove them reliably.
 	const listenersRef = useRef<{
@@ -84,7 +108,9 @@ export function usePanelResize({
 				const delta = e.clientX - s.startX;
 				const newWidth =
 					s.direction === "left" ? s.startWidth - delta : s.startWidth + delta;
-				setWidth(Math.min(s.maxWidth, Math.max(s.minWidth, newWidth)));
+				const clamped = Math.min(s.maxWidth, Math.max(s.minWidth, newWidth));
+				// Store as proportion so the size is preserved across zoom changes.
+				setProportion(clamped / s.innerWidth);
 			});
 		};
 
@@ -112,7 +138,8 @@ export function usePanelResize({
 		};
 
 		const onDoubleClick = () => {
-			setWidth(stateRef.current.defaultWidth);
+			const s = stateRef.current;
+			setProportion(s.defaultWidth / s.innerWidth);
 		};
 
 		listenersRef.current = {
@@ -172,9 +199,10 @@ export function usePanelResize({
 		};
 	}, []);
 
-	const resetToDefault = () => {
-		setWidth(stateRef.current.defaultWidth);
-	};
+	const resetToDefault = useCallback(() => {
+		const s = stateRef.current;
+		setProportion(s.defaultWidth / s.innerWidth);
+	}, []);
 
 	return { width, isResizing, resetToDefault, handleRef };
 }

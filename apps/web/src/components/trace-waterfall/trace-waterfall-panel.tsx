@@ -500,11 +500,7 @@ export function TraceWaterfallPanel({
 
 	const traceResize = usePanelResize({
 		direction: "right",
-		// Original: basis-[30%] of the sheet (70vw) = ~21vw, sm:min-w-[18rem], sm:max-w-[30rem]
-		defaultWidth: Math.max(
-			288,
-			Math.min(Math.floor(window.innerWidth * 0.7 * 0.3), 480),
-		),
+		defaultWidth: Math.floor(0.22 * window.innerWidth),
 		minWidth: 250,
 		maxWidth: Math.floor(window.innerWidth * 0.5),
 	});

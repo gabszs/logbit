@@ -318,12 +318,28 @@ export function DataRowSidePanel({
 				null)
 			: null;
 
+	const TRACE_PANEL_VW = 0.22;
+	const COMBINED_VW = 0.70;
+
+	const hasTrace = !!(tracePanel && displayIdentity && adapter);
+
 	const sheetResize = usePanelResize({
 		direction: "left",
-		defaultWidth: Math.floor(window.innerWidth * 0.7),
+		defaultWidth: Math.floor(
+			(hasTrace ? COMBINED_VW : COMBINED_VW - TRACE_PANEL_VW) *
+				window.innerWidth,
+		),
 		minWidth: 400,
 		maxWidth: Math.floor(window.innerWidth * 0.95),
 	});
+
+	const prevHasTraceRef = useRef(hasTrace);
+	useEffect(() => {
+		if (prevHasTraceRef.current !== hasTrace) {
+			prevHasTraceRef.current = hasTrace;
+			sheetResize.resetToDefault();
+		}
+	}, [hasTrace, sheetResize.resetToDefault]);
 
 	return (
 		<Sheet open={open} onOpenChange={onOpenChange}>

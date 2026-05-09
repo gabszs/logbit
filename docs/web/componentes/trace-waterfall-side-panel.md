@@ -40,7 +40,8 @@ Nao foi implementado timeline horizontal, graph view ou service map.
   - testes unitarios do builder e do resolver de highlight
 - `apps/web/src/routes/logs/-lib/logs-row-panel.ts`
   - implementa a correlacao log -> trace source
-  - monta queries ClickHouse para spans e logs
+  - monta queries ClickHouse para spans e logs, incluindo bounds temporais para
+    reduzir scan no waterfall
   - constroi identidades canonicas quando uma linha do waterfall e clicada
 - `apps/web/src/routes/logs/-lib/logs-row-panel.test.ts`
   - testes do adapter de row identity e resolucao de campos log/span
@@ -48,6 +49,10 @@ Nao foi implementado timeline horizontal, graph view ou service map.
   - carrega todos os sources para resolver `traceSourceId`
   - passa `setSelectedRowIdentity` para o drawer, permitindo que cliques no
     waterfall recarreguem o painel principal
+- `apps/server/src/features/sources/base/schemas.ts`
+  - define `queryRangeLimit` para limitar a janela maxima de queries por source
+- `apps/web/src/routes/integrations/-components/add-source-dialog.tsx`
+  - permite configurar `lookbackDays` e `forwardDays` no formulario de source
 - `apps/web/.env.example`
   - documenta `VITE_LOGLOG_TRACE_WATERFALL_LIMIT`
 
@@ -137,7 +142,12 @@ Fluxo em `createLogsRowPanelAdapter(source, allSources)`:
 3. Se `traceSourceId` nao existe, retorna `setup-required`.
 4. Se `traceSourceId` existe, procura esse source em `allSources`.
 5. Se o source existe e e do tipo `trace`, retorna `available`.
-6. `fetchTrace` executa duas consultas:
+6. `fetchTrace` calcula uma janela temporal segura para o trace:
+   - tenta um lookup leve na tabela auxiliar do trace source
+   - combina esse resultado com o `queryRangeLimit` do log source
+   - usa fallback apenas para a janela maxima quando o lookup nao retorna dados
+     ou falha
+7. Com a janela resolvida, `fetchTrace` executa duas consultas principais:
    - uma no trace source, buscando spans
    - uma no log source, buscando logs
 
@@ -160,7 +170,65 @@ normalizados de trace e `LIMIT 2`.
 
 ## Query ClickHouse
 
-As queries nao usam janela temporal.
+O waterfall usa `SELECT *` nas consultas de painel. A intencao e carregar todas
+as informacoes da linha quando o usuario abre detalhes. A otimizacao fica no
+`WHERE`, na janela temporal e na reducao de colunas da listagem principal.
+
+Antes das consultas principais, `fetchTrace` pode fazer um lookup leve na tabela
+auxiliar do trace source. A convencao e:
+
+```txt
+<trace_table>_trace_id_ts
+```
+
+Exemplo para `otel_traces`:
+
+```txt
+otel_traces_trace_id_ts
+```
+
+Forma conceitual do lookup:
+
+```sql
+SELECT min(Start) AS start, max(End) AS end
+FROM <traceDatabase>.<traceTable>_trace_id_ts
+WHERE TraceId = '<traceId>'
+```
+
+Esse lookup ajuda o ClickHouse a restringir as queries grandes por tempo sem
+precisar varrer a tabela principal inteira so para descobrir onde o trace vive.
+Se a tabela auxiliar nao existir, a consulta falhar ou nao houver retorno, o
+waterfall continua funcionando com fallback.
+
+### Janela temporal
+
+Cada source tem `queryRangeLimit`:
+
+```ts
+queryRangeLimit: {
+  lookbackDays: 7,
+  forwardDays: 2,
+}
+```
+
+Os valores sao inteiros `>= 0`. O default atual e 7 dias para tras e 2 dias
+para frente.
+
+Sources existentes devem receber esse atributo no `config` por migration de
+dados em JSONB. Mesmo com fallback em runtime, a migration evita diferenca entre
+sources antigos e novos na UI e na API.
+
+A janela final e calculada assim:
+
+1. A referencia e o timestamp da linha selecionada, quando existir; caso
+   contrario, `now()`.
+2. A janela maxima e:
+   - inicio: referencia menos `lookbackDays`
+   - fim: referencia mais `forwardDays`
+3. Se o lookup retornar `start`/`end`, a janela usada e a intersecao entre o
+   lookup e a janela maxima.
+4. Se a intersecao ficar invalida, ou se o lookup nao ajudar, usa apenas a
+   janela maxima.
 
 As expressoes configuradas sao resolvidas uma vez por helpers privados:
 
@@ -185,7 +253,9 @@ SELECT *,
   <statusMessageField> AS __loglog_trace_status_message,
   <spanKindField> AS __loglog_trace_span_kind
 FROM <traceDatabase>.<traceTable>
-WHERE toString(<traceIdField>) = '<traceId>'
+WHERE <traceIdField> = '<traceId>'
+  AND <timestampField> >= parseDateTime64BestEffort('<startIso>', 9)
+  AND <timestampField> <= parseDateTime64BestEffort('<endIso>', 9)
 ORDER BY <timestampField> ASC
 LIMIT <limit>
 ```
@@ -201,10 +271,22 @@ SELECT *,
   <bodyField> AS __loglog_trace_body,
   <severityField> AS __loglog_trace_severity_text
 FROM <logDatabase>.<logTable>
-WHERE toString(<traceIdField>) = '<traceId>'
+WHERE <traceIdField> = '<traceId>'
+  AND <timestampField> >= parseDateTime64BestEffort('<startIso>', 9)
+  AND <timestampField> <= parseDateTime64BestEffort('<endIso>', 9)
 ORDER BY <timestampField> ASC
 LIMIT <limit>
 ```
+
+Para campos simples conhecidos, como `TraceId`, `SpanId`, `ServiceName` e
+outros identificadores escalares, as queries preferem comparacao direta:
+
+```sql
+TraceId = '<traceId>'
+```
+
+`toString(...)` fica reservado para expressoes configuradas complexas, aliases
+incertos ou casos em que nao da para garantir o tipo de forma simples.
 
 O limite vem de:
 
@@ -213,6 +295,16 @@ VITE_LOGLOG_TRACE_WATERFALL_LIMIT="5000"
 ```
 
 Default em codigo: `5000`.
+
+### Colunas lazy na listagem
+
+Na tabela principal de logs, `ResourceAttributes` e `LogAttributes` nao sao mais
+incluidos automaticamente nos selects ocultos da listagem. Isso evita carregar
+JSON pesado em toda pagina de resultado.
+
+Se o usuario colocar esses campos explicitamente no `SELECT`, eles continuam
+sendo preservados. Ao abrir o painel, as queries de detalhe e waterfall seguem
+com `SELECT *`, entao o painel ainda carrega todos os dados da linha.
 
 ## Dados exibidos no painel principal
 
