@@ -353,9 +353,11 @@ principal. Com isso, ao clicar em outra linha:
 - um indicador compacto de carregamento aparece no topo do painel principal
 - quando a nova row chega, o conteudo troca de forma estavel
 
-O trace query tambem usa `placeholderData`. O waterfall so mostra estado
-`loading` no carregamento inicial, quando ainda nao existe dado anterior. Em
-refetch com dados antigos, o waterfall permanece renderizado ate o novo resultado
+O trace query tambem usa `placeholderData`, mas somente quando o dado anterior e
+do mesmo `traceId`. Isso evita misturar spans/logs de um trace antigo com a
+identidade da linha nova. O waterfall so mostra estado `loading` no carregamento
+inicial, quando ainda nao existe dado anterior compativel. Em refetch do mesmo
+trace com dados antigos, o waterfall permanece renderizado ate o novo resultado
 chegar.
 
 ## Download

@@ -1,5 +1,13 @@
 ## Integrations
 
+-- investigar acumulo de memoria no front, ele salva todos os logs?!
+
+-- arrumar bug nao redenrizar trace completo na primeira linha
+
+-- arrumar bug animacao do painel de traces
+
+-- adiconar botao refrash trace -> no primeiro click nao vai, mas se saiu e volto denovo ele recarrega
+
 -- implementar displayedTimestampField
 
 -- implemntar o trace no sources
@@ -22,6 +30,8 @@
 
 -- arrumar testes do middelware de front end que aparenta nao esta funcionando quando ativado, tbm nao ta tendo trace quando eu dipsaro reqeust normal (mas pode ser a rota)
 
+-- adicionar visualizacao do proprio clickhouse, quanto gb tem cada tabela, quantos logs/traces, maiores metricas, metricas mais frequentes, metricas com maior cardinaldiade
+
 ---
 frontend:
 4. Sugestões de "Cérebro" para a UI (Contexto Observabilidade)
@@ -31,17 +41,3 @@ Nuqs: Uma biblioteca excelente para sincronizar o estado da sua UI (filtros, bus
 
 Date-fns: Essencial para manipular os timeframes de observabilidade (ex: "Last 15 minutes", "Relative time").
 ---
-
-
-no sonrebamento da linha, use rounded-lg
-na cor do icone do log, coloque de acordo como seveirty level, se nao tive ou for unkow deixa da cor que te mem
-
-TRACE → text-stone-500 dark:text-stone-400
-DEBUG → text-blue-600 dark:text-blue-400
-INFO → text-emerald-600 dark:text-emerald-400
-WARN / WARNING → text-amber-600 dark:text-amber-500
-ERROR → text-red-600 dark:text-red-400
-FATAL → text-purple-600 dark:text-purple-400
-UNKNOWN → text-stone-400 dark:text-stone-500 italic
-
-a cor do root trace icon deve ser diferente, deix eo laranja que ja usamos muito no nosso sistema, pege do tailwind

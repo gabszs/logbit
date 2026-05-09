@@ -138,6 +138,8 @@ function LogsRoute() {
 		useState<LogsVolumeActivePopover | null>(null);
 	const [selectedRowIdentity, setSelectedRowIdentity] =
 		useState<RowIdentity | null>(null);
+	const [selectedRowIdentityVersion, setSelectedRowIdentityVersion] =
+		useState(0);
 	const previousSourceIdRef = useRef<string | null>(null);
 	const timeRangeRef = useRef(timeRange);
 	const resultsView: LogsResultsView =
@@ -291,6 +293,7 @@ function LogsRoute() {
 		setQueryError(null);
 		setVolumeError(null);
 		setSelectedRowIdentity(null);
+		setSelectedRowIdentityVersion(0);
 		setSelectQuery(defaults.selectQuery);
 		setOrderByQuery(defaults.orderByQuery);
 		setWhereQuery("");
@@ -545,9 +548,18 @@ function LogsRoute() {
 			const identity = buildLogsRowIdentity(selectedSource, row);
 			if (identity) {
 				setSelectedRowIdentity(identity);
+				setSelectedRowIdentityVersion((current) => current + 1);
 			}
 		},
 		[selectedSource],
+	);
+
+	const handleSelectedRowIdentityChange = useCallback(
+		(identity: RowIdentity) => {
+			setSelectedRowIdentity(identity);
+			setSelectedRowIdentityVersion((current) => current + 1);
+		},
+		[],
 	);
 
 	const handleResultsViewChange = useCallback(
@@ -695,8 +707,9 @@ function LogsRoute() {
 					}
 				}}
 				identity={selectedRowIdentity}
+				identityVersion={selectedRowIdentityVersion}
 				adapter={rowPanelAdapter}
-				onIdentityChange={setSelectedRowIdentity}
+				onIdentityChange={handleSelectedRowIdentityChange}
 			/>
 			<div
 				className={`flex min-h-0 w-full flex-1 flex-col transition-[padding-left] duration-200 ease-linear ${isLogsCanvasSidebarExpanded ? "xl:pl-[280px]" : "xl:pl-0"}`}

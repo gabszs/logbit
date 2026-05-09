@@ -142,24 +142,28 @@ function SuccessPanel({
 
 function TracePanelSlot({
 	identity,
+	identityVersion,
 	adapter,
 	tracePanel,
 	onIdentityChange,
 }: {
 	identity: RowIdentity;
+	identityVersion: number;
 	adapter: RowPanelAdapter;
 	tracePanel: RowTracePanelDescriptor;
 	onIdentityChange?: (identity: RowIdentity) => void;
 }) {
+	const baseTraceQueryKey =
+		tracePanel.kind === "available"
+			? (adapter.getTraceQueryKey?.(identity, tracePanel) ?? [
+					"row-trace-panel",
+					identity.selectedRowKey,
+					tracePanel.traceId,
+				])
+			: ["row-trace-panel", identity.selectedRowKey, "setup-required"];
+
 	const traceQuery = useQuery({
-		queryKey:
-			tracePanel.kind === "available"
-				? (adapter.getTraceQueryKey?.(identity, tracePanel) ?? [
-						"row-trace-panel",
-						identity.selectedRowKey,
-						tracePanel.traceId,
-					])
-				: ["row-trace-panel", identity.selectedRowKey, "setup-required"],
+		queryKey: [...baseTraceQueryKey, "selection", identityVersion],
 		queryFn: async () => {
 			if (tracePanel.kind !== "available" || !adapter.fetchTrace) {
 				throw new Error("Trace fetcher is not configured");
@@ -171,8 +175,9 @@ function TracePanelSlot({
 		refetchOnMount: false,
 		refetchOnReconnect: false,
 		refetchOnWindowFocus: false,
-		placeholderData: (previousData) => previousData,
-		staleTime: Number.POSITIVE_INFINITY,
+		placeholderData: (previousData) =>
+			previousData?.traceId === tracePanel.traceId ? previousData : undefined,
+		staleTime: 0,
 	});
 
 	const handleTraceNodeSelect = (selection: TraceWaterfallNodeSelection) => {
@@ -253,19 +258,23 @@ export function DataRowSidePanel({
 	onOpenChange,
 	onIdentityChange,
 	identity,
+	identityVersion = 0,
 	adapter,
 }: {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 	onIdentityChange?: (identity: RowIdentity) => void;
 	identity: RowIdentity | null;
+	identityVersion?: number;
 	adapter: RowPanelAdapter | null;
 }) {
+	const baseRowQueryKey =
+		identity && adapter
+			? adapter.getQueryKey(identity)
+			: ["data-row-side-panel", "idle"];
+
 	const query = useQuery({
-		queryKey:
-			identity && adapter
-				? adapter.getQueryKey(identity)
-				: ["data-row-side-panel", "idle"],
+		queryKey: [...baseRowQueryKey, "selection", identityVersion],
 		queryFn: async () => {
 			if (!identity || !adapter) {
 				return { rows: [] };
@@ -278,7 +287,7 @@ export function DataRowSidePanel({
 		refetchOnReconnect: false,
 		refetchOnWindowFocus: false,
 		placeholderData: (previousData) => previousData,
-		staleTime: Number.POSITIVE_INFINITY,
+		staleTime: 0,
 	});
 
 	const lastSuccessfulIdentityRef = useRef<RowIdentity | null>(null);
@@ -348,6 +357,7 @@ export function DataRowSidePanel({
 				{tracePanel && displayIdentity && adapter ? (
 					<TracePanelSlot
 						identity={displayIdentity}
+						identityVersion={identityVersion}
 						adapter={adapter}
 						tracePanel={tracePanel}
 						onIdentityChange={onIdentityChange}
