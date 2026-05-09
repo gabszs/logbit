@@ -34,6 +34,26 @@ const materializedViewSchema = z.object({
 	aggregatedColumns: z.array(materializedViewAggregatedColumnSchema).min(1),
 });
 
+export const DEFAULT_QUERY_RANGE_LIMIT = {
+	lookbackDays: 7,
+	forwardDays: 2,
+} as const;
+
+const queryRangeLimitSchema = z
+	.object({
+		lookbackDays: z
+			.number()
+			.int()
+			.min(0)
+			.default(DEFAULT_QUERY_RANGE_LIMIT.lookbackDays),
+		forwardDays: z
+			.number()
+			.int()
+			.min(0)
+			.default(DEFAULT_QUERY_RANGE_LIMIT.forwardDays),
+	})
+	.default(DEFAULT_QUERY_RANGE_LIMIT);
+
 export const BaseSourceConfigSchema = z.object({
 	database: z.string().nullable().default(null),
 	table: z.string().nullable().default(null),
@@ -45,6 +65,7 @@ export const BaseSourceConfigSchema = z.object({
 	traceIdField: z.string().nullable().default("TraceId"),
 	spanIdField: z.string().nullable().default("SpanId"),
 	luceneImplicitColumnField: z.string().nullable().default("Body"),
+	queryRangeLimit: queryRangeLimitSchema,
 	querySettings: z
 		.array(
 			z.object({

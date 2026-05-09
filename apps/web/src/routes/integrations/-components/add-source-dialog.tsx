@@ -1,3 +1,14 @@
+import { useQuery } from "@tanstack/react-query";
+import {
+	ChevronDown,
+	Circle,
+	CircleDot,
+	Loader2,
+	Settings2,
+} from "lucide-react";
+import type { ReactNode } from "react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import type {
 	SourcesUpsertInput,
 	SourceUpdateInput,
@@ -23,17 +34,6 @@ import {
 } from "@/web/components/ui/select";
 import { Textarea } from "@/web/components/ui/textarea";
 import { cn } from "@/web/utils/cn";
-import { useQuery } from "@tanstack/react-query";
-import {
-	ChevronDown,
-	Circle,
-	CircleDot,
-	Loader2,
-	Settings2,
-} from "lucide-react";
-import type { ReactNode } from "react";
-import { useEffect, useState } from "react";
-import { toast } from "sonner";
 import {
 	type ConnectionOption,
 	createSource,
@@ -64,6 +64,8 @@ type FormState = {
 	traceIdField: string;
 	spanIdField: string;
 	luceneImplicitColumnField: string;
+	queryRangeLookbackDays: string;
+	queryRangeForwardDays: string;
 	metricSourceId: string;
 	severityField: string;
 	logAttributesField: string;
@@ -98,6 +100,8 @@ const LOG_DEFAULT_FORM: FormState = {
 	traceIdField: "TraceId",
 	spanIdField: "SpanId",
 	luceneImplicitColumnField: "Body",
+	queryRangeLookbackDays: "7",
+	queryRangeForwardDays: "2",
 	metricSourceId: "",
 	severityField: "SeverityText",
 	logAttributesField: "LogAttributes",
@@ -180,6 +184,12 @@ function formFromSource(source: SourceEntity): FormState {
 		spanIdField: nullableString(source.config.spanIdField),
 		luceneImplicitColumnField: nullableString(
 			source.config.luceneImplicitColumnField,
+		),
+		queryRangeLookbackDays: String(
+			source.config.queryRangeLimit?.lookbackDays ?? 7,
+		),
+		queryRangeForwardDays: String(
+			source.config.queryRangeLimit?.forwardDays ?? 2,
 		),
 		metricSourceId: source.config.metricSourceId ?? "",
 	};
@@ -272,6 +282,20 @@ export function AddSourceDialog({
 		return value;
 	};
 
+	const parseQueryRangeLimit = () => {
+		const lookbackDays = Number(form.queryRangeLookbackDays.trim());
+		const forwardDays = Number(form.queryRangeForwardDays.trim());
+		if (!Number.isInteger(lookbackDays) || lookbackDays < 0) {
+			setFormError("Query lookback days must be a non-negative integer");
+			return null;
+		}
+		if (!Number.isInteger(forwardDays) || forwardDays < 0) {
+			setFormError("Query forward days must be a non-negative integer");
+			return null;
+		}
+		return { lookbackDays, forwardDays };
+	};
+
 	const buildPayload = (): SourcesUpsertInput | null => {
 		const name = form.name.trim();
 		if (!name) {
@@ -282,6 +306,8 @@ export function AddSourceDialog({
 			setFormError("Connection is required");
 			return null;
 		}
+		const queryRangeLimit = parseQueryRangeLimit();
+		if (queryRangeLimit == null) return null;
 
 		const commonConfig = {
 			database: form.database.trim() || null,
@@ -296,6 +322,7 @@ export function AddSourceDialog({
 			traceIdField: form.traceIdField.trim(),
 			spanIdField: form.spanIdField.trim(),
 			luceneImplicitColumnField: form.luceneImplicitColumnField.trim(),
+			queryRangeLimit,
 			querySettings: source?.config.querySettings ?? [],
 			materializedViews: source?.config.materializedViews ?? [],
 			highlightedRowAttributeExpressions:
@@ -644,6 +671,22 @@ export function AddSourceDialog({
 									value={form.luceneImplicitColumnField}
 									onChange={(value) => set("luceneImplicitColumnField", value)}
 									disabled={isPending}
+								/>
+								<FieldInput
+									id="source-query-lookback-days"
+									label="Query lookback days"
+									value={form.queryRangeLookbackDays}
+									onChange={(value) => set("queryRangeLookbackDays", value)}
+									disabled={isPending}
+									type="number"
+								/>
+								<FieldInput
+									id="source-query-forward-days"
+									label="Query forward days"
+									value={form.queryRangeForwardDays}
+									onChange={(value) => set("queryRangeForwardDays", value)}
+									disabled={isPending}
+									type="number"
 								/>
 
 								{form.type === "log" ? (

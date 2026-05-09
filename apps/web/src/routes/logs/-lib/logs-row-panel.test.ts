@@ -38,6 +38,10 @@ const logSource = {
 		traceIdField: "TraceId",
 		spanIdField: "SpanId",
 		luceneImplicitColumnField: "Body",
+		queryRangeLimit: {
+			lookbackDays: 7,
+			forwardDays: 2,
+		},
 		querySettings: [],
 		metricSourceId: null,
 		materializedViews: [],
@@ -69,6 +73,10 @@ const traceSource = {
 		serviceNameField: "ServiceName",
 		traceIdField: "TraceId",
 		luceneImplicitColumnField: "SpanName",
+		queryRangeLimit: {
+			lookbackDays: 7,
+			forwardDays: 2,
+		},
 		querySettings: [],
 		metricSourceId: null,
 		materializedViews: [],
@@ -139,9 +147,12 @@ describe("trace node row identity", () => {
 
 		expect(identity?.sourceId).toBe("log-source");
 		expect(identity?.connectionId).toBe("log-connection");
-		expect(identity?.rowWhere).toContain("toString(TraceId) = 'trace-1'");
-		expect(identity?.rowWhere).toContain("toString(SpanId) = 'span-1'");
-		expect(identity?.rowWhere).toContain("toString(Body) = 'clicked log'");
+		expect(identity?.rowWhere).toContain("TraceId = 'trace-1'");
+		expect(identity?.rowWhere).toContain("SpanId = 'span-1'");
+		expect(identity?.rowWhere).toContain("Body = 'clicked log'");
+		expect(identity?.rowWhere).toContain(
+			"toString(Timestamp) = '2026-05-08 10:00:00.000000010'",
+		);
 	});
 
 	it("builds a trace source identity for clicked span nodes", async () => {
@@ -169,9 +180,12 @@ describe("trace node row identity", () => {
 
 		expect(identity?.sourceId).toBe("trace-source");
 		expect(identity?.connectionId).toBe("trace-connection");
-		expect(identity?.rowWhere).toContain("toString(TraceId) = 'trace-1'");
-		expect(identity?.rowWhere).toContain("toString(SpanId) = 'span-1'");
-		expect(identity?.rowWhere).toContain("toString(SpanName) = 'GET /api'");
+		expect(identity?.rowWhere).toContain("TraceId = 'trace-1'");
+		expect(identity?.rowWhere).toContain("SpanId = 'span-1'");
+		expect(identity?.rowWhere).toContain("SpanName = 'GET /api'");
+		expect(identity?.rowWhere).toContain(
+			"toString(Timestamp) = '2026-05-08 10:00:00.000000000'",
+		);
 	});
 
 	it("does not create predicates for undefined values", async () => {

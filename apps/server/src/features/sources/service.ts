@@ -8,10 +8,12 @@ import { httpErrors } from "@/lib/errors";
 import type { ConnectionRepository } from "../connections/repository";
 import type { SourceRepository } from "./repository";
 import type {
+	SourceResponseType,
 	SourcesType,
 	SourcesUpsertInput,
 	SourceUpdateInput,
 } from "./schemas";
+import { sourcesSchema } from "./schemas";
 
 const allowedConnections = ["clickhouse"] as const;
 
@@ -39,7 +41,23 @@ export class SourceService extends BaseService<SourcesType> {
 			organizationId: activeOrganizationId,
 		};
 
-		return await this.create(sourceData);
+		return this.parseSource(await this.create(sourceData));
+	}
+
+	override async getAll(
+		searchOptions: Parameters<BaseService<SourcesType>["getAll"]>[0],
+		filters: Parameters<BaseService<SourcesType>["getAll"]>[1],
+	) {
+		const sources = await super.getAll(searchOptions, filters);
+		return sources.map((source) => this.parseSource(source));
+	}
+
+	override async getById(
+		id: string,
+		filters: Parameters<BaseService<SourcesType>["getById"]>[1],
+	) {
+		const source = await super.getById(id, filters);
+		return source ? this.parseSource(source) : null;
 	}
 
 	async updateSource(
@@ -106,7 +124,7 @@ export class SourceService extends BaseService<SourcesType> {
 			});
 		}
 
-		return updatedSource;
+		return this.parseSource(updatedSource);
 	}
 
 	async deleteSource(id: string, activeOrganizationId: string) {
@@ -144,5 +162,9 @@ export class SourceService extends BaseService<SourcesType> {
 				detail: `Sources can only use ${allowedConnections.join(", ")} connections`,
 			});
 		}
+	}
+
+	private parseSource(source: SourcesType): SourceResponseType {
+		return sourcesSchema.parse(source);
 	}
 }

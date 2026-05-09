@@ -1,5 +1,5 @@
-import { BaseSourceConfigSchema } from "@/features/sources/base/schemas";
 import { z } from "zod";
+import { BaseSourceConfigSchema } from "@/features/sources/base/schemas";
 
 export const tracesConfigSchema = BaseSourceConfigSchema.extend({
 	defaultSelectQuery: z
@@ -57,6 +57,9 @@ export const patchTracesConfigSchema = z
 		spanIdField: tracesConfigSchema.shape.spanIdField.unwrap().optional(),
 		luceneImplicitColumnField:
 			tracesConfigSchema.shape.luceneImplicitColumnField.unwrap().optional(),
+		queryRangeLimit: tracesConfigSchema.shape.queryRangeLimit
+			.unwrap()
+			.optional(),
 		querySettings: tracesConfigSchema.shape.querySettings.unwrap().optional(),
 		metricSourceId: tracesConfigSchema.shape.metricSourceId.unwrap().optional(),
 		materializedViews: tracesConfigSchema.shape.materializedViews

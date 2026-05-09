@@ -270,18 +270,18 @@ function TraceRow({
 
 	return (
 		<div
-				ref={rowRef}
-				className={cn(
-					"group relative flex min-h-7 w-full cursor-pointer items-center gap-1.5 rounded-md pr-2 text-left text-xs transition-colors",
-					"focus-within:bg-muted/60 hover:bg-muted/60",
-					isSelected && "bg-muted/80 text-foreground",
-				)}
-			>
-				<button
-					type="button"
-					className="absolute inset-0 z-20 cursor-pointer rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
-					onClick={selectRow}
-					title={node.warning ? "Log is not attached to a known span" : node.name}
+			ref={rowRef}
+			className={cn(
+				"group relative flex min-h-7 w-full cursor-pointer items-center gap-1.5 rounded-md pr-2 text-left text-xs transition-colors",
+				"focus-within:bg-muted/60 hover:bg-muted/60",
+				isSelected && "bg-muted/80 text-foreground",
+			)}
+		>
+			<button
+				type="button"
+				className="absolute inset-0 z-20 cursor-pointer rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+				onClick={selectRow}
+				title={node.warning ? "Log is not attached to a known span" : node.name}
 				aria-label={`Inspect ${node.kind} ${node.name}`}
 			/>
 			<span

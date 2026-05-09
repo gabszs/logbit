@@ -1,3 +1,6 @@
+import { Database, Loader2, Pencil, Trash2 } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
 import { Badge } from "@/web/components/ui/badge";
 import { Button } from "@/web/components/ui/button";
 import { DetailCard } from "@/web/components/ui/detail-card";
@@ -14,9 +17,6 @@ import {
 	TooltipContent,
 	TooltipTrigger,
 } from "@/web/components/ui/tooltip";
-import { Database, Loader2, Pencil, Trash2 } from "lucide-react";
-import { useState } from "react";
-import { toast } from "sonner";
 import {
 	type ConnectionOption,
 	deleteSource,

@@ -47,6 +47,7 @@ type LogsRowSelector = {
 	expression: string;
 	role: LogsSelectorRole;
 	includeInRowWhere: boolean;
+	includeInTableSelect: boolean;
 };
 
 const LOG_SELECTOR_CONFIGS: Array<{
@@ -62,54 +63,63 @@ const LOG_SELECTOR_CONFIGS: Array<{
 		| "logAttributesField";
 	fallbackExpression: string;
 	includeInRowWhere: boolean;
+	includeInTableSelect: boolean;
 }> = [
 	{
 		role: "timestamp",
 		configKey: "timestampQueryField",
 		fallbackExpression: "Timestamp",
 		includeInRowWhere: true,
+		includeInTableSelect: true,
 	},
 	{
 		role: "body",
 		configKey: "bodyField",
 		fallbackExpression: "Body",
 		includeInRowWhere: true,
+		includeInTableSelect: true,
 	},
 	{
 		role: "severityText",
 		configKey: "severityField",
 		fallbackExpression: "SeverityText",
 		includeInRowWhere: true,
+		includeInTableSelect: true,
 	},
 	{
 		role: "serviceName",
 		configKey: "serviceNameField",
 		fallbackExpression: "ServiceName",
 		includeInRowWhere: true,
+		includeInTableSelect: true,
 	},
 	{
 		role: "traceId",
 		configKey: "traceIdField",
 		fallbackExpression: "TraceId",
 		includeInRowWhere: true,
+		includeInTableSelect: true,
 	},
 	{
 		role: "spanId",
 		configKey: "spanIdField",
 		fallbackExpression: "SpanId",
 		includeInRowWhere: true,
+		includeInTableSelect: true,
 	},
 	{
 		role: "resourceAttributes",
 		configKey: "resourceAttributesField",
 		fallbackExpression: "ResourceAttributes",
 		includeInRowWhere: false,
+		includeInTableSelect: false,
 	},
 	{
 		role: "logAttributes",
 		configKey: "logAttributesField",
 		fallbackExpression: "LogAttributes",
 		includeInRowWhere: false,
+		includeInTableSelect: false,
 	},
 ];
 
@@ -214,6 +224,10 @@ const SPAN_ROW_FIELD_HINTS = [
 ] as const;
 
 const DEFAULT_TRACE_WATERFALL_LIMIT = 5000;
+const DEFAULT_QUERY_RANGE_LIMIT = {
+	lookbackDays: 7,
+	forwardDays: 2,
+} as const;
 
 function getLogsRowSelectors(source: LogSourceEntity): LogsRowSelector[] {
 	return LOG_SELECTOR_CONFIGS.map((config, index) => {
@@ -226,6 +240,7 @@ function getLogsRowSelectors(source: LogSourceEntity): LogsRowSelector[] {
 			expression,
 			role: config.role,
 			includeInRowWhere: config.includeInRowWhere,
+			includeInTableSelect: config.includeInTableSelect,
 		};
 	}).filter((selector) => selector.expression.trim().length > 0);
 }
@@ -248,10 +263,12 @@ export function getLogsRowSelectorAliases(source: LogSourceEntity) {
 }
 
 export function getLogsRowSelectorSelects(source: LogSourceEntity) {
-	return getLogsRowSelectors(source).map((selector) => ({
-		valueExpression: selector.expression,
-		alias: selector.alias,
-	}));
+	return getLogsRowSelectors(source)
+		.filter((selector) => selector.includeInTableSelect)
+		.map((selector) => ({
+			valueExpression: selector.expression,
+			alias: selector.alias,
+		}));
 }
 
 function isScalarPredicateValue(value: unknown) {
@@ -263,17 +280,66 @@ function isScalarPredicateValue(value: unknown) {
 	);
 }
 
+function unquoteSimpleIdentifier(expression: string) {
+	const trimmed = normalizeSqlExpression(expression);
+	if (/^`[^`]+`$/u.test(trimmed)) {
+		return trimmed.slice(1, -1);
+	}
+	return trimmed;
+}
+
+function isSimpleIdentifierExpression(expression: string) {
+	return /^[A-Za-z_][A-Za-z0-9_]*$/u.test(unquoteSimpleIdentifier(expression));
+}
+
+function dateFromValue(value: unknown) {
+	if (value instanceof Date && !Number.isNaN(value.getTime())) return value;
+	if (typeof value !== "string" && typeof value !== "number") return null;
+	const date = new Date(value);
+	return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function predicateForSimpleExpression(
+	expression: string,
+	value: unknown,
+	role?: LogsSelectorRole,
+) {
+	if (!isSimpleIdentifierExpression(expression)) return null;
+	if (role === "timestamp") {
+		return null;
+	}
+	if (typeof value === "number") return `${expression} = ${value}`;
+	if (typeof value === "boolean") return `${expression} = ${value ? 1 : 0}`;
+	return `${expression} = '${escapeSqlString(String(value))}'`;
+}
+
 function predicateForSelector(selector: LogsRowSelector, value: unknown) {
 	if (!isScalarPredicateValue(value)) return null;
 	if (value == null) return `isNull(${selector.expression})`;
+	const typedPredicate = predicateForSimpleExpression(
+		selector.expression,
+		value,
+		selector.role,
+	);
+	if (typedPredicate) return typedPredicate;
 	return `toString(${selector.expression}) = '${escapeSqlString(String(value))}'`;
 }
 
-function predicateForExpression(expression: string, value: unknown) {
+function predicateForExpression(
+	expression: string,
+	value: unknown,
+	role?: LogsSelectorRole,
+) {
 	const normalizedExpression = normalizeSqlExpression(expression);
 	if (!normalizedExpression || value === undefined) return null;
 	if (!isScalarPredicateValue(value)) return null;
 	if (value === null) return `isNull(${normalizedExpression})`;
+	const typedPredicate = predicateForSimpleExpression(
+		normalizedExpression,
+		value,
+		role,
+	);
+	if (typedPredicate) return typedPredicate;
 	return `toString(${normalizedExpression}) = '${escapeSqlString(String(value))}'`;
 }
 
@@ -655,16 +721,120 @@ function getLogFieldExpressions(source: LogSourceEntity) {
 	};
 }
 
-function buildTraceWaterfallSpansQuery(
+type TraceQueryBounds = {
+	startIso: string;
+	endIso: string;
+};
+
+type TraceBoundsRow = {
+	start: string | null;
+	end: string | null;
+};
+
+function timestampRangePredicates(
+	timestampExpression: string,
+	bounds: TraceQueryBounds | null,
+) {
+	if (!bounds) return [];
+	return [
+		`${timestampExpression} >= parseDateTime64BestEffort('${escapeSqlString(bounds.startIso)}', 9)`,
+		`${timestampExpression} <= parseDateTime64BestEffort('${escapeSqlString(bounds.endIso)}', 9)`,
+	];
+}
+
+function traceIdPredicate(traceIdExpression: string, traceId: string) {
+	return (
+		predicateForExpression(traceIdExpression, traceId, "traceId") ??
+		`toString(${traceIdExpression}) = '${escapeSqlString(traceId)}'`
+	);
+}
+
+function getTraceLookupTableName(source: TraceSourceEntity) {
+	if (!source.config.table) {
+		throw new Error("Trace source is missing table configuration");
+	}
+	return `${source.config.table}_trace_id_ts`;
+}
+
+export function buildTraceBoundsQuery(
 	source: TraceSourceEntity,
 	traceId: string,
-	limit: number,
 ) {
 	if (!source.config.database || !source.config.table) {
 		throw new Error("Trace source is missing database or table configuration");
 	}
 
 	const fields = getTraceFieldExpressions(source);
+	return [
+		"SELECT min(Start) AS start, max(End) AS end",
+		`FROM ${quoteIdentifier(source.config.database)}.${quoteIdentifier(getTraceLookupTableName(source))}`,
+		`WHERE ${traceIdPredicate(fields.traceId, traceId)}`,
+	].join("\n");
+}
+
+function sourceQueryRangeLimit(source: LogSourceEntity | TraceSourceEntity) {
+	const limit = source.config.queryRangeLimit ?? DEFAULT_QUERY_RANGE_LIMIT;
+	return {
+		lookbackDays: Math.max(0, Math.trunc(limit.lookbackDays)),
+		forwardDays: Math.max(0, Math.trunc(limit.forwardDays)),
+	};
+}
+
+function addDays(date: Date, days: number) {
+	return new Date(date.getTime() + days * 24 * 60 * 60 * 1000);
+}
+
+function dateFromTraceBoundsValue(value: unknown) {
+	const date = dateFromValue(value);
+	return date && !Number.isNaN(date.getTime()) ? date : null;
+}
+
+export function resolveTraceWaterfallTimeBounds(
+	source: LogSourceEntity,
+	referenceTimestamp: unknown,
+	lookupBounds?: TraceBoundsRow | null,
+): TraceQueryBounds {
+	const referenceDate = dateFromValue(referenceTimestamp) ?? new Date();
+	const rangeLimit = sourceQueryRangeLimit(source);
+	const maxStart = addDays(referenceDate, -rangeLimit.lookbackDays);
+	const maxEnd = addDays(referenceDate, rangeLimit.forwardDays);
+	const lookupStart = dateFromTraceBoundsValue(lookupBounds?.start);
+	const lookupEnd = dateFromTraceBoundsValue(lookupBounds?.end);
+	const start =
+		lookupStart && lookupStart.getTime() > maxStart.getTime()
+			? lookupStart
+			: maxStart;
+	const end =
+		lookupEnd && lookupEnd.getTime() < maxEnd.getTime() ? lookupEnd : maxEnd;
+
+	if (start.getTime() <= end.getTime()) {
+		return {
+			startIso: start.toISOString(),
+			endIso: end.toISOString(),
+		};
+	}
+
+	return {
+		startIso: maxStart.toISOString(),
+		endIso: maxEnd.toISOString(),
+	};
+}
+
+export function buildTraceWaterfallSpansQuery(
+	source: TraceSourceEntity,
+	traceId: string,
+	limit: number,
+	bounds: TraceQueryBounds | null = null,
+) {
+	if (!source.config.database || !source.config.table) {
+		throw new Error("Trace source is missing database or table configuration");
+	}
+
+	const fields = getTraceFieldExpressions(source);
+	const whereClauses = [
+		traceIdPredicate(fields.traceId, traceId),
+		...timestampRangePredicates(fields.timestamp, bounds),
+	];
 
 	return [
 		[
@@ -681,22 +851,27 @@ function buildTraceWaterfallSpansQuery(
 			aliasedSelect(fields.spanKind, TRACE_ALIASES.spanKind),
 		].join(", "),
 		`FROM ${quoteIdentifier(source.config.database)}.${quoteIdentifier(source.config.table)}`,
-		`WHERE toString(${fields.traceId}) = '${escapeSqlString(traceId)}'`,
+		`WHERE ${whereClauses.join(" AND ")}`,
 		`ORDER BY ${fields.timestamp} ASC`,
 		`LIMIT ${limit}`,
 	].join("\n");
 }
 
-function buildTraceWaterfallLogsQuery(
+export function buildTraceWaterfallLogsQuery(
 	source: LogSourceEntity,
 	traceId: string,
 	limit: number,
+	bounds: TraceQueryBounds | null = null,
 ) {
 	if (!source.config.database || !source.config.table) {
 		throw new Error("Log source is missing database or table configuration");
 	}
 
 	const fields = getLogFieldExpressions(source);
+	const whereClauses = [
+		traceIdPredicate(fields.traceId, traceId),
+		...timestampRangePredicates(fields.timestamp, bounds),
+	];
 
 	return [
 		[
@@ -709,7 +884,7 @@ function buildTraceWaterfallLogsQuery(
 			aliasedSelect(fields.severityText, TRACE_ALIASES.severityText),
 		].join(", "),
 		`FROM ${quoteIdentifier(source.config.database)}.${quoteIdentifier(source.config.table)}`,
-		`WHERE toString(${fields.traceId}) = '${escapeSqlString(traceId)}'`,
+		`WHERE ${whereClauses.join(" AND ")}`,
 		`ORDER BY ${fields.timestamp} ASC`,
 		`LIMIT ${limit}`,
 	].join("\n");
@@ -761,26 +936,32 @@ function buildLogTraceNodeRowWhere(source: LogSourceEntity, row: DataRow) {
 			predicateForExpression(
 				fields.traceId,
 				fallbackValue(row, FIELD_FALLBACKS.traceId),
+				"traceId",
 			),
 			predicateForExpression(
 				fields.spanId,
 				fallbackValue(row, FIELD_FALLBACKS.spanId),
+				"spanId",
 			),
 			predicateForExpression(
 				fields.timestamp,
 				fallbackValue(row, FIELD_FALLBACKS.timestamp),
+				"timestamp",
 			),
 			predicateForExpression(
 				fields.serviceName,
 				fallbackValue(row, FIELD_FALLBACKS.serviceName),
+				"serviceName",
 			),
 			predicateForExpression(
 				fields.body,
 				fallbackValue(row, FIELD_FALLBACKS.body),
+				"body",
 			),
 			predicateForExpression(
 				fields.severityText,
 				fallbackValue(row, FIELD_FALLBACKS.severityText),
+				"severityText",
 			),
 		],
 		2,
@@ -795,10 +976,12 @@ function buildSpanTraceNodeRowWhere(source: TraceSourceEntity, row: DataRow) {
 			predicateForExpression(
 				fields.traceId,
 				fallbackValue(row, FIELD_FALLBACKS.traceId),
+				"traceId",
 			),
 			predicateForExpression(
 				fields.spanId,
 				fallbackValue(row, FIELD_FALLBACKS.spanId),
+				"spanId",
 			),
 			predicateForExpression(
 				fields.parentSpanId,
@@ -807,10 +990,12 @@ function buildSpanTraceNodeRowWhere(source: TraceSourceEntity, row: DataRow) {
 			predicateForExpression(
 				fields.timestamp,
 				fallbackValue(row, FIELD_FALLBACKS.timestamp),
+				"timestamp",
 			),
 			predicateForExpression(
 				fields.serviceName,
 				fallbackValue(row, FIELD_FALLBACKS.serviceName),
+				"serviceName",
 			),
 			predicateForExpression(
 				fields.name,
