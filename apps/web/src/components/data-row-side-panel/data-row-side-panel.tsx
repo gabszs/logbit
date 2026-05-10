@@ -108,17 +108,17 @@ function SuccessPanel({
 		<div className="flex min-h-0 flex-1 flex-col overflow-hidden">
 			<RowHeader fields={fields} tableLabel={identity.tableLabel} />
 			<BodyBlock fields={fields} />
-			<div className="scrollbar-hide overflow-x-auto border-[color:var(--surface-border)] border-b px-5">
+			<div className="scrollbar-hide overflow-x-auto">
 				<nav
 					aria-label="Row detail sections"
-					className="flex min-w-max items-end gap-2"
+					className="flex w-full min-w-max items-end gap-2 border-[color:var(--surface-border)] border-b px-5"
 				>
 					{tabs.map((tab) => (
 						<button
 							key={tab.id}
 							type="button"
 							className={cn(
-								"relative -mb-px overflow-hidden rounded-t-lg border-b-2 px-3 py-3 font-medium text-sm transition-all duration-150",
+								"relative overflow-hidden rounded-t-lg border-b-2 px-3 py-3 font-medium text-sm transition-all duration-150",
 								selectedTab === tab.id
 									? "border-primary bg-[color:var(--surface-background)] text-foreground"
 									: "border-transparent text-muted-foreground hover:bg-[color:var(--surface-background)]/60 hover:text-foreground",
