@@ -75,6 +75,11 @@ const SENSITIVE_QUERY_PARAMETERS = new Set([
 ]);
 
 const METRIC_EXPORT_INTERVAL_MS = 30_000;
+const UUID_SEGMENT_PATTERN =
+	/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const ULID_SEGMENT_PATTERN = /^[0-9A-HJKMNP-TV-Z]{26}$/i;
+const OBJECT_ID_SEGMENT_PATTERN = /^[0-9a-f]{24}$/i;
+const OPAQUE_ID_SEGMENT_PATTERN = /^(?=.*[a-zA-Z])(?=.*\d)[a-zA-Z0-9_-]{12,}$/;
 
 let webVitalTtfbHistogram: Histogram | undefined;
 let webVitalFcpHistogram: Histogram | undefined;
@@ -106,8 +111,80 @@ function isMobile(userAgent: string) {
 	return /android|iphone|ipad|ipod|mobile/i.test(userAgent);
 }
 
+function getBrowserInfo(userAgent: string) {
+	const edge = userAgent.match(/\bEdg\/([\d.]+)/);
+	if (edge) {
+		return {
+			name: "Edge",
+			version: edge[1],
+			versionMajor: edge[1]?.split(".")[0] ?? "unknown",
+		};
+	}
+
+	const chrome = userAgent.match(/\b(?:Chrome|CriOS)\/([\d.]+)/);
+	if (chrome) {
+		return {
+			name: "Chrome",
+			version: chrome[1],
+			versionMajor: chrome[1]?.split(".")[0] ?? "unknown",
+		};
+	}
+
+	const firefox = userAgent.match(/\b(?:Firefox|FxiOS)\/([\d.]+)/);
+	if (firefox) {
+		return {
+			name: "Firefox",
+			version: firefox[1],
+			versionMajor: firefox[1]?.split(".")[0] ?? "unknown",
+		};
+	}
+
+	const safari = userAgent.match(/\bVersion\/([\d.]+).*Safari\//);
+	if (safari) {
+		return {
+			name: "Safari",
+			version: safari[1],
+			versionMajor: safari[1]?.split(".")[0] ?? "unknown",
+		};
+	}
+
+	return {
+		name: "unknown",
+		version: "unknown",
+		versionMajor: "unknown",
+	};
+}
+
+function isOpaquePathId(segment: string) {
+	return (
+		UUID_SEGMENT_PATTERN.test(segment) ||
+		ULID_SEGMENT_PATTERN.test(segment) ||
+		OBJECT_ID_SEGMENT_PATTERN.test(segment) ||
+		OPAQUE_ID_SEGMENT_PATTERN.test(segment)
+	);
+}
+
+function normalizePagePath(pathname: string) {
+	const normalizedPath = pathname.replace(/\/+$/, "") || "/";
+
+	if (/^\/settings\/invitations\/[^/]+$/.test(normalizedPath)) {
+		return "/settings/invitations/*";
+	}
+
+	const segments = normalizedPath.split("/").filter(Boolean);
+	if (segments.length === 0) return "/";
+
+	const normalizedSegments = segments.map((segment, index) => {
+		if (!isOpaquePathId(segment)) return segment;
+		return "*";
+	});
+
+	return `/${normalizedSegments.join("/")}`;
+}
+
 function getBrowserResourceAttributes() {
 	const userAgent = navigator.userAgent;
+	const browser = getBrowserInfo(userAgent);
 	const mobile = isMobile(userAgent);
 	const attributes = {
 		[ATTR_SERVICE_NAME]: settings.otel.serviceName,
@@ -115,6 +192,9 @@ function getBrowserResourceAttributes() {
 		"os.type": detectOs(userAgent),
 		"os.name": navigator.platform,
 		"device.type": mobile ? "mobile" : "desktop",
+		"browser.name": browser.name,
+		"browser.version": browser.version,
+		"browser.version_major": browser.versionMajor,
 		"browser.mobile": mobile,
 		"browser.platform": navigator.platform,
 		"browser.language": navigator.language,
@@ -361,6 +441,7 @@ function initializeMetricPipeline(
 
 function getWebVitalAttributes(metric: Metric) {
 	return {
+		"page.id": normalizePagePath(window.location.pathname),
 		"web.vital.rating": metric.rating,
 		"web.vital.navigation_type": metric.navigationType,
 	};

@@ -80,6 +80,9 @@ Os spans e metricas do browser usam um resource com atributos do servico e do am
 - `os.type`: inferido de `navigator.userAgent`
 - `os.name`: `navigator.platform`
 - `device.type`: `mobile` ou `desktop`
+- `browser.name`: nome normalizado do browser, como `Chrome`, `Firefox`, `Safari`, `Edge` ou `unknown`
+- `browser.version`: versao normalizada do browser, quando detectada
+- `browser.version_major`: versao major normalizada do browser, quando detectada
 - `browser.mobile`: boolean
 - `browser.platform`: `navigator.platform`
 - `browser.language`: `navigator.language`
@@ -124,6 +127,7 @@ Web Vitals sao exportados como histograms separados:
 
 Cada ponto de Web Vital usa somente:
 
+- `page.id`: `window.location.pathname` normalizado, sem query string, com IDs opacos substituidos por `*`
 - `web.vital.rating`: `good`, `needs-improvement` ou `poor`
 - `web.vital.navigation_type`: tipo de navegacao reportado por `web-vitals`
 
@@ -132,7 +136,7 @@ Erros nao tratados sao exportados pelo counter `loglog.frontend.error.count` com
 - `error.source`: `react-boundary`, `window-error` ou `unhandled-rejection`
 - `error.type`: `error.name` quando disponivel, senao `_OTHER`
 
-Metricas nao enviam `error.message`, stack trace, URL completa, query string, IDs de usuario, IDs de sessao ou detalhes de DOM. O build de attribution do `web-vitals` nao e usado.
+Metricas nao enviam `page_url`, `error.message`, stack trace, URL completa, query string, IDs de usuario, IDs de sessao ou detalhes de DOM. O build de attribution do `web-vitals` nao e usado.
 
 ## Sanitizacao de URL
 
