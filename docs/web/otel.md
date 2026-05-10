@@ -1,6 +1,6 @@
 # Frontend OpenTelemetry
 
-O frontend (`apps/web`) tem instrumentacao OpenTelemetry opt-in para chamadas HTTP feitas via `fetch`, Web Vitals e contador de erros nao tratados. A configuracao fica centralizada em `apps/web/src/lib/config.ts`, e a inicializacao do SDK fica em `apps/web/src/lib/otel.ts`.
+O frontend (`apps/web`) tem instrumentacao OpenTelemetry opt-in para chamadas HTTP feitas via `fetch`, Web Vitals, contador de erros nao tratados e logs de erro do browser. A configuracao fica centralizada em `apps/web/src/lib/config.ts`, e a inicializacao do SDK fica em `apps/web/src/lib/otel.ts`.
 
 ## Como habilitar
 
@@ -14,7 +14,7 @@ VITE_OTEL_SERVICE_VERSION=""
 VITE_OTEL_SAMPLE_RATIO="1"
 ```
 
-- `VITE_OTEL_EXPORTER_OTLP_ENDPOINT` deve ser a URL base do collector OTLP HTTP, sem `/v1/traces` ou `/v1/metrics`.
+- `VITE_OTEL_EXPORTER_OTLP_ENDPOINT` deve ser a URL base do collector OTLP HTTP, sem `/v1/traces`, `/v1/metrics` ou `/v1/logs`.
 - Se OTel estiver ativo e a URL do collector estiver vazia, o app nao quebra; ele emite um `console.warn` e nao inicializa a instrumentacao.
 - Nao existe default de ativacao nem default de collector no codigo. O valor padrao documentado vive apenas no `.env.example`.
 - `VITE_OTEL_SAMPLE_RATIO` aceita `0..1`; valores invalidos caem para `1`.
@@ -38,6 +38,8 @@ As metricas usam `@opentelemetry/sdk-metrics` e exportam para `${VITE_OTEL_EXPOR
 
 - Web Vitals via `web-vitals`: `TTFB`, `FCP`, `LCP`, `INP` e `CLS`
 - Erros nao tratados via `loglog.frontend.error.count`
+
+Os logs usam `@opentelemetry/sdk-logs` e exportam para `${VITE_OTEL_EXPORTER_OTLP_ENDPOINT}/v1/logs`. No OpenTelemetry JS, logs ainda estao em desenvolvimento, entao o frontend emite apenas logs de erro controlados.
 
 A propagacao tambem esta aberta para qualquer `fetch` com:
 
@@ -70,9 +72,17 @@ turbo -F server otel-dev
 4. Erros capturados pelo `ErrorBoundary`, `window.error` e `unhandledrejection` incrementam `loglog.frontend.error.count`, exceto erros classificados como backend indisponivel.
 5. O browser exporta metricas em lote para `${VITE_OTEL_EXPORTER_OTLP_ENDPOINT}/v1/metrics`.
 
+## Fluxo de logs
+
+1. Um erro chega pelo `ErrorBoundary`, `window.error` ou `unhandledrejection`.
+2. `recordFrontendError` aplica deduplicacao compartilhada entre metricas e logs.
+3. Se o erro nao for backend indisponivel, `loglog.frontend.error.count` e incrementado.
+4. Todo erro deduplicado, inclusive backend indisponivel, gera um log OpenTelemetry.
+5. O browser exporta logs em lote para `${VITE_OTEL_EXPORTER_OTLP_ENDPOINT}/v1/logs`.
+
 ## Resource attributes
 
-Os spans e metricas do browser usam um resource com atributos do servico e do ambiente do navegador:
+Os spans, metricas e logs do browser usam um resource com atributos do servico e do ambiente do navegador:
 
 - `service.name`: `VITE_OTEL_SERVICE_NAME`, default `loglog-web`
 - `service.version`: `VITE_OTEL_SERVICE_VERSION`, opcional
@@ -138,6 +148,26 @@ Erros nao tratados sao exportados pelo counter `loglog.frontend.error.count` com
 
 Metricas nao enviam `page_url`, `error.message`, stack trace, URL completa, query string, IDs de usuario, IDs de sessao ou detalhes de DOM. O build de attribution do `web-vitals` nao e usado.
 
+## Error log attributes
+
+Logs de erro usam `severityNumber = 17`, `severityText = ERROR` e o `body` com a primeira linha da mensagem do erro, sanitizada e truncada em 500 caracteres.
+
+Atributos enviados:
+
+- `error.source`: `react-boundary`, `window-error` ou `unhandled-rejection`
+- `error.type`: `error.name` quando disponivel, senao `_OTHER`
+- `error.backend_unavailable`: boolean
+- `page.id`: `window.location.pathname` normalizado, sem query string, com IDs opacos substituidos por `*`
+
+Logs nao enviam stack trace, `page_url`, URL completa, query string, IDs de usuario, IDs de sessao, cookies, headers de autorizacao, seletores de DOM ou dados de input/form.
+
+Sanitizacao do body:
+
+- query string de URLs e removida
+- emails sao mascarados como `[REDACTED_EMAIL]`
+- `Bearer` e `Basic` tokens sao mascarados
+- valores de chaves como `token`, `access_token`, `refresh_token`, `api_key`, `apikey`, `password`, `secret` e `authorization` sao mascarados
+
 ## Sanitizacao de URL
 
 `url.full` e preenchido com uma URL sanitizada.
@@ -160,7 +190,7 @@ O `FetchInstrumentation` descarta o segundo argumento de `fetch(Request, init)` 
 
 Headers de propagacao exigem CORS. Se uma chamada externa falhar depois de habilitar OTel, confirme que o destino aceita `traceparent`, `tracestate` e `baggage` em preflight.
 
-Metricas tambem exigem CORS no collector para `/v1/metrics`. Se Web Vitals nao aparecerem, confirme que o collector aceita OTLP HTTP metrics nesse path.
+Metricas e logs tambem exigem CORS no collector para `/v1/metrics` e `/v1/logs`. Se Web Vitals ou logs nao aparecerem, confirme que o collector aceita OTLP HTTP nesses paths.
 
 Como `propagateToUrls` esta em `/.*/`, destinos externos tambem recebem headers de trace quando o browser/CORS permitir. Isso e intencional nesta fase para simplificar debugging.
 
@@ -181,6 +211,7 @@ turbo -F web dev
 ```
 
 5. Abra DevTools e confirme que requests para o backend incluem `traceparent`.
-6. Confirme que o browser envia OTLP para `/v1/traces` e `/v1/metrics`.
+6. Confirme que o browser envia OTLP para `/v1/traces`, `/v1/metrics` e `/v1/logs`.
 7. Consulte `otel_traces` e verifique spans com `service.name = loglog-web` e `service.name = loglog-api` no mesmo `TraceId`.
 8. Consulte as tabelas de metricas e confirme `web.vital.*` e `loglog.frontend.error.count` com `service.name = loglog-web`.
+9. Force um erro no frontend e confirme um log com `error.source` e `error.backend_unavailable`.

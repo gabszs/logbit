@@ -24,6 +24,7 @@ export type ResolvedRowFields = {
 	traceId?: unknown;
 	spanId?: unknown;
 	serviceName?: unknown;
+	levelText?: unknown;
 	severityText?: unknown;
 	severityNumber?: unknown;
 	body?: unknown;

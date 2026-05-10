@@ -28,6 +28,8 @@ export const settings = {
 		serviceName: import.meta.env.VITE_OTEL_SERVICE_NAME ?? "loglog-web",
 		serviceVersion: import.meta.env.VITE_OTEL_SERVICE_VERSION?.trim(),
 		sampleRatio: parseSampleRatio(import.meta.env.VITE_OTEL_SAMPLE_RATIO),
+		consoleErrorEnabled:
+			import.meta.env.VITE_OTEL_CONSOLE_ERROR_ENABLED === "true",
 		propagateToUrls: [/.*/],
 	},
 } as const;

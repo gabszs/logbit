@@ -72,7 +72,8 @@ export function RowHeader({
 	fields: ResolvedRowFields;
 	tableLabel: string;
 }) {
-	const levelValue = fields.severityText ?? fields.severityNumber ?? "UNKNOWN";
+	const levelValue =
+		fields.levelText ?? fields.severityText ?? fields.severityNumber ?? "UNKNOWN";
 	const level = toDisplayText(levelValue).trim().toUpperCase() || "UNKNOWN";
 	const timestampDate = parseDate(fields.timestamp);
 	const timestamp = timestampDate
@@ -101,7 +102,7 @@ export function RowHeader({
 						getSeverityBadgeClass(level),
 					)}
 				>
-					<span className="flex h-full items-center justify-center leading-none">
+					<span className="flex h-full translate-y-px items-center justify-center leading-none">
 						{level}
 					</span>
 				</span>

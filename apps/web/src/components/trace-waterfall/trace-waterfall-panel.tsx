@@ -317,7 +317,34 @@ function TraceRow({
 						</span>
 					</div>
 				</div>
-				{/* Content + warning badge + collapse button + duration */}
+				{/* Collapse button between icon and label */}
+				{hasChildren ? (
+					<span className="relative z-30 flex size-4 shrink-0 self-center items-center justify-center">
+						<button
+							type="button"
+							className="flex size-4 cursor-pointer items-center justify-center rounded-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+							aria-label={
+								isCollapsed && !hasSearch
+									? `Expand ${node.name}`
+									: `Collapse ${node.name}`
+							}
+							onClick={(event) => {
+								event.stopPropagation();
+								onToggleCollapse(node.id);
+							}}
+							onKeyDown={(event) => {
+								event.stopPropagation();
+							}}
+						>
+							{isCollapsed && !hasSearch ? (
+								<ChevronRight className="size-3" />
+							) : (
+								<ChevronDown className="size-3" />
+							)}
+						</button>
+					</span>
+				) : null}
+				{/* Content + warning badge + duration */}
 				<div className="flex min-w-0 flex-1 items-center gap-1.5 py-1.5 pl-1">
 					<span className="relative z-10 min-w-0 flex-1 truncate font-medium">
 						{node.kind === "log" ? (node.body ?? node.name) : node.name}
@@ -325,32 +352,6 @@ function TraceRow({
 					{node.warning ? (
 						<span className="relative z-10 shrink-0 rounded border border-amber-300/60 bg-amber-500/10 px-1.5 py-0.5 text-[10px] text-amber-700 dark:border-amber-800 dark:text-amber-300">
 							no span
-						</span>
-					) : null}
-					{hasChildren ? (
-						<span className="relative z-30 flex size-4 shrink-0 items-center justify-center">
-							<button
-								type="button"
-								className="flex size-4 cursor-pointer items-center justify-center rounded-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-								aria-label={
-									isCollapsed && !hasSearch
-										? `Expand ${node.name}`
-										: `Collapse ${node.name}`
-								}
-								onClick={(event) => {
-									event.stopPropagation();
-									onToggleCollapse(node.id);
-								}}
-								onKeyDown={(event) => {
-									event.stopPropagation();
-								}}
-							>
-								{isCollapsed && !hasSearch ? (
-									<ChevronRight className="size-3" />
-								) : (
-									<ChevronDown className="size-3" />
-								)}
-							</button>
 						</span>
 					) : null}
 					{duration ? (

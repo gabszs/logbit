@@ -118,8 +118,10 @@ function SuccessPanel({
 							key={tab.id}
 							type="button"
 							className={cn(
-								"relative -mb-px h-11 overflow-hidden border-transparent border-b-2 px-3 font-medium text-muted-foreground text-sm transition-colors",
-								selectedTab === tab.id && "border-primary text-foreground",
+								"relative -mb-px overflow-hidden rounded-t-lg border-b-2 px-3 py-3 font-medium text-sm transition-all duration-150",
+								selectedTab === tab.id
+									? "border-primary bg-[color:var(--surface-background)] text-foreground"
+									: "border-transparent text-muted-foreground hover:bg-[color:var(--surface-background)]/60 hover:text-foreground",
 							)}
 							onClick={() => setActiveTab(tab.id)}
 						>

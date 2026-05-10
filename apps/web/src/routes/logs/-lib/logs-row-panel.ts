@@ -589,6 +589,9 @@ export function resolveLogsRowFields(
 			"serviceName",
 			FIELD_FALLBACKS.serviceName,
 		),
+		levelText: isSpan
+			? fallbackValue(row, TOP_LEVEL_FIELD_FALLBACKS.SpanKind)
+			: undefined,
 		severityText: isSpan
 			? (fallbackValue(row, TOP_LEVEL_FIELD_FALLBACKS.StatusCode) ??
 				fallbackValue(row, TOP_LEVEL_FIELD_FALLBACKS.StatusMessage))

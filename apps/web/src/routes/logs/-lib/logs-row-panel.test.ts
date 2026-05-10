@@ -233,12 +233,14 @@ describe("row field resolution", () => {
 		const row = {
 			[TRACE_ALIASES.name]: "GET /api",
 			[TRACE_ALIASES.spanId]: "span-1",
+			[TRACE_ALIASES.spanKind]: "SERVER",
 			[TRACE_ALIASES.statusCode]: "ERROR",
 		};
 		const fields = resolveLogsRowFields(logSource, row);
 
 		expect(fields.body).toBe("GET /api");
 		expect(fields.bodyLabel).toBe("SpanName");
+		expect(fields.levelText).toBe("SERVER");
 		expect(fields.severityText).toBe("ERROR");
 		expect(adapter.getColumnValuesLabel?.(row, fields)).toBe("Span Values");
 	});

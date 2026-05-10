@@ -335,7 +335,7 @@ export function LogsVolumeChart({
 					/>
 				) : (
 					<div className="h-[5.5rem]">
-						<ResponsiveContainer width="100%" height="100%">
+						{containerSize.width > 0 && <ResponsiveContainer width="100%" height="100%">
 							<BarChart
 								data={points}
 								barCategoryGap={2}
@@ -469,7 +469,7 @@ export function LogsVolumeChart({
 									/>
 								))}
 							</BarChart>
-						</ResponsiveContainer>
+						</ResponsiveContainer>}
 					</div>
 				)}
 

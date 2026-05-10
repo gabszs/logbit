@@ -7,6 +7,7 @@ import {
 	Play,
 	Terminal,
 	XCircle,
+	Zap,
 } from "lucide-react";
 import { useState } from "react";
 import { Badge } from "@/web/components/ui/badge";
@@ -76,6 +77,239 @@ async function executeQuery(
 	// json<T> returns ResponseJSON<T> — data: T[], meta?: ..., rows?: ..., statistics?: ...
 	return rs.json<Record<string, unknown>>() as Promise<ClickhouseResult>;
 }
+
+// ─── stack test scenarios ─────────────────────────────────────────────────────
+// Cada cenário cria erros com call stacks reais e profundos para testar o
+// pipeline de coleta → parse → envio ao collector.
+
+function scenarioCauseChain() {
+	// 3 níveis de error.cause — innermost primeiro no exception.values
+	function tcpConnect(host: string) {
+		const err = new Error(`ECONNREFUSED ${host}:5432 (connection refused)`);
+		err.name = "ConnectionError";
+		return err;
+	}
+	function runDatabaseQuery(sql: string) {
+		const conn = tcpConnect("prod-db-01.cluster.internal");
+		const err = new Error(`Query failed after 3 retries: "${sql.slice(0, 60)}"`, {
+			cause: conn,
+		});
+		err.name = "QueryError";
+		return err;
+	}
+	function loadUserProfile(userId: string) {
+		const query = runDatabaseQuery(
+			`SELECT profile, preferences, metadata FROM users WHERE id = '${userId}' LIMIT 1`,
+		);
+		return new TypeError(
+			"Cannot read properties of undefined (reading 'profile')",
+			{ cause: query },
+		);
+	}
+	Promise.reject(loadUserProfile("usr_01J9XKZM3PQRS7VW6TNHB4D2C"));
+}
+
+function scenarioDeepStack() {
+	// Stack sync de 6 frames reais — testa o V8 line parser
+	function assertDefined(value: unknown, field: string): asserts value is NonNullable<unknown> {
+		if (value == null) {
+			throw new TypeError(
+				`Null assertion failed at field "${field}" — schema validation aborted`,
+			);
+		}
+	}
+	function extractCell(row: Record<string, unknown>, col: string) {
+		assertDefined(row[col], col);
+		return row[col];
+	}
+	function processRow(row: Record<string, unknown>, schema: string[]) {
+		return schema.map((col) => extractCell(row, col));
+	}
+	function validateDataFrame(frame: unknown[]) {
+		return processRow(frame[0] as Record<string, unknown>, [
+			"id",
+			"timestamp",
+			"value",
+			"meta",
+			"source",
+		]);
+	}
+	function deserializeClickhouseResponse(raw: unknown) {
+		return validateDataFrame(raw as unknown[]);
+	}
+	try {
+		deserializeClickhouseResponse([{ id: 1, timestamp: null, value: null }]);
+	} catch (err) {
+		window.dispatchEvent(
+			new ErrorEvent("error", {
+				error: err instanceof Error ? err : new Error(String(err)),
+			}),
+		);
+	}
+}
+
+function scenarioAsyncChain() {
+	// Async chain — cada await adiciona um frame; rejeição vira unhandledrejection
+	async function decodeJwtPayload(token: string) {
+		const parts = token.split(".");
+		if (parts.length !== 3) {
+			throw new SyntaxError(
+				`Malformed JWT: expected 3 segments, got ${parts.length} — token="${token.slice(0, 24)}..."`,
+			);
+		}
+		const payload = JSON.parse(atob(parts[1] ?? "")) as {
+			exp?: number;
+			sub?: string;
+		};
+		if (!payload.exp || payload.exp < Math.floor(Date.now() / 1000)) {
+			const err = new Error(
+				`Token expired: exp=${payload.exp ?? "missing"}, now=${Math.floor(Date.now() / 1000)} (delta=${Math.floor(Date.now() / 1000) - (payload.exp ?? 0)}s)`,
+			);
+			err.name = "JwtExpiredError";
+			throw err;
+		}
+		return payload;
+	}
+	async function validateSessionClaims(token: string) {
+		const payload = await decodeJwtPayload(token);
+		if (!payload.sub) {
+			throw new Error("JWT missing required claim: sub");
+		}
+		return payload;
+	}
+	async function refreshAccessToken(refreshToken: string) {
+		await validateSessionClaims(refreshToken);
+		throw new Error("Auth server rejected token rotation (HTTP 401 Unauthorized)");
+	}
+	async function bootstrapAuthState() {
+		await refreshAccessToken(
+			"eyJhbGciOiJIUzI1NiJ9.eyJleHAiOjE2MDAwMDAwMDB9.invalid-sig",
+		);
+	}
+	void bootstrapAuthState();
+}
+
+function scenarioResourceError() {
+	// Injeta um <img> com src inválido — capturado pelo listener document capture
+	const img = document.createElement("img");
+	img.src = `https://cdn.otel-test.loglog.dev/missing-asset-${Date.now()}.png`;
+	img.style.cssText =
+		"position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;top:-9999px";
+	document.body.appendChild(img);
+	const cleanup = () => img.remove();
+	img.addEventListener("error", cleanup, { once: true });
+	img.addEventListener("load", cleanup, { once: true });
+}
+
+function scenarioConsoleError() {
+	// SyntaxError em deserialização — requer VITE_OTEL_CONSOLE_ERROR_ENABLED=true
+	function parseJsonBody(raw: string) {
+		function attemptParse(input: string) {
+			return JSON.parse(input);
+		}
+		try {
+			return attemptParse(raw);
+		} catch {
+			const err = new SyntaxError(
+				`Unexpected token '<' at position 0 while parsing response body: "${raw.slice(0, 40)}..."`,
+			);
+			console.error("[api] Response deserialization failed:", err);
+		}
+	}
+	parseJsonBody("<!DOCTYPE html><html><body>503 Service Unavailable</body></html>");
+}
+
+function scenarioAuthChain() {
+	// 3-level auth cause chain — testa walkCauseChain + mechanism por nível
+	function decodeBase64Segment(segment: string) {
+		if (!/^[A-Za-z0-9+/=_-]+$/.test(segment)) {
+			const err = new SyntaxError(
+				`Invalid base64url in JWT segment: "${segment.slice(0, 20)}" — unexpected character`,
+			);
+			err.name = "TokenDecodeError";
+			return err;
+		}
+		return null;
+	}
+	function validateSessionToken(sessionId: string) {
+		const decodeErr = decodeBase64Segment("INVALID_B@SE64_SEG!MENT_CORRUPT==");
+		const err = new Error(
+			`Session ${sessionId}: access token is corrupt or tampered — cannot decode payload`,
+			{ cause: decodeErr ?? undefined },
+		);
+		err.name = "SessionValidationError";
+		return err;
+	}
+	function authorizeApiRequest(method: string, path: string) {
+		const sessionErr = validateSessionToken("sess_01JA2RNTQ8PVX3YW7KMHB5D4E");
+		const err = new Error(
+			`Authorization denied for ${method} ${path}: identity cannot be verified`,
+			{ cause: sessionErr },
+		);
+		err.name = "AuthorizationError";
+		return err;
+	}
+	Promise.reject(authorizeApiRequest("POST", "/orpc/settings.update"));
+}
+
+type StackTestScenario = {
+	id: string;
+	name: string;
+	source: string;
+	description: string;
+	fire: () => void;
+};
+
+const STACK_TEST_SCENARIOS: StackTestScenario[] = [
+	{
+		id: "cause-chain",
+		name: "Cause chain 3 níveis",
+		source: "unhandled-rejection",
+		description:
+			"TypeError → QueryError → ConnectionError — testa walkCauseChain e exception.values com 3 entradas",
+		fire: scenarioCauseChain,
+	},
+	{
+		id: "deep-stack",
+		name: "Stack sync 6 frames",
+		source: "window-error",
+		description:
+			"assertDefined → extractCell → processRow → validateFrame → deserialize — testa o V8 line parser",
+		fire: scenarioDeepStack,
+	},
+	{
+		id: "async-chain",
+		name: "Async rejection chain",
+		source: "unhandled-rejection",
+		description:
+			"bootstrapAuth → refreshToken → validateClaims → decodeJwt — frames async encadeados",
+		fire: scenarioAsyncChain,
+	},
+	{
+		id: "resource-error",
+		name: "Resource load failure",
+		source: "resource-error",
+		description:
+			"<img> com src inválido injetado no DOM — testa o listener document capture",
+		fire: scenarioResourceError,
+	},
+	{
+		id: "console-error",
+		name: "console.error c/ stack",
+		source: "console-error",
+		description:
+			"SyntaxError em parseJsonBody → attemptParse — requer VITE_OTEL_CONSOLE_ERROR_ENABLED=true",
+		fire: scenarioConsoleError,
+	},
+	{
+		id: "auth-chain",
+		name: "Auth chain 3 níveis",
+		source: "unhandled-rejection",
+		description:
+			"AuthorizationError → SessionValidationError → TokenDecodeError — segundo cenário de causa chain",
+		fire: scenarioAuthChain,
+	},
+];
 
 // ─── preset queries ───────────────────────────────────────────────────────────
 
@@ -150,6 +384,10 @@ function ProxyTestPage() {
 	const [isRunning, setIsRunning] = useState(false);
 	const [result, setResult] = useState<ClickhouseResult | null>(null);
 	const [error, setError] = useState<string | null>(null);
+	const [lastFiredError, setLastFiredError] = useState<{
+		name: string;
+		source: string;
+	} | null>(null);
 
 	const canRun = mode === "saved" ? !!connectionId : !!url && !!username;
 
@@ -383,6 +621,80 @@ function ProxyTestPage() {
 						/>
 						<p className="text-muted-foreground text-xs">Ctrl+Enter to run</p>
 					</div>
+				</CardContent>
+			</Card>
+
+			{/* OTel stack test */}
+			<Card>
+				<CardHeader className="gap-3">
+					<div className="flex items-center gap-2">
+						<Zap className="size-5" />
+						<CardTitle>OTel Stack Test</CardTitle>
+					</div>
+					<CardDescription>
+						Cada cenário dispara um erro com call stack profundo e real.
+						Confirme <span className="font-mono">exception.values</span> com
+						frames estruturados no POST para{" "}
+						<span className="font-mono">/v1/logs</span>.
+					</CardDescription>
+				</CardHeader>
+
+				<Separator />
+
+				<CardContent className="pt-6">
+					<div className="space-y-2">
+						{STACK_TEST_SCENARIOS.map((scenario) => (
+							<div
+								key={scenario.id}
+								className="flex items-center justify-between gap-4 rounded-lg border p-3"
+							>
+								<div className="flex min-w-0 flex-col gap-1">
+									<div className="flex items-center gap-2">
+										<span className="font-medium text-sm">{scenario.name}</span>
+										<Badge variant="outline" className="font-mono text-xs">
+											{scenario.source}
+										</Badge>
+										{lastFiredError?.name === scenario.name && (
+											<Badge className="bg-green-500/15 text-green-700 text-xs dark:text-green-400">
+												fired
+											</Badge>
+										)}
+									</div>
+									<p className="truncate text-muted-foreground text-xs">
+										{scenario.description}
+									</p>
+								</div>
+								<Button
+									type="button"
+									size="sm"
+									variant="outline"
+									className="shrink-0 gap-1.5"
+									onClick={() => {
+										scenario.fire();
+										setLastFiredError({
+											name: scenario.name,
+											source: scenario.source,
+										});
+									}}
+								>
+									<Zap className="size-3" />
+									Disparar
+								</Button>
+							</div>
+						))}
+					</div>
+
+					{lastFiredError && (
+						<p className="mt-4 text-muted-foreground text-xs">
+							Último:{" "}
+							<span className="font-mono text-foreground">
+								{lastFiredError.name}
+							</span>{" "}
+							· verifique DevTools → Network → POST{" "}
+							<span className="font-mono">/v1/logs</span> →{" "}
+							<span className="font-mono">exception.values</span>
+						</p>
+					)}
 				</CardContent>
 			</Card>
 

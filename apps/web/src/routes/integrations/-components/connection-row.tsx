@@ -54,12 +54,12 @@ export function ConnectionRow({ connection, onRefresh }: ConnectionRowProps) {
 	return (
 		<>
 			<div className="w-full">
-				<button
-					type="button"
-					onClick={() => setIsExpanded((v) => !v)}
-					className="flex w-full items-center justify-between gap-4 p-4 text-left"
-				>
-					<div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+				<div className="flex w-full items-center justify-between gap-4 p-4">
+					<button
+						type="button"
+						onClick={() => setIsExpanded((v) => !v)}
+						className="flex min-w-0 flex-1 flex-wrap items-center gap-2 text-left"
+					>
 						{integration && (
 							<integration.logo className="size-5 shrink-0 text-foreground" />
 						)}
@@ -67,7 +67,7 @@ export function ConnectionRow({ connection, onRefresh }: ConnectionRowProps) {
 						<Badge variant="outline" className="shrink-0">
 							{connection.isActive ? "Active" : "Inactive"}
 						</Badge>
-					</div>
+					</button>
 
 					<div className="flex shrink-0 items-center gap-2">
 						<Tooltip>
@@ -76,10 +76,7 @@ export function ConnectionRow({ connection, onRefresh }: ConnectionRowProps) {
 									type="button"
 									size="sm"
 									variant="outline"
-									onClick={(e) => {
-										e.stopPropagation();
-										setIsEditOpen(true);
-									}}
+									onClick={() => setIsEditOpen(true)}
 									aria-label="Edit connection"
 								>
 									<Pencil className="size-4" />
@@ -94,10 +91,7 @@ export function ConnectionRow({ connection, onRefresh }: ConnectionRowProps) {
 									type="button"
 									size="sm"
 									variant="outline"
-									onClick={(e) => {
-										e.stopPropagation();
-										setIsDeleteOpen(true);
-									}}
+									onClick={() => setIsDeleteOpen(true)}
 									aria-label="Delete connection"
 								>
 									<Trash2 className="size-4" />
@@ -106,7 +100,7 @@ export function ConnectionRow({ connection, onRefresh }: ConnectionRowProps) {
 							<TooltipContent>Delete</TooltipContent>
 						</Tooltip>
 					</div>
-				</button>
+				</div>
 
 				{isExpanded && (
 					<div className="app-surface-divider px-4 py-4">

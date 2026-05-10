@@ -5,7 +5,7 @@ import { useEffect, useRef } from "react";
 import { BackendUnavailableError } from "@/web/components/backend-unavailable-error";
 import { Button } from "@/web/components/ui/button";
 import { isBackendUnavailableError } from "@/web/lib/backend-error";
-import { recordFrontendError } from "@/web/lib/otel";
+import { reportError } from "@/web/lib/log-handler";
 
 export function ErrorBoundary({ error, reset }: ErrorComponentProps) {
 	const router = useRouter();
@@ -14,7 +14,7 @@ export function ErrorBoundary({ error, reset }: ErrorComponentProps) {
 	useEffect(() => {
 		if (recordedError.current === error) return;
 		recordedError.current = error;
-		recordFrontendError(error, "react-boundary");
+		reportError(error, "react-boundary");
 	}, [error]);
 
 	if (isBackendUnavailableError(error)) {

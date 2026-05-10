@@ -1,17 +1,23 @@
-import type { Counter, Histogram } from "@opentelemetry/api";
+import type { Histogram } from "@opentelemetry/api";
 import { metrics } from "@opentelemetry/api";
+import { logs } from "@opentelemetry/api-logs";
 import { ZoneContextManager } from "@opentelemetry/context-zone";
 import {
 	CompositePropagator,
 	W3CBaggagePropagator,
 	W3CTraceContextPropagator,
 } from "@opentelemetry/core";
+import { OTLPLogExporter } from "@opentelemetry/exporter-logs-otlp-http";
 import { OTLPMetricExporter } from "@opentelemetry/exporter-metrics-otlp-http";
 import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http";
 import { registerInstrumentations } from "@opentelemetry/instrumentation";
 import type { FetchCustomAttributeFunction } from "@opentelemetry/instrumentation-fetch";
 import { FetchInstrumentation } from "@opentelemetry/instrumentation-fetch";
 import { resourceFromAttributes } from "@opentelemetry/resources";
+import {
+	BatchLogRecordProcessor,
+	LoggerProvider,
+} from "@opentelemetry/sdk-logs";
 import {
 	MeterProvider,
 	PeriodicExportingMetricReader,
@@ -34,7 +40,6 @@ import {
 	ATTR_SERVICE_VERSION,
 	ATTR_URL_FULL,
 	ATTR_URL_PATH,
-	ATTR_URL_QUERY,
 	ATTR_URL_SCHEME,
 	ATTR_USER_AGENT_ORIGINAL,
 	HTTP_REQUEST_METHOD_VALUE_CONNECT,
@@ -51,8 +56,9 @@ import {
 } from "@opentelemetry/semantic-conventions";
 import type { Metric } from "web-vitals";
 import { onCLS, onFCP, onINP, onLCP, onTTFB } from "web-vitals";
-import { isBackendUnavailableError } from "@/web/lib/backend-error";
 import { settings } from "@/web/lib/config";
+import { initLogHandler } from "@/web/lib/log-handler";
+import { getSessionId } from "@/web/lib/session";
 
 const KNOWN_HTTP_METHODS = new Set([
 	HTTP_REQUEST_METHOD_VALUE_CONNECT,
@@ -86,9 +92,6 @@ let webVitalFcpHistogram: Histogram | undefined;
 let webVitalLcpHistogram: Histogram | undefined;
 let webVitalInpHistogram: Histogram | undefined;
 let webVitalClsHistogram: Histogram | undefined;
-let frontendErrorCounter: Counter | undefined;
-let globalErrorMetricsRegistered = false;
-const recordedErrorObjects = new WeakSet<object>();
 
 function joinOtlpTraceUrl(collectorUrl: string) {
 	return `${collectorUrl.replace(/\/+$/, "")}/v1/traces`;
@@ -96,6 +99,10 @@ function joinOtlpTraceUrl(collectorUrl: string) {
 
 function joinOtlpMetricUrl(collectorUrl: string) {
 	return `${collectorUrl.replace(/\/+$/, "")}/v1/metrics`;
+}
+
+function joinOtlpLogUrl(collectorUrl: string) {
+	return `${collectorUrl.replace(/\/+$/, "")}/v1/logs`;
 }
 
 function detectOs(userAgent: string) {
@@ -174,7 +181,7 @@ function normalizePagePath(pathname: string) {
 	const segments = normalizedPath.split("/").filter(Boolean);
 	if (segments.length === 0) return "/";
 
-	const normalizedSegments = segments.map((segment, index) => {
+	const normalizedSegments = segments.map((segment) => {
 		if (!isOpaquePathId(segment)) return segment;
 		return "*";
 	});
@@ -188,6 +195,7 @@ function getBrowserResourceAttributes() {
 	const mobile = isMobile(userAgent);
 	const attributes = {
 		[ATTR_SERVICE_NAME]: settings.otel.serviceName,
+		"session.id": getSessionId(),
 		[ATTR_USER_AGENT_ORIGINAL]: userAgent,
 		"os.type": detectOs(userAgent),
 		"os.name": navigator.platform,
@@ -212,7 +220,8 @@ function getHttpComponent(url: URL) {
 	if (
 		settings.otel.collectorUrl &&
 		(url.href.startsWith(joinOtlpTraceUrl(settings.otel.collectorUrl)) ||
-			url.href.startsWith(joinOtlpMetricUrl(settings.otel.collectorUrl)))
+			url.href.startsWith(joinOtlpMetricUrl(settings.otel.collectorUrl)) ||
+			url.href.startsWith(joinOtlpLogUrl(settings.otel.collectorUrl)))
 	) {
 		return "otel-exporter";
 	}
@@ -251,7 +260,7 @@ function getRequestUrl(
 }
 
 function getRequestMethod(request: Request | RequestInit) {
-	return request instanceof Request ? request.method : request.method;
+	return request.method;
 }
 
 function getNormalizedMethod(method: string | undefined) {
@@ -308,10 +317,6 @@ function setStableHttpRequestAttributes(
 		span.setAttribute(ATTR_SERVER_PORT, serverPort);
 	}
 
-	if (url.search) {
-		span.setAttribute(ATTR_URL_QUERY, url.search.slice(1));
-	}
-
 	if (queryParamNames.length > 0) {
 		span.setAttribute("loglog.http.query.param_names", queryParamNames);
 	}
@@ -342,7 +347,10 @@ const applyFetchSpanAttributes: FetchCustomAttributeFunction = (
 	setStableHttpRequestAttributes(span, request, requestUrl);
 
 	if (!(result instanceof Response)) {
-		span.setAttribute(ATTR_ERROR_TYPE, result.status?.toString() ?? "_OTHER");
+		span.setAttribute(
+			ATTR_ERROR_TYPE,
+			result instanceof Error ? result.name : "_OTHER",
+		);
 		return;
 	}
 
@@ -434,14 +442,29 @@ function initializeMetricPipeline(
 		description: "Cumulative Layout Shift reported by the browser",
 		unit: "1",
 	});
-	frontendErrorCounter = meter.createCounter("loglog.frontend.error.count", {
-		description: "Unhandled frontend errors observed by the browser",
+}
+
+function initializeLogPipeline(
+	resource: ReturnType<typeof resourceFromAttributes>,
+	collectorUrl: string,
+) {
+	const loggerProvider = new LoggerProvider({
+		resource,
+		processors: [
+			new BatchLogRecordProcessor(
+				new OTLPLogExporter({
+					url: joinOtlpLogUrl(collectorUrl),
+				}),
+			),
+		],
 	});
+
+	logs.setGlobalLoggerProvider(loggerProvider);
 }
 
 function getWebVitalAttributes(metric: Metric) {
 	return {
-		"page.id": normalizePagePath(window.location.pathname),
+		"url.path": normalizePagePath(window.location.pathname),
 		"web.vital.rating": metric.rating,
 		"web.vital.navigation_type": metric.navigationType,
 	};
@@ -483,57 +506,6 @@ function registerWebVitalsMetrics() {
 	onCLS(recordWebVital);
 }
 
-function getFrontendErrorType(error: unknown) {
-	if (error instanceof Error && error.name) {
-		return error.name;
-	}
-
-	if (typeof error === "object" && error !== null && "name" in error) {
-		const { name } = error;
-		if (typeof name === "string" && name) {
-			return name;
-		}
-	}
-
-	return "_OTHER";
-}
-
-function shouldRecordFrontendError(error: unknown) {
-	if (isBackendUnavailableError(error)) return false;
-
-	if (typeof error === "object" && error !== null) {
-		if (recordedErrorObjects.has(error)) return false;
-		recordedErrorObjects.add(error);
-	}
-
-	return true;
-}
-
-export function recordFrontendError(
-	error: unknown,
-	source: "react-boundary" | "window-error" | "unhandled-rejection",
-) {
-	if (!frontendErrorCounter || !shouldRecordFrontendError(error)) return;
-
-	frontendErrorCounter.add(1, {
-		"error.source": source,
-		"error.type": getFrontendErrorType(error),
-	});
-}
-
-function registerGlobalErrorMetrics() {
-	if (globalErrorMetricsRegistered) return;
-	globalErrorMetricsRegistered = true;
-
-	window.addEventListener("error", (event) => {
-		recordFrontendError(event.error, "window-error");
-	});
-
-	window.addEventListener("unhandledrejection", (event) => {
-		recordFrontendError(event.reason, "unhandled-rejection");
-	});
-}
-
 function initializeOtel() {
 	if (!settings.otel.enabled) return;
 
@@ -549,8 +521,9 @@ function initializeOtel() {
 
 	initializeTracePipeline(resource, collectorUrl);
 	initializeMetricPipeline(resource, collectorUrl);
+	initializeLogPipeline(resource, collectorUrl);
 	registerWebVitalsMetrics();
-	registerGlobalErrorMetrics();
+	initLogHandler();
 }
 
 initializeOtel();
