@@ -240,21 +240,7 @@ function TraceRow({
 	const { node } = item;
 	const hasChildren = node.children.length > 0;
 	const duration = formatDurationNs(node.durationNs);
-	const isFirstRoot = item.depth === 0 && item.isFirstSibling;
-	const railWidth = isFirstRoot ? 0 : (item.depth + 1) * 16 + 10;
-	const currentLineLeft = item.depth * 16 + 8;
-	const shouldRenderBranchConnector = !isFirstRoot;
-	const shouldRenderCurrentLine = !isFirstRoot;
-	const ancestorLines = item.ancestorHasNext
-		.map((hasNext, lineIndex) =>
-			hasNext
-				? {
-						key: `${node.id}-ancestor-${lineIndex * 16 + 8}`,
-						left: lineIndex * 16 + 8,
-					}
-				: null,
-		)
-		.filter((line): line is { key: string; left: number } => line != null);
+	const childrenVisible = hasChildren && (!isCollapsed || hasSearch);
 
 	const selectRow = () => {
 		onSelect(node.id);
@@ -272,7 +258,7 @@ function TraceRow({
 		<div
 			ref={rowRef}
 			className={cn(
-				"group relative flex min-h-7 w-full cursor-pointer items-center gap-1.5 rounded-md pr-2 text-left text-xs transition-colors",
+				"group relative flex min-h-7 w-full cursor-pointer rounded-md pr-2 text-left text-xs transition-colors",
 				"focus-within:bg-muted/60 hover:bg-muted/60",
 				isSelected && "bg-muted/80 text-foreground",
 			)}
@@ -284,80 +270,96 @@ function TraceRow({
 				title={node.warning ? "Log is not attached to a known span" : node.name}
 				aria-label={`Inspect ${node.kind} ${node.name}`}
 			/>
-			<span
-				className="relative h-7 shrink-0 text-muted-foreground"
-				style={{ width: railWidth }}
-			>
-				{ancestorLines.map((line) => (
-					<span
-						key={line.key}
-						className="absolute top-0 bottom-0 w-px bg-[color:var(--surface-border)]"
-						style={{ left: line.left }}
-					/>
-				))}
-				{shouldRenderCurrentLine ? (
-					<span
-						className="absolute w-px bg-[color:var(--surface-border)]"
-						style={{
-							left: currentLineLeft,
-							top: item.isFirstSibling ? "50%" : 0,
-							bottom: item.hasNextSibling ? 0 : "50%",
-						}}
-					/>
-				) : null}
-				{shouldRenderBranchConnector ? (
-					<span
-						className="absolute h-px bg-[color:var(--surface-border)]"
-						style={{
-							left: currentLineLeft,
-							top: "50%",
-							width: 12,
-						}}
-					/>
-				) : null}
-			</span>
-			{hasChildren ? (
-				<span className="relative z-30 flex size-4 shrink-0 items-center justify-center">
-					<button
-						type="button"
-						className="flex size-4 cursor-pointer items-center justify-center rounded-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-						aria-label={
-							isCollapsed && !hasSearch
-								? `Expand ${node.name}`
-								: `Collapse ${node.name}`
-						}
-						onClick={(event) => {
-							event.stopPropagation();
-							onToggleCollapse(node.id);
-						}}
-						onKeyDown={(event) => {
-							event.stopPropagation();
-						}}
-					>
-						{isCollapsed && !hasSearch ? (
-							<ChevronRight className="size-3" />
-						) : (
-							<ChevronDown className="size-3" />
+			<div className="flex w-full pl-2">
+				{/* Ancestor columns: one per ancestor level above the immediate parent.
+				    ancestorHasNext[i+1] tells whether the ancestor at level i has more siblings,
+				    which determines if the vertical continuation line should be drawn. */}
+				{item.depth > 0 &&
+					item.ancestorHasNext.slice(1).map((hasNext, i) => (
+						<div key={i} className="relative w-5 shrink-0">
+							{hasNext && (
+								<span className="absolute top-0 bottom-0 left-3 w-px bg-[color:var(--surface-border)]" />
+							)}
+						</div>
+					))}
+				{/* Current level elbow: vertical bars + horizontal connector to icon */}
+				{item.depth > 0 && (
+					<div className="relative w-5 shrink-0">
+						<span
+							className={cn(
+								"absolute left-3 w-px bg-[color:var(--surface-border)]",
+								!item.hasNextSibling ? "top-0 h-3" : "top-0 bottom-3",
+							)}
+						/>
+						{item.hasNextSibling && (
+							<span className="absolute top-3 bottom-0 left-3 w-px bg-[color:var(--surface-border)]" />
 						)}
-					</button>
-				</span>
-			) : null}
-			<span className="relative z-10 flex size-4 shrink-0 items-center justify-center">
-				{iconForNode(node, item.depth === 0 && node.kind === "span")}
-			</span>
-			<span className="relative z-10 min-w-0 flex-1 truncate font-medium">
-				{node.kind === "log" ? (node.body ?? node.name) : node.name}
-			</span>
-			{node.warning ? (
-				<span className="relative z-10 shrink-0 rounded border border-amber-300/60 bg-amber-500/10 px-1.5 py-0.5 text-[10px] text-amber-700 dark:border-amber-800 dark:text-amber-300">
-					no span
-				</span>
-			) : null}
-			{duration ? (
-				<span className="relative z-10 shrink-0 font-mono text-[10px] text-muted-foreground tabular-nums">
-					{duration}
-				</span>
-			) : null}
+						<span className="absolute top-3 left-3 h-px w-2 bg-[color:var(--surface-border)]" />
+					</div>
+				)}
+				{/* Icon badge + downward connector when node has visible children */}
+				<div
+					className="group/icon relative z-30 flex w-6 shrink-0 flex-col py-1.5"
+					onClick={selectRow}
+				>
+					{childrenVisible && (
+						<span className="absolute left-3 top-[27px] bottom-0 w-px bg-[color:var(--surface-border)]" />
+					)}
+					<div className="flex h-4 items-center justify-center">
+						<span
+							className={cn(
+								"flex size-5 shrink-0 items-center justify-center rounded-sm",
+								"border border-transparent bg-[color:var(--surface-background)]",
+								"transition-colors group-hover/icon:border-[color:var(--surface-border)]",
+							)}
+						>
+							{iconForNode(node, item.depth === 0 && node.kind === "span")}
+						</span>
+					</div>
+				</div>
+				{/* Content + warning badge + collapse button + duration */}
+				<div className="flex min-w-0 flex-1 items-center gap-1.5 py-1.5 pl-1">
+					<span className="relative z-10 min-w-0 flex-1 truncate font-medium">
+						{node.kind === "log" ? (node.body ?? node.name) : node.name}
+					</span>
+					{node.warning ? (
+						<span className="relative z-10 shrink-0 rounded border border-amber-300/60 bg-amber-500/10 px-1.5 py-0.5 text-[10px] text-amber-700 dark:border-amber-800 dark:text-amber-300">
+							no span
+						</span>
+					) : null}
+					{hasChildren ? (
+						<span className="relative z-30 flex size-4 shrink-0 items-center justify-center">
+							<button
+								type="button"
+								className="flex size-4 cursor-pointer items-center justify-center rounded-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+								aria-label={
+									isCollapsed && !hasSearch
+										? `Expand ${node.name}`
+										: `Collapse ${node.name}`
+								}
+								onClick={(event) => {
+									event.stopPropagation();
+									onToggleCollapse(node.id);
+								}}
+								onKeyDown={(event) => {
+									event.stopPropagation();
+								}}
+							>
+								{isCollapsed && !hasSearch ? (
+									<ChevronRight className="size-3" />
+								) : (
+									<ChevronDown className="size-3" />
+								)}
+							</button>
+						</span>
+					) : null}
+					{duration ? (
+						<span className="relative z-10 shrink-0 font-mono text-[10px] text-muted-foreground tabular-nums">
+							{duration}
+						</span>
+					) : null}
+				</div>
+			</div>
 		</div>
 	);
 }
