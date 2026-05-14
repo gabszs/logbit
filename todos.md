@@ -1,5 +1,9 @@
 ## Integrations
 
+-- junstar query do painel principal com o with (tabelas de trace ids + traces + logs)
+
+-- adiconar aba de session no painel do frontend para qualquer linah que tenah o atributo session.id
+
 -- forcar o envio manual das mtricas quando fechar a tela no frontend
 
 -- investigar acumulo de memoria no front, ele salva todos os logs?!
@@ -33,6 +37,8 @@
 -- arrumar testes do middelware de front end que aparenta nao esta funcionando quando ativado, tbm nao ta tendo trace quando eu dipsaro reqeust normal (mas pode ser a rota)
 
 -- adicionar visualizacao do proprio clickhouse, quanto gb tem cada tabela, quantos logs/traces, maiores metricas, metricas mais frequentes, metricas com maior cardinaldiade
+
+-- adicionar DBM do clickhouse + alerta de logs internos
 
 ---
 frontend:

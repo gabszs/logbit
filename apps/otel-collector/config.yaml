@@ -114,7 +114,7 @@ connectors:
     error_mode: ignore
     table:
       - context: log
-        statement: route() where attributes["loglog.session_replay.event"] == true or attributes["loglog.session_replay.event"] == "true"
+        statement: route() where attributes["session.replay.event"] == true or attributes["session.replay.event"] == "true" or attributes["loglog.session_replay.event"] == true or attributes["loglog.session_replay.event"] == "true"
         pipelines: [logs/out-sessions]
 
 service:
