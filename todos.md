@@ -49,3 +49,10 @@ Nuqs: Uma biblioteca excelente para sincronizar o estado da sua UI (filtros, bus
 
 Date-fns: Essencial para manipular os timeframes de observabilidade (ex: "Last 15 minutes", "Relative time").
 ---
+
+
+libs para dashboard:
+- perses
+- evidence
+- lightdash
+- cube
