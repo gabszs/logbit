@@ -66,8 +66,8 @@ export function LogsBarsSparkline({
 			) : null}
 			<div
 				className={cn(
-					"grid min-w-0 flex-1 auto-cols-fr grid-flow-col items-end border-stone-300/80 border-b pb-0.5 dark:border-stone-700/80",
-					compact ? "gap-[2px]" : "gap-[3px]",
+					"flex min-w-0 flex-1 items-end border-stone-300/80 border-b pb-0.5 dark:border-stone-700/80",
+					compact ? "gap-px" : "gap-[3px]",
 				)}
 				style={{ height }}
 			>
@@ -83,7 +83,7 @@ export function LogsBarsSparkline({
 						<div
 							key={point.key}
 							className={cn(
-								"w-full opacity-95",
+								"min-w-px flex-1 opacity-95",
 								interactive &&
 									"transition-[box-shadow,opacity] duration-150 hover:opacity-100 hover:shadow-[0_0_0_2px_rgba(68,64,60,0.3),0_0_12px_rgba(68,64,60,0.24),0_4px_12px_rgba(68,64,60,0.18)] dark:hover:shadow-[0_0_0_2px_rgba(214,211,209,0.32),0_0_12px_rgba(214,211,209,0.18),0_4px_14px_rgba(0,0,0,0.42)]",
 							)}
