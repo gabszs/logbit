@@ -67,7 +67,7 @@ const modeItems = [
 	},
 	{
 		value: "groups" as const,
-		label: "Groups",
+		label: "Patterns",
 	},
 ];
 

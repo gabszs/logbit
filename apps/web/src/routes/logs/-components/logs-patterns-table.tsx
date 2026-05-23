@@ -77,6 +77,7 @@ function TrendBars({ group }: { group: LogsPatternGroup }) {
 			height={40}
 			compact
 			showYAxisMax
+			interactive
 			className="min-w-[10rem]"
 		/>
 	);
@@ -190,25 +191,27 @@ export function LogsPatternsTable({
 										<TrendBars group={group} />
 									</td>
 									<td className="border-[color:var(--surface-border)] border-b px-4 py-3 align-top">
-										<div className="font-mono text-[15px] text-foreground tabular-nums">
+										<div className="inline-flex h-6 items-center font-mono text-[15px] text-foreground tabular-nums leading-none">
 											{group.countLabel}
 										</div>
 									</td>
 									<td className="border-[color:var(--surface-border)] border-b px-4 py-3 align-top">
-										{group.level ? (
-											<span
-												className={`inline-flex h-5 max-w-full items-center rounded border px-1.5 font-mono text-[11px] leading-none ${getSeverityBadgeClass(group.level)}`}
-											>
-												{group.level}
-											</span>
-										) : (
-											<span className="font-mono text-[13px] text-muted-foreground">
-												—
-											</span>
-										)}
+										<div className="flex h-6 items-center">
+											{group.level ? (
+												<span
+													className={`inline-flex h-5 max-w-full items-center rounded border px-1.5 font-mono text-[11px] leading-none ${getSeverityBadgeClass(group.level)}`}
+												>
+													{group.level}
+												</span>
+											) : (
+												<span className="font-mono text-[13px] text-muted-foreground leading-none">
+													—
+												</span>
+											)}
+										</div>
 									</td>
 									<td className="border-[color:var(--surface-border)] border-b px-4 py-3 align-top">
-										<div className="max-w-none break-words font-mono text-[13px] text-foreground leading-6">
+										<div className="min-h-6 max-w-none break-words font-mono text-[13px] text-foreground leading-6">
 											{group.pattern}
 										</div>
 									</td>

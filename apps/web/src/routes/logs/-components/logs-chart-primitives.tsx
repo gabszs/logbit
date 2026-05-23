@@ -83,8 +83,9 @@ export function LogsBarsSparkline({
 						<div
 							key={point.key}
 							className={cn(
-								"w-full rounded-t-sm opacity-95",
-								interactive && "transition-opacity hover:opacity-100",
+								"w-full opacity-95",
+								interactive &&
+									"transition-[box-shadow,opacity] duration-150 hover:opacity-100 hover:shadow-[0_0_0_2px_rgba(68,64,60,0.3),0_0_12px_rgba(68,64,60,0.24),0_4px_12px_rgba(68,64,60,0.18)] dark:hover:shadow-[0_0_0_2px_rgba(214,211,209,0.32),0_0_12px_rgba(214,211,209,0.18),0_4px_14px_rgba(0,0,0,0.42)]",
 							)}
 							style={{
 								height: `${normalizedHeight}%`,
