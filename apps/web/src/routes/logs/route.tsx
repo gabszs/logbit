@@ -69,20 +69,40 @@ const allSourcesQueryOptions = queryOptions({
 	queryFn: getSourcesForSourceSelect,
 });
 
+const LOGS_VOLUME_TIME_FORMATTER = new Intl.DateTimeFormat(undefined, {
+	hour: "2-digit",
+	minute: "2-digit",
+	hourCycle: "h23",
+});
+
+const LOGS_VOLUME_TOOLTIP_FORMATTER = new Intl.DateTimeFormat(undefined, {
+	year: "numeric",
+	month: "2-digit",
+	day: "2-digit",
+	hour: "2-digit",
+	minute: "2-digit",
+	second: "2-digit",
+	hourCycle: "h23",
+});
+
+function getDateTimePart(
+	parts: Intl.DateTimeFormatPart[],
+	type: Intl.DateTimeFormatPartTypes,
+) {
+	return parts.find((part) => part.type === type)?.value ?? "00";
+}
+
 function formatLogsVolumeTimeLabel(date: Date) {
-	const hours = date.getHours().toString().padStart(2, "0");
-	const minutes = date.getMinutes().toString().padStart(2, "0");
-	return `${hours}:${minutes}`;
+	const parts = LOGS_VOLUME_TIME_FORMATTER.formatToParts(date);
+	return `${getDateTimePart(parts, "hour")}:${getDateTimePart(parts, "minute")}`;
 }
 
 function formatLogsVolumeTooltipLabel(date: Date) {
-	const year = date.getFullYear().toString().padStart(4, "0");
-	const month = (date.getMonth() + 1).toString().padStart(2, "0");
-	const day = date.getDate().toString().padStart(2, "0");
-	const hours = date.getHours().toString().padStart(2, "0");
-	const minutes = date.getMinutes().toString().padStart(2, "0");
-	const seconds = date.getSeconds().toString().padStart(2, "0");
-	return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+	const parts = LOGS_VOLUME_TOOLTIP_FORMATTER.formatToParts(date);
+	return [
+		`${getDateTimePart(parts, "year")}-${getDateTimePart(parts, "month")}-${getDateTimePart(parts, "day")}`,
+		`${getDateTimePart(parts, "hour")}:${getDateTimePart(parts, "minute")}:${getDateTimePart(parts, "second")}`,
+	].join(" ");
 }
 
 export const Route = createFileRoute("/logs")({

@@ -92,10 +92,10 @@ const RANGE_WINDOW_MS: Record<LogTimeRange, number> = {
 };
 
 const RANGE_BUCKET = {
-	"5m": { amount: 10, unit: "SECOND" },
-	"10m": { amount: 10, unit: "SECOND" },
-	"15m": { amount: 10, unit: "SECOND" },
-	"30m": { amount: 15, unit: "SECOND" },
+	"5m": { amount: 15, unit: "SECOND" },
+	"10m": { amount: 15, unit: "SECOND" },
+	"15m": { amount: 15, unit: "SECOND" },
+	"30m": { amount: 20, unit: "SECOND" },
 	"1h": { amount: 30, unit: "SECOND" },
 	"6h": { amount: 2, unit: "MINUTE" },
 	"12h": { amount: 3, unit: "MINUTE" },
@@ -446,8 +446,9 @@ export function buildLogsVolumeQuery(
 		options,
 	);
 	const severityGroupExpression = buildSeverityGroupExpression(source);
+	const bucketExpression = `toStartOfInterval(${timestampQueryField}, INTERVAL ${amount} ${unit})`;
 	const selectClauses = [
-		`toStartOfInterval(${timestampQueryField}, INTERVAL ${amount} ${unit}) AS bucket`,
+		`formatDateTime(${bucketExpression}, '%Y-%m-%dT%H:%i:%SZ', 'UTC') AS bucket`,
 	];
 	const groupByClauses = ["bucket"];
 
@@ -486,7 +487,7 @@ export function normalizeLogsVolumeRows(
 	timeRange: LogTimeRange,
 	hasSeverityField: boolean,
 	options: LogsVolumeRowsOptions = {},
-) {
+): LogsVolumeChartData {
 	const groupDefinitions = new Map<string, LogsVolumeGroup>();
 	const bucketMap = new Map<
 		string,
@@ -504,6 +505,7 @@ export function normalizeLogsVolumeRows(
 	const boundsStart = timeBounds ? new Date(timeBounds.startIso) : null;
 	const boundsEnd = timeBounds ? new Date(timeBounds.endIso) : null;
 
+	// Bucket keys stay in UTC ISO; route-level formatters render local labels.
 	if (
 		boundsStart &&
 		boundsEnd &&

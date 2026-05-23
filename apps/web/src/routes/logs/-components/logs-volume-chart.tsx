@@ -38,12 +38,25 @@ const DEFAULT_LOG_LEVELS = [
 	"TRACE",
 	"unknown",
 ] as const;
-const CHART_PLOT_INSET = {
-	top: 2,
-	right: 8,
-	bottom: 10,
-	left: 24,
-};
+function createChartGeometry() {
+	const margin = { top: 2, right: 8, left: -18, bottom: -8 };
+	const yAxisWidth = 42;
+	const xAxisHeight = 18;
+
+	return {
+		margin,
+		yAxisWidth,
+		xAxisHeight,
+		trackInset: {
+			top: margin.top,
+			right: margin.right,
+			bottom: xAxisHeight + margin.bottom,
+			left: yAxisWidth + margin.left,
+		},
+	};
+}
+
+const CHART_GEOMETRY = createChartGeometry();
 
 function getGroupColor(groupKey: string) {
 	return getLogsChartColor(groupKey);
@@ -309,7 +322,13 @@ export function LogsVolumeChart({
 			return 4;
 		}
 
-		const slotWidth = containerSize.width / points.length;
+		const plotWidth = Math.max(
+			0,
+			containerSize.width -
+				CHART_GEOMETRY.trackInset.left -
+				CHART_GEOMETRY.trackInset.right,
+		);
+		const slotWidth = plotWidth / points.length;
 		return Math.max(1, Math.floor(slotWidth * 0.82));
 	}, [containerSize.width, points.length]);
 
@@ -422,10 +441,10 @@ export function LogsVolumeChart({
 						<div
 							className="pointer-events-none absolute z-0 grid"
 							style={{
-								top: CHART_PLOT_INSET.top,
-								right: CHART_PLOT_INSET.right,
-								bottom: CHART_PLOT_INSET.bottom,
-								left: CHART_PLOT_INSET.left,
+								top: CHART_GEOMETRY.trackInset.top,
+								right: CHART_GEOMETRY.trackInset.right,
+								bottom: CHART_GEOMETRY.trackInset.bottom,
+								left: CHART_GEOMETRY.trackInset.left,
 								gridTemplateColumns: `repeat(${points.length}, minmax(0, 1fr))`,
 							}}
 						>
@@ -451,12 +470,12 @@ export function LogsVolumeChart({
 								barCategoryGap={0}
 								barGap={0}
 								barSize={chartBarSize}
-								margin={{ top: 2, right: 8, left: -18, bottom: -8 }}
+								margin={CHART_GEOMETRY.margin}
 							>
 								<XAxis
 									dataKey="bucketStart"
 									ticks={xAxisTicks}
-									height={18}
+									height={CHART_GEOMETRY.xAxisHeight}
 									interval={0}
 									tickLine={false}
 									axisLine={false}
@@ -473,7 +492,7 @@ export function LogsVolumeChart({
 								<YAxis
 									tickLine={false}
 									axisLine={false}
-									width={42}
+									width={CHART_GEOMETRY.yAxisWidth}
 									tick={{
 										fontSize: 10,
 										fill: "var(--muted-foreground)",
