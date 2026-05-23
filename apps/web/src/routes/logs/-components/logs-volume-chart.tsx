@@ -1,5 +1,5 @@
 import { BarChart3, Filter, Rows3, X } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
 	Bar,
 	BarChart,
@@ -176,25 +176,32 @@ export function LogsVolumeChart({
 	onApplyDrilldown: (drilldown: LogsChartDrilldown) => void;
 	onClearDrilldown: () => void;
 }) {
-	const containerRef = useRef<HTMLDivElement>(null);
+	const containerRef = useRef<HTMLDivElement | null>(null);
 	const popoverRef = useRef<HTMLDivElement>(null);
 	const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
+	const observerRef = useRef<ResizeObserver | null>(null);
 
-	useEffect(() => {
-		const container = containerRef.current;
-		if (!container) return;
+	const setContainerRef = useCallback((node: HTMLDivElement | null) => {
+		containerRef.current = node;
+
+		if (observerRef.current) {
+			observerRef.current.disconnect();
+			observerRef.current = null;
+		}
+
+		if (!node) return;
 
 		const updateSize = () => {
 			setContainerSize({
-				width: container.clientWidth,
-				height: container.clientHeight,
+				width: node.clientWidth,
+				height: node.clientHeight,
 			});
 		};
 
 		updateSize();
 		const observer = new ResizeObserver(updateSize);
-		observer.observe(container);
-		return () => observer.disconnect();
+		observer.observe(node);
+		observerRef.current = observer;
 	}, []);
 
 	useEffect(() => {
@@ -325,7 +332,7 @@ export function LogsVolumeChart({
 			</div>
 
 			<div
-				ref={containerRef}
+				ref={setContainerRef}
 				className="relative overflow-visible rounded-md bg-[#faf9f6]/85 px-2 py-1.5 shadow-none dark:bg-stone-950/80"
 			>
 				{points.length === 0 ? (
@@ -335,7 +342,7 @@ export function LogsVolumeChart({
 					/>
 				) : (
 					<div className="h-[5.5rem]">
-						{containerSize.width > 0 && <ResponsiveContainer width="100%" height="100%">
+						<ResponsiveContainer width="100%" height="100%">
 							<BarChart
 								data={points}
 								barCategoryGap={2}
@@ -469,7 +476,7 @@ export function LogsVolumeChart({
 									/>
 								))}
 							</BarChart>
-						</ResponsiveContainer>}
+						</ResponsiveContainer>
 					</div>
 				)}
 
