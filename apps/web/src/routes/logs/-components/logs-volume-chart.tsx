@@ -3,7 +3,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
 	Bar,
 	BarChart,
-	CartesianGrid,
 	ReferenceLine,
 	ResponsiveContainer,
 	Tooltip,
@@ -39,6 +38,12 @@ const DEFAULT_LOG_LEVELS = [
 	"TRACE",
 	"unknown",
 ] as const;
+const CHART_PLOT_INSET = {
+	top: 2,
+	right: 8,
+	bottom: 10,
+	left: 24,
+};
 
 function getGroupColor(groupKey: string) {
 	return getLogsChartColor(groupKey);
@@ -46,6 +51,14 @@ function getGroupColor(groupKey: string) {
 
 function formatEventCount(value: number) {
 	return `${value.toLocaleString()} event${value === 1 ? "" : "s"}`;
+}
+
+function formatTooltipCount(value: number) {
+	return value > 0 ? value.toLocaleString() : "N/A";
+}
+
+function formatTooltipGroupLabel(label: string) {
+	return label === "unknown" ? "null" : label;
 }
 
 function buildPopoverGroups(
@@ -87,6 +100,51 @@ function buildPopoverGroups(
 		count: point.values[group.key] ?? 0,
 		color: getGroupColor(group.key),
 	}));
+}
+
+function LogsVolumeTooltipContent({
+	point,
+	groups,
+}: {
+	point: LogsVolumePoint;
+	groups: LogsVolumeGroup[];
+}) {
+	const tooltipGroups = (groups.length ? groups : point.groups).map(
+		(group) => ({
+			...group,
+			count: point.values[group.key] ?? 0,
+			color: getGroupColor(group.key),
+		}),
+	);
+
+	return (
+		<div className="min-w-[9.5rem] rounded-[3px] border border-[#30333a] bg-[#0b0c0f] px-2.5 py-2 font-mono text-[12px] leading-5 shadow-none">
+			<div className="mb-1 whitespace-nowrap text-[#f3f4f6]">
+				{point.bucketLabel}
+			</div>
+			<div className="space-y-0.5">
+				{tooltipGroups.map((group) => (
+					<div
+						key={group.key}
+						className="grid grid-cols-[1fr_auto] items-center gap-8"
+					>
+						<div className="flex min-w-0 items-center gap-1.5 text-[#c8ccd4]">
+							<span
+								className="size-2.5 shrink-0 rounded-full"
+								style={{ backgroundColor: group.color }}
+							/>
+							<span className="truncate">
+								{formatTooltipGroupLabel(group.label)}
+							</span>
+						</div>
+						<span className="text-right font-semibold text-[#d7dbe2] tabular-nums">
+							{formatTooltipCount(group.count)}
+						</span>
+					</div>
+				))}
+			</div>
+		</div>
+	);
 }
 
 function LogsVolumeState({
@@ -156,6 +214,7 @@ function isLogsVolumePoint(value: object | null): value is LogsVolumePoint {
 export function LogsVolumeChart({
 	points,
 	groups,
+	xAxisTicks,
 	isLoading,
 	error,
 	activeDrilldown,
@@ -167,6 +226,7 @@ export function LogsVolumeChart({
 }: {
 	points: LogsVolumePoint[];
 	groups: LogsVolumeGroup[];
+	xAxisTicks: string[];
 	isLoading: boolean;
 	error: string | null;
 	activeDrilldown: LogsChartDrilldown | null;
@@ -235,6 +295,23 @@ export function LogsVolumeChart({
 		() => activePopover?.bucketStart ?? activeDrilldown?.bucketStart ?? null,
 		[activeDrilldown?.bucketStart, activePopover?.bucketStart],
 	);
+	const xAxisLabelByBucket = useMemo(
+		() =>
+			new Map(
+				points
+					.filter((point) => point.xAxisLabel)
+					.map((point) => [point.bucketStart, point.xAxisLabel ?? ""]),
+			),
+		[points],
+	);
+	const chartBarSize = useMemo(() => {
+		if (containerSize.width <= 0 || points.length === 0) {
+			return 4;
+		}
+
+		const slotWidth = containerSize.width / points.length;
+		return Math.max(1, Math.floor(slotWidth * 0.82));
+	}, [containerSize.width, points.length]);
 
 	const popoverStyle = useMemo(() => {
 		if (!activePopover) return null;
@@ -333,7 +410,7 @@ export function LogsVolumeChart({
 
 			<div
 				ref={setContainerRef}
-				className="relative overflow-visible rounded-md bg-[#faf9f6]/85 px-2 py-1.5 shadow-none dark:bg-stone-950/80"
+				className="relative overflow-visible rounded-md border border-stone-200/80 bg-[#f7f6f1]/85 px-2 py-1.5 shadow-none dark:border-stone-800/80 dark:bg-[#050506]"
 			>
 				{points.length === 0 ? (
 					<LogsVolumeState
@@ -341,30 +418,54 @@ export function LogsVolumeChart({
 						description="Run a query to see stacked log volume by time bucket."
 					/>
 				) : (
-					<div className="h-[5.5rem]">
-						<ResponsiveContainer width="100%" height="100%">
+					<div className="relative h-[5.5rem]">
+						<div
+							className="pointer-events-none absolute z-0 grid"
+							style={{
+								top: CHART_PLOT_INSET.top,
+								right: CHART_PLOT_INSET.right,
+								bottom: CHART_PLOT_INSET.bottom,
+								left: CHART_PLOT_INSET.left,
+								gridTemplateColumns: `repeat(${points.length}, minmax(0, 1fr))`,
+							}}
+						>
+							{points.map((point) => (
+								<div
+									key={point.bucketStart}
+									className="flex h-full justify-center"
+								>
+									<div
+										className="h-full bg-stone-400/20 dark:bg-white/[0.075]"
+										style={{ width: chartBarSize }}
+									/>
+								</div>
+							))}
+						</div>
+						<ResponsiveContainer
+							width="100%"
+							height="100%"
+							className="relative z-10"
+						>
 							<BarChart
 								data={points}
-								barCategoryGap={2}
-								margin={{ top: 2, right: 8, left: -20, bottom: -10 }}
+								barCategoryGap={0}
+								barGap={0}
+								barSize={chartBarSize}
+								margin={{ top: 2, right: 8, left: -18, bottom: -8 }}
 							>
-								<CartesianGrid
-									stroke="rgba(148, 163, 184, 0.14)"
-									vertical={false}
-								/>
 								<XAxis
 									dataKey="bucketStart"
+									ticks={xAxisTicks}
+									height={18}
+									interval={0}
 									tickLine={false}
 									axisLine={false}
-									minTickGap={20}
+									tickMargin={4}
 									tickFormatter={(value) => {
-										const point = points.find(
-											(entry) => entry.bucketStart === value,
-										);
-										return point?.bucketLabel ?? "";
+										return xAxisLabelByBucket.get(String(value)) ?? "";
 									}}
 									tick={{
-										fontSize: 11,
+										fontSize: 10,
 										fill: "var(--muted-foreground)",
 										fontFamily: "ui-monospace, monospace",
 									}}
@@ -374,7 +475,7 @@ export function LogsVolumeChart({
 									axisLine={false}
 									width={42}
 									tick={{
-										fontSize: 11,
+										fontSize: 10,
 										fill: "var(--muted-foreground)",
 										fontFamily: "ui-monospace, monospace",
 									}}
@@ -388,10 +489,18 @@ export function LogsVolumeChart({
 									/>
 								) : null}
 								<Tooltip
+									offset={{ x: 12, y: 16 }}
+									reverseDirection={{ x: false, y: true }}
+									allowEscapeViewBox={{ x: false, y: true }}
+									wrapperStyle={{
+										outline: "none",
+										pointerEvents: "none",
+										zIndex: 30,
+									}}
 									cursor={{
 										fill: "rgba(148, 163, 184, 0.08)",
 									}}
-									content={({ active, payload, label }) => {
+									content={({ active, payload }) => {
 										if (!active || !payload?.length) {
 											return null;
 										}
@@ -407,37 +516,7 @@ export function LogsVolumeChart({
 
 										const point = pointPayload;
 										return (
-											<div className="min-w-[14rem] rounded-md border border-stone-200 bg-[#faf9f6]/95 px-3 py-2.5 shadow-sm backdrop-blur dark:border-stone-800 dark:bg-stone-950/95">
-												<div className="font-medium text-foreground text-sm">
-													{typeof label === "string"
-														? label
-														: point.bucketLabel}
-												</div>
-												<div className="mt-1 font-mono text-[11px] text-muted-foreground uppercase tracking-[0.18em]">
-													{formatEventCount(point.total)}
-												</div>
-												<div className="mt-3 space-y-1.5">
-													{point.groups.map((group) => (
-														<div
-															key={group.key}
-															className="flex items-center justify-between gap-3 text-xs"
-														>
-															<div className="flex items-center gap-2 text-foreground">
-																<span
-																	className="size-2.5 rounded-full"
-																	style={{
-																		backgroundColor: getGroupColor(group.key),
-																	}}
-																/>
-																<span>{group.label}</span>
-															</div>
-															<span className="font-mono text-muted-foreground">
-																{group.count.toLocaleString()}
-															</span>
-														</div>
-													))}
-												</div>
-											</div>
+											<LogsVolumeTooltipContent point={point} groups={groups} />
 										);
 									}}
 								/>
@@ -450,8 +529,8 @@ export function LogsVolumeChart({
 										}
 										name={group.label}
 										fill={getGroupColor(group.key)}
-										radius={[3, 3, 0, 0]}
-										maxBarSize={30}
+										radius={0}
+										maxBarSize={chartBarSize}
 										cursor="pointer"
 										onClick={(data) => {
 											const payload = data.payload;

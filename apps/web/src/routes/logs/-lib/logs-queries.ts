@@ -41,11 +41,25 @@ export type LogsVolumeGroup = {
 
 export type LogsVolumePoint = {
 	bucketLabel: string;
+	xAxisLabel?: string;
 	bucketStart: string;
 	bucketEnd: string;
 	total: number;
 	values: Record<string, number>;
 	groups: Array<LogsVolumeGroup & { count: number }>;
+};
+
+export type LogsVolumeChartData = {
+	points: LogsVolumePoint[];
+	groups: LogsVolumeGroup[];
+	xAxisTicks: string[];
+};
+
+type LogsVolumeRowsOptions = {
+	timeBounds?: LogsQueryAbsoluteTimeRange | null;
+	formatBucketLabel?: (date: Date, range: LogTimeRange) => string;
+	formatXAxisLabel?: (date: Date, range: LogTimeRange) => string;
+	targetXAxisTickCount?: number;
 };
 
 const DEFAULT_SELECT_QUERY =
@@ -78,14 +92,14 @@ const RANGE_WINDOW_MS: Record<LogTimeRange, number> = {
 };
 
 const RANGE_BUCKET = {
-	"5m": { amount: 15, unit: "SECOND" },
-	"10m": { amount: 15, unit: "SECOND" },
-	"15m": { amount: 15, unit: "SECOND" },
-	"30m": { amount: 1, unit: "MINUTE" },
-	"1h": { amount: 1, unit: "MINUTE" },
-	"6h": { amount: 10, unit: "MINUTE" },
-	"12h": { amount: 10, unit: "MINUTE" },
-	"1d": { amount: 30, unit: "MINUTE" },
+	"5m": { amount: 10, unit: "SECOND" },
+	"10m": { amount: 10, unit: "SECOND" },
+	"15m": { amount: 10, unit: "SECOND" },
+	"30m": { amount: 15, unit: "SECOND" },
+	"1h": { amount: 30, unit: "SECOND" },
+	"6h": { amount: 2, unit: "MINUTE" },
+	"12h": { amount: 3, unit: "MINUTE" },
+	"1d": { amount: 5, unit: "MINUTE" },
 } as const satisfies Record<
 	LogTimeRange,
 	{ amount: number; unit: "SECOND" | "MINUTE" }
@@ -141,6 +155,25 @@ function resolveTimeBounds(
 	return buildTimeBounds(range, now);
 }
 
+export function resolveLogsQueryTimeBounds(
+	range: LogTimeRange,
+	options: {
+		now?: Date;
+		absoluteTimeRange?: LogsQueryAbsoluteTimeRange;
+	} = {},
+): LogsQueryAbsoluteTimeRange {
+	const { start, end } = resolveTimeBounds(
+		range,
+		options.now,
+		options.absoluteTimeRange,
+	);
+
+	return {
+		startIso: start,
+		endIso: end,
+	};
+}
+
 function buildTimePredicate(
 	timestampQueryField: string,
 	startIso: string,
@@ -194,6 +227,41 @@ function addBucketDuration(date: Date, range: LogTimeRange) {
 	return nextDate;
 }
 
+function getBucketStart(date: Date, range: LogTimeRange) {
+	const { amount, unit } = getTimeBucket(range);
+	const bucketDate = new Date(date);
+	bucketDate.setUTCMilliseconds(0);
+
+	if (unit === "SECOND") {
+		const seconds = Math.floor(bucketDate.getUTCSeconds() / amount) * amount;
+		bucketDate.setUTCSeconds(seconds, 0);
+		return bucketDate;
+	}
+
+	const minutes = Math.floor(bucketDate.getUTCMinutes() / amount) * amount;
+	bucketDate.setUTCMinutes(minutes, 0, 0);
+	return bucketDate;
+}
+
+function parseClickHouseBucketDate(value: string) {
+	const normalizedValue = value.trim();
+	const hasExplicitTimezone =
+		/[zZ]$/u.test(normalizedValue) ||
+		/[+-]\d{2}:?\d{2}$/u.test(normalizedValue);
+	const dateTimeWithoutTimezone =
+		/^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2}:\d{2}(?:\.\d+)?)$/u.exec(
+			normalizedValue,
+		);
+
+	if (dateTimeWithoutTimezone && !hasExplicitTimezone) {
+		return new Date(
+			`${dateTimeWithoutTimezone[1]}T${dateTimeWithoutTimezone[2]}Z`,
+		);
+	}
+
+	return new Date(normalizedValue);
+}
+
 function formatBucketLabel(date: Date, range: LogTimeRange) {
 	const { unit } = getTimeBucket(range);
 	const options: Intl.DateTimeFormatOptions =
@@ -213,9 +281,50 @@ function formatBucketLabel(date: Date, range: LogTimeRange) {
 	return new Intl.DateTimeFormat(undefined, options).format(date);
 }
 
+function applyXAxisLabels(
+	points: LogsVolumePoint[],
+	timeRange: LogTimeRange,
+	formatXAxisLabel: (date: Date, range: LogTimeRange) => string,
+	targetXAxisTickCount: number,
+) {
+	if (points.length === 0) {
+		return {
+			points,
+			xAxisTicks: [],
+		};
+	}
+
+	const tickCount = Math.max(2, Math.min(targetXAxisTickCount, points.length));
+	const tickIndexes = new Set<number>();
+	for (let index = 0; index < tickCount; index++) {
+		tickIndexes.add(
+			Math.round((index * (points.length - 1)) / Math.max(1, tickCount - 1)),
+		);
+	}
+
+	const xAxisTicks: string[] = [];
+	const labeledPoints = points.map((point, index) => {
+		if (!tickIndexes.has(index)) {
+			return point;
+		}
+
+		xAxisTicks.push(point.bucketStart);
+		return {
+			...point,
+			xAxisLabel: formatXAxisLabel(new Date(point.bucketStart), timeRange),
+		};
+	});
+
+	return {
+		points: labeledPoints,
+		xAxisTicks,
+	};
+}
+
 function sortGroupKeys(a: string, b: string) {
-	const aIndex = SEVERITY_GROUP_ORDER.findIndex((group) => group === a);
-	const bIndex = SEVERITY_GROUP_ORDER.findIndex((group) => group === b);
+	const severityGroupOrder: readonly string[] = SEVERITY_GROUP_ORDER;
+	const aIndex = severityGroupOrder.indexOf(a);
+	const bIndex = severityGroupOrder.indexOf(b);
 
 	if (aIndex !== -1 || bIndex !== -1) {
 		if (aIndex === -1) return 1;
@@ -376,6 +485,7 @@ export function normalizeLogsVolumeRows(
 	rows: LogsVolumeRow[],
 	timeRange: LogTimeRange,
 	hasSeverityField: boolean,
+	options: LogsVolumeRowsOptions = {},
 ) {
 	const groupDefinitions = new Map<string, LogsVolumeGroup>();
 	const bucketMap = new Map<
@@ -387,10 +497,40 @@ export function normalizeLogsVolumeRows(
 			values: Record<string, number>;
 		}
 	>();
+	const formatPointLabel = options.formatBucketLabel ?? formatBucketLabel;
+	const formatXAxisLabel = options.formatXAxisLabel ?? formatPointLabel;
+	const targetXAxisTickCount = options.targetXAxisTickCount ?? 8;
+	const timeBounds = options.timeBounds;
+	const boundsStart = timeBounds ? new Date(timeBounds.startIso) : null;
+	const boundsEnd = timeBounds ? new Date(timeBounds.endIso) : null;
+
+	if (
+		boundsStart &&
+		boundsEnd &&
+		!Number.isNaN(boundsStart.getTime()) &&
+		!Number.isNaN(boundsEnd.getTime()) &&
+		boundsStart < boundsEnd
+	) {
+		let bucketDate = getBucketStart(boundsStart, timeRange);
+		while (bucketDate < boundsEnd) {
+			const bucketStart = bucketDate.toISOString();
+			bucketMap.set(bucketStart, {
+				bucketStart,
+				bucketEnd: addBucketDuration(bucketDate, timeRange).toISOString(),
+				bucketLabel: formatPointLabel(bucketDate, timeRange),
+				values: {},
+			});
+			bucketDate = addBucketDuration(bucketDate, timeRange);
+		}
+	}
 
 	for (const row of rows) {
-		const bucketDate = new Date(row.bucket);
+		const bucketDate = parseClickHouseBucketDate(row.bucket);
 		if (Number.isNaN(bucketDate.getTime())) {
+			continue;
+		}
+		const rowCount = Number(row.rows);
+		if (!Number.isFinite(rowCount)) {
 			continue;
 		}
 
@@ -410,16 +550,20 @@ export function normalizeLogsVolumeRows(
 				};
 		groupDefinitions.set(groupKey, groupDefinition);
 
-		const bucketStart = bucketDate.toISOString();
-		const bucketEnd = addBucketDuration(bucketDate, timeRange).toISOString();
+		const bucketStartDate = getBucketStart(bucketDate, timeRange);
+		const bucketStart = bucketStartDate.toISOString();
+		const bucketEnd = addBucketDuration(
+			bucketStartDate,
+			timeRange,
+		).toISOString();
 		const currentBucket = bucketMap.get(bucketStart) ?? {
 			bucketStart,
 			bucketEnd,
-			bucketLabel: formatBucketLabel(bucketDate, timeRange),
+			bucketLabel: formatPointLabel(bucketStartDate, timeRange),
 			values: {},
 		};
 		currentBucket.values[groupKey] =
-			(currentBucket.values[groupKey] ?? 0) + Number(row.rows);
+			(currentBucket.values[groupKey] ?? 0) + rowCount;
 		bucketMap.set(bucketStart, currentBucket);
 	}
 
@@ -427,34 +571,48 @@ export function normalizeLogsVolumeRows(
 		sortGroupKeys(a.key, b.key),
 	);
 
-	const points: LogsVolumePoint[] = Array.from(bucketMap.values())
-		.sort(
-			(a, b) =>
-				new Date(a.bucketStart).getTime() - new Date(b.bucketStart).getTime(),
-		)
-		.map((bucket) => {
-			const pointGroups = groups
-				.map((group) => ({
-					...group,
-					count: bucket.values[group.key] ?? 0,
-				}))
-				.filter((group) => group.count > 0);
+	const points: LogsVolumePoint[] =
+		groups.length === 0
+			? []
+			: Array.from(bucketMap.values())
+					.sort(
+						(a, b) =>
+							new Date(a.bucketStart).getTime() -
+							new Date(b.bucketStart).getTime(),
+					)
+					.map((bucket) => {
+						const pointGroups = groups
+							.map((group) => ({
+								...group,
+								count: bucket.values[group.key] ?? 0,
+							}))
+							.filter((group) => group.count > 0);
 
-			const total = pointGroups.reduce((sum, group) => sum + group.count, 0);
+						const total = pointGroups.reduce(
+							(sum, group) => sum + group.count,
+							0,
+						);
 
-			return {
-				bucketLabel: bucket.bucketLabel,
-				bucketStart: bucket.bucketStart,
-				bucketEnd: bucket.bucketEnd,
-				total,
-				values: bucket.values,
-				groups: pointGroups,
-			};
-		});
+						return {
+							bucketLabel: bucket.bucketLabel,
+							bucketStart: bucket.bucketStart,
+							bucketEnd: bucket.bucketEnd,
+							total,
+							values: bucket.values,
+							groups: pointGroups,
+						};
+					});
+	const chartData = applyXAxisLabels(
+		points,
+		timeRange,
+		formatXAxisLabel,
+		targetXAxisTickCount,
+	);
 
 	return {
-		points,
+		points: chartData.points,
 		groups,
+		xAxisTicks: chartData.xAxisTicks,
 	};
 }
 

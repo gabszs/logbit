@@ -50,6 +50,7 @@ import {
 	type LogsVolumeRow,
 	type LogTimeRange,
 	normalizeLogsVolumeRows,
+	resolveLogsQueryTimeBounds,
 } from "./-lib/logs-queries";
 import {
 	buildLogsRowIdentity,
@@ -67,6 +68,22 @@ const allSourcesQueryOptions = queryOptions({
 	queryKey: ["sources", "all"],
 	queryFn: getSourcesForSourceSelect,
 });
+
+function formatLogsVolumeTimeLabel(date: Date) {
+	const hours = date.getHours().toString().padStart(2, "0");
+	const minutes = date.getMinutes().toString().padStart(2, "0");
+	return `${hours}:${minutes}`;
+}
+
+function formatLogsVolumeTooltipLabel(date: Date) {
+	const year = date.getFullYear().toString().padStart(4, "0");
+	const month = (date.getMonth() + 1).toString().padStart(2, "0");
+	const day = date.getDate().toString().padStart(2, "0");
+	const hours = date.getHours().toString().padStart(2, "0");
+	const minutes = date.getMinutes().toString().padStart(2, "0");
+	const seconds = date.getSeconds().toString().padStart(2, "0");
+	return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+}
 
 export const Route = createFileRoute("/logs")({
 	validateSearch: (search: Record<string, unknown>) => {
@@ -129,6 +146,10 @@ function LogsRoute() {
 	);
 	const [volumeResult, setVolumeResult] =
 		useState<ClickhouseJsonResult<LogsVolumeRow> | null>(null);
+	const [volumeTimeBounds, setVolumeTimeBounds] =
+		useState<LogsQueryAbsoluteTimeRange | null>(null);
+	const [volumeTimeRange, setVolumeTimeRange] =
+		useState<LogTimeRange>(timeRange);
 	const [queryError, setQueryError] = useState<string | null>(null);
 	const [volumeError, setVolumeError] = useState<string | null>(null);
 	const [isDenoisePanelVisible, setIsDenoisePanelVisible] = useState(true);
@@ -207,8 +228,14 @@ function LogsRoute() {
 			if (!source) return;
 
 			const drilldownOptions = buildDrilldownOptions(source, drilldown);
+			const queryNow = new Date();
+			const queryTimeBounds = resolveLogsQueryTimeBounds(queryState.timeRange, {
+				now: queryNow,
+				absoluteTimeRange: drilldownOptions.absoluteTimeRange,
+			});
 			const tableQuery = buildLogsTableQuery(source, {
 				...queryState,
+				now: queryNow,
 				...drilldownOptions,
 				extraSelectExpressions: getLogsRowSelectorSelects(source),
 			});
@@ -219,12 +246,15 @@ function LogsRoute() {
 			const volumeQuery = buildLogsVolumeQuery(source, {
 				whereQuery: queryState.whereQuery,
 				timeRange: queryState.timeRange,
+				now: queryNow,
 				...drilldownOptions,
 			});
 
 			setIsRunning(true);
 			setQueryError(null);
 			setVolumeError(null);
+			setVolumeTimeBounds(queryTimeBounds);
+			setVolumeTimeRange(queryState.timeRange);
 			setActiveChartPopover(null);
 
 			try {
@@ -290,6 +320,8 @@ function LogsRoute() {
 		setActiveChartPopover(null);
 		setTableResult(null);
 		setVolumeResult(null);
+		setVolumeTimeBounds(null);
+		setVolumeTimeRange(timeRangeRef.current);
 		setQueryError(null);
 		setVolumeError(null);
 		setSelectedRowIdentity(null);
@@ -383,10 +415,16 @@ function LogsRoute() {
 		() =>
 			normalizeLogsVolumeRows(
 				volumeResult?.data ?? [],
-				timeRange,
+				volumeTimeRange,
 				hasSeverityField,
+				{
+					timeBounds: volumeTimeBounds,
+					formatBucketLabel: formatLogsVolumeTooltipLabel,
+					formatXAxisLabel: formatLogsVolumeTimeLabel,
+					targetXAxisTickCount: 9,
+				},
 			),
-		[hasSeverityField, timeRange, volumeResult?.data],
+		[hasSeverityField, volumeResult?.data, volumeTimeBounds, volumeTimeRange],
 	);
 
 	const baseRows = tableResult?.data ?? [];
@@ -826,6 +864,7 @@ function LogsRoute() {
 									<LogsVolumeChart
 										points={volumeData.points}
 										groups={volumeData.groups}
+										xAxisTicks={volumeData.xAxisTicks}
 										isLoading={isRunning && volumeResult == null}
 										error={volumeError}
 										activeDrilldown={chartDrilldown}

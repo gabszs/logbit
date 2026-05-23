@@ -7,15 +7,18 @@ export type LogsBarsSparklinePoint = {
 };
 
 const LOG_CHART_COLORS: Record<string, string> = {
-	FATAL: "#ff5d73",
+	FATAL: "#f87171",
 	CRITICAL: "#fb7185",
-	ERROR: "#ff7a59",
-	WARN: "#f4b942",
-	INFO: "#2dd4bf",
-	DEBUG: "#60a5fa",
-	TRACE: "#a78bfa",
-	unknown: "#94a3b8",
-	__all__: "#2dd4bf",
+	ERROR: "#d98b86",
+	WARN: "#d6b84a",
+	INFO: "#7ea6d9",
+	OK: "#8fbf9f",
+	DEBUG: "#8aa0c8",
+	TRACE: "#9a8fc8",
+	UNSET: "#a9adc1",
+	null: "#7d828d",
+	unknown: "#7d828d",
+	__all__: "#a9adc1",
 };
 
 export function getLogsChartColor(groupKey: string) {
@@ -27,6 +30,9 @@ export function getLogsChartBarTone(level: string | null | undefined) {
 
 	if (key === "WARNING") {
 		return getLogsChartColor("WARN");
+	}
+	if (key === "UNKNOWN") {
+		return getLogsChartColor("unknown");
 	}
 
 	return getLogsChartColor(key || "__all__");
