@@ -23,16 +23,16 @@ _Avoid_: Integration (that's the Connection), Datasource (ambiguous—could mean
 **Signal Type**: The classification of a telemetry event. Types: logs, traces, metrics, sessions. Each Source has exactly one signal type.
 _Avoid_: Event Type (event is the raw data in ClickHouse), Category, Kind
 
-**Log**: A discrete event from a log source. Contains timestamp, level, message, and arbitrary fields (structured or unstructured). Stored in ClickHouse.
+**Log**: A discrete event from a log source. Contains timestamp, level, message, and arbitrary fields (structured or unstructured). Stored in ClickHouse table `otel_logs`.
 _Avoid_: LogEntry (same thing), Event (too generic), Message
 
-**Trace**: A distributed trace representing a request or transaction. Contains a unique traceId and multiple spans. Stored in ClickHouse.
+**Trace**: A distributed trace representing a request or transaction. Contains a unique traceId and multiple spans. Stored in ClickHouse table `otel_traces`.
 _Avoid_: Request Trace (too long), Transaction (different concept), Span (a span is part of a trace)
 
-**Metric**: A numerical measurement at a point in time (gauges, counters, histograms). Stored in ClickHouse.
+**Metric**: A numerical measurement at a point in time. Types: gauge, sum, histogram, exponential histogram, summary. Stored in ClickHouse (type-specific tables: `otel_metrics_gauge`, `otel_metrics_sum`, etc.).
 _Avoid_: Measurement (too generic), Data Point (ambiguous)
 
-**Session**: A user session replay or aggregated session data. Contains session metadata and events within that session. Stored in ClickHouse.
+**Session**: A user session replay or aggregated session data. Contains session metadata and events within that session. Stored in ClickHouse table `otel_sessions`.
 _Avoid_: User Session (redundant—sessions are always for users), Window
 
 **Correlation**: A configured relationship between sources that share a common identifier (traceId, spanId, userId, etc.). Allows navigation between related signals. For example, a Log Source with correlation to a Trace Source means: "when viewing a log with traceId=X, also fetch traces with traceId=X."
@@ -96,3 +96,7 @@ _Avoid_: Gateway (too generic), Reverse Proxy (implementation detail), Adapter (
 - **Signal Type** = the category of telemetry (logs, traces, metrics, sessions)
 - **Event Type** = field within a log (e.g., "error", "warning", "info")
 - Use carefully in conversation: "What signal type is this source?" vs. "What event types does this log contain?"
+
+## Reference: ClickHouse Schemas
+
+For implementation details of telemetry storage, see [[SCHEMAS.md]] — ClickHouse table definitions for each signal type, including codecs, indexing strategies, and materialized views.
