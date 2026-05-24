@@ -60,6 +60,12 @@ type LogsVolumeRowsOptions = {
 	formatBucketLabel?: (date: Date, range: LogTimeRange) => string;
 };
 
+type LogsVolumeBucketUnit = "SECOND" | "MINUTE" | "HOUR";
+type LogsVolumeBucket = {
+	amount: number;
+	unit: LogsVolumeBucketUnit;
+};
+
 const DEFAULT_SELECT_QUERY =
 	"Timestamp, ServiceName as service, SeverityText as level, Body";
 const DEFAULT_ORDER_BY_QUERY = "Timestamp DESC";
@@ -98,10 +104,29 @@ const RANGE_BUCKET = {
 	"6h": { amount: 2, unit: "MINUTE" },
 	"12h": { amount: 3, unit: "MINUTE" },
 	"1d": { amount: 5, unit: "MINUTE" },
-} as const satisfies Record<
-	LogTimeRange,
-	{ amount: number; unit: "SECOND" | "MINUTE" }
->;
+} as const satisfies Record<LogTimeRange, LogsVolumeBucket>;
+
+const LOGS_VOLUME_BUCKET_STEPS = [
+	{ amount: 15, unit: "SECOND" },
+	{ amount: 20, unit: "SECOND" },
+	{ amount: 30, unit: "SECOND" },
+	{ amount: 1, unit: "MINUTE" },
+	{ amount: 2, unit: "MINUTE" },
+	{ amount: 3, unit: "MINUTE" },
+	{ amount: 5, unit: "MINUTE" },
+	{ amount: 10, unit: "MINUTE" },
+	{ amount: 15, unit: "MINUTE" },
+	{ amount: 30, unit: "MINUTE" },
+	{ amount: 1, unit: "HOUR" },
+	{ amount: 2, unit: "HOUR" },
+	{ amount: 3, unit: "HOUR" },
+	{ amount: 6, unit: "HOUR" },
+	{ amount: 12, unit: "HOUR" },
+	{ amount: 24, unit: "HOUR" },
+] as const satisfies readonly LogsVolumeBucket[];
+const LOGS_VOLUME_MAX_BUCKETS = Math.ceil(
+	RANGE_WINDOW_MS["1d"] / getBucketDurationMs(RANGE_BUCKET["1d"]),
+);
 
 type LogsQueryBaseOptions = {
 	whereQuery?: string;
@@ -209,24 +234,59 @@ function buildFromClause(source: LogSourceEntity) {
 	return `FROM ${quoteIdentifier(source.config.database ?? "")}.${quoteIdentifier(source.config.table ?? "")}`;
 }
 
-function getTimeBucket(range: LogTimeRange) {
-	return RANGE_BUCKET[range];
+function getBucketDurationMs(bucket: LogsVolumeBucket) {
+	if (bucket.unit === "SECOND") {
+		return bucket.amount * 1000;
+	}
+	if (bucket.unit === "MINUTE") {
+		return bucket.amount * 60 * 1000;
+	}
+	return bucket.amount * 60 * 60 * 1000;
 }
 
-function addBucketDuration(date: Date, range: LogTimeRange) {
-	const { amount, unit } = getTimeBucket(range);
-	const nextDate = new Date(date);
-	if (unit === "SECOND") {
-		nextDate.setUTCSeconds(nextDate.getUTCSeconds() + amount);
-		return nextDate;
+function getTimeBoundsDurationMs(
+	timeBounds: LogsQueryAbsoluteTimeRange | null | undefined,
+) {
+	if (!timeBounds) return null;
+
+	const start = new Date(timeBounds.startIso);
+	const end = new Date(timeBounds.endIso);
+	if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+		return null;
 	}
 
-	nextDate.setUTCMinutes(nextDate.getUTCMinutes() + amount);
+	const durationMs = end.getTime() - start.getTime();
+	return durationMs > 0 ? durationMs : null;
+}
+
+function getTimeBucket(
+	range: LogTimeRange,
+	timeBounds?: LogsQueryAbsoluteTimeRange | null,
+) {
+	const preferredBucket = RANGE_BUCKET[range];
+	const durationMs =
+		getTimeBoundsDurationMs(timeBounds) ?? RANGE_WINDOW_MS[range];
+	const minimumBucketMs = Math.ceil(durationMs / LOGS_VOLUME_MAX_BUCKETS);
+
+	if (getBucketDurationMs(preferredBucket) >= minimumBucketMs) {
+		return preferredBucket;
+	}
+
+	return (
+		LOGS_VOLUME_BUCKET_STEPS.find(
+			(bucket) => getBucketDurationMs(bucket) >= minimumBucketMs,
+		) ?? LOGS_VOLUME_BUCKET_STEPS[LOGS_VOLUME_BUCKET_STEPS.length - 1]
+	);
+}
+
+function addBucketDuration(date: Date, bucket: LogsVolumeBucket) {
+	const nextDate = new Date(date);
+	nextDate.setTime(nextDate.getTime() + getBucketDurationMs(bucket));
 	return nextDate;
 }
 
-function getBucketStart(date: Date, range: LogTimeRange) {
-	const { amount, unit } = getTimeBucket(range);
+function getBucketStart(date: Date, bucket: LogsVolumeBucket) {
+	const { amount, unit } = bucket;
 	const bucketDate = new Date(date);
 	bucketDate.setUTCMilliseconds(0);
 
@@ -237,7 +297,13 @@ function getBucketStart(date: Date, range: LogTimeRange) {
 	}
 
 	const minutes = Math.floor(bucketDate.getUTCMinutes() / amount) * amount;
-	bucketDate.setUTCMinutes(minutes, 0, 0);
+	if (unit === "MINUTE") {
+		bucketDate.setUTCMinutes(minutes, 0, 0);
+		return bucketDate;
+	}
+
+	const hours = Math.floor(bucketDate.getUTCHours() / amount) * amount;
+	bucketDate.setUTCHours(hours, 0, 0, 0);
 	return bucketDate;
 }
 
@@ -398,11 +464,14 @@ export function buildLogsVolumeQuery(
 ) {
 	if (!isConfiguredLogSource(source)) return null;
 
-	const { amount, unit } = RANGE_BUCKET[options.timeRange];
-	const { timestampQueryField, clauses } = buildLogsQueryConfig(
+	const { timestampQueryField, start, end, clauses } = buildLogsQueryConfig(
 		source,
 		options,
 	);
+	const { amount, unit } = getTimeBucket(options.timeRange, {
+		startIso: start,
+		endIso: end,
+	});
 	const severityGroupExpression = buildSeverityGroupExpression(source);
 	const bucketExpression = `toStartOfInterval(${timestampQueryField}, INTERVAL ${amount} ${unit})`;
 	const selectClauses = [
@@ -460,6 +529,7 @@ export function normalizeLogsVolumeRows(
 	const timeBounds = options.timeBounds;
 	const boundsStart = timeBounds ? new Date(timeBounds.startIso) : null;
 	const boundsEnd = timeBounds ? new Date(timeBounds.endIso) : null;
+	const volumeBucket = getTimeBucket(timeRange, timeBounds);
 
 	// Bucket keys stay in UTC ISO; route-level formatters render local labels.
 	if (
@@ -469,16 +539,16 @@ export function normalizeLogsVolumeRows(
 		!Number.isNaN(boundsEnd.getTime()) &&
 		boundsStart < boundsEnd
 	) {
-		let bucketDate = getBucketStart(boundsStart, timeRange);
+		let bucketDate = getBucketStart(boundsStart, volumeBucket);
 		while (bucketDate < boundsEnd) {
 			const bucketStart = bucketDate.toISOString();
 			bucketMap.set(bucketStart, {
 				bucketStart,
-				bucketEnd: addBucketDuration(bucketDate, timeRange).toISOString(),
+				bucketEnd: addBucketDuration(bucketDate, volumeBucket).toISOString(),
 				bucketLabel: formatPointLabel(bucketDate, timeRange),
 				values: {},
 			});
-			bucketDate = addBucketDuration(bucketDate, timeRange);
+			bucketDate = addBucketDuration(bucketDate, volumeBucket);
 		}
 	}
 
@@ -508,11 +578,11 @@ export function normalizeLogsVolumeRows(
 				};
 		groupDefinitions.set(groupKey, groupDefinition);
 
-		const bucketStartDate = getBucketStart(bucketDate, timeRange);
+		const bucketStartDate = getBucketStart(bucketDate, volumeBucket);
 		const bucketStart = bucketStartDate.toISOString();
 		const bucketEnd = addBucketDuration(
 			bucketStartDate,
-			timeRange,
+			volumeBucket,
 		).toISOString();
 		const currentBucket = bucketMap.get(bucketStart) ?? {
 			bucketStart,
