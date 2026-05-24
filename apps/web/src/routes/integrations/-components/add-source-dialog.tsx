@@ -35,6 +35,10 @@ import {
 import { Textarea } from "@/web/components/ui/textarea";
 import { cn } from "@/web/utils/cn";
 import {
+	createProxyClient,
+	executeClickhouseJsonQuery,
+} from "@/web/lib/clickhouse-client";
+import {
 	type ConnectionOption,
 	createSource,
 	getSourcesForSourceSelect,
@@ -255,6 +259,32 @@ export function AddSourceDialog({
 		setIsPending(false);
 		setShowOptionalFields(false);
 	}, [open, mode, source]);
+
+	useEffect(() => {
+		if (!open || !form.connectionId || !form.database.trim()) return;
+
+		const prefetchTablesAndDatabases = async () => {
+			try {
+				const client = createProxyClient(form.connectionId);
+				const db = form.database.trim().replace(/`/g, "");
+
+				await Promise.all([
+					executeClickhouseJsonQuery<{ name: string }>(
+						client,
+						"SHOW DATABASES",
+					),
+					executeClickhouseJsonQuery<{ name: string }>(
+						client,
+						`SHOW TABLES FROM \`${db}\``,
+					),
+				]);
+			} catch {
+				// Silently fail — static fallback options will be used
+			}
+		};
+
+		prefetchTablesAndDatabases();
+	}, [open, form.connectionId, form.database]);
 
 	const set = <K extends keyof FormState>(field: K, value: FormState[K]) => {
 		setFormError(null);
@@ -515,9 +545,18 @@ export function AddSourceDialog({
 							id="source-database"
 							value={form.database}
 							onChange={(value) => set("database", value)}
-							disabled={isPending}
+							disabled={isPending || !form.connectionId}
 							placeholder="Select a database"
 							options={databaseOptions}
+							onOpen={async () => {
+								if (!form.connectionId) return [];
+								const client = createProxyClient(form.connectionId);
+								const result = await executeClickhouseJsonQuery<{ name: string }>(
+									client,
+									"SHOW DATABASES",
+								);
+								return result.data.map((row) => row.name);
+							}}
 						/>
 
 						<FieldLabel htmlFor="source-table">Table</FieldLabel>
@@ -525,9 +564,19 @@ export function AddSourceDialog({
 							id="source-table"
 							value={form.table}
 							onChange={(value) => set("table", value)}
-							disabled={isPending}
+							disabled={isPending || !form.connectionId || !form.database}
 							placeholder="Select a table"
 							options={tableOptions}
+							onOpen={async () => {
+								if (!form.connectionId || !form.database) return [];
+								const client = createProxyClient(form.connectionId);
+								const db = form.database.trim().replace(/`/g, "");
+								const result = await executeClickhouseJsonQuery<{ name: string }>(
+									client,
+									`SHOW TABLES FROM \`${db}\``,
+								);
+								return result.data.map((row) => row.name);
+							}}
 						/>
 					</div>
 
@@ -878,6 +927,7 @@ function SelectField({
 	disabled,
 	placeholder,
 	options,
+	onOpen,
 }: {
 	id: string;
 	value: string;
@@ -885,18 +935,48 @@ function SelectField({
 	disabled: boolean;
 	placeholder: string;
 	options: string[];
+	onOpen?: () => Promise<string[]>;
 }) {
+	const [isLoading, setIsLoading] = useState(false);
+	const [dynamicOptions, setDynamicOptions] = useState<string[]>([]);
+	const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+
+	const handleOpenChange = async (isOpen: boolean) => {
+		if (!isOpen || !onOpen || hasLoadedOnce) return;
+
+		setIsLoading(true);
+		try {
+			const result = await onOpen();
+			setDynamicOptions(result);
+			setHasLoadedOnce(true);
+		} catch {
+			// Silently fail — static options will be used
+		} finally {
+			setIsLoading(false);
+		}
+	};
+
+	const allOptions = uniqueOptions([...dynamicOptions, ...options]);
+
 	return (
 		<Select
 			value={value}
 			onValueChange={onChange}
-			disabled={disabled || options.length === 0}
+			disabled={disabled || (isLoading && allOptions.length === 0)}
+			onOpenChange={handleOpenChange}
 		>
 			<SelectTrigger id={id} className="w-full">
-				<SelectValue placeholder={placeholder} />
+				{isLoading && !hasLoadedOnce ? (
+					<span className="flex items-center gap-2 text-muted-foreground">
+						<Loader2 className="size-3.5 animate-spin" />
+						Loading...
+					</span>
+				) : (
+					<SelectValue placeholder={placeholder} />
+				)}
 			</SelectTrigger>
 			<SelectContent>
-				{options.map((option) => (
+				{allOptions.map((option) => (
 					<SelectItem key={option} value={option}>
 						{option}
 					</SelectItem>

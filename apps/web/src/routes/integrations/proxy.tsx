@@ -358,6 +358,78 @@ export const Route = createFileRoute("/integrations/proxy")({
 	errorComponent: IntegrationsError,
 });
 
+// ─── result table ─────────────────────────────────────────────────────────────
+
+function ResultTable({ result }: { result: ClickhouseResult }) {
+	const cols: ClickhouseColumn[] =
+		(result.meta ?? []).length > 0
+			? (result.meta ?? [])
+			: result.data.length > 0
+				? Object.keys(result.data[0] ?? {}).map((name) => ({ name, type: "" }))
+				: [];
+
+	if (result.data.length === 0) {
+		return (
+			<p className="py-4 text-center text-sm text-muted-foreground">
+				No rows returned.
+			</p>
+		);
+	}
+
+	if (cols.length === 0) {
+		return (
+			<p className="py-4 text-center text-sm text-muted-foreground">
+				Empty result set.
+			</p>
+		);
+	}
+
+	return (
+		<div className="app-surface overflow-auto">
+			<table className="w-full min-w-max text-sm">
+				<thead>
+					<tr className="app-surface-divider bg-muted/50">
+						{cols.map((col) => (
+							<th
+								key={col.name}
+								className="whitespace-nowrap px-3 py-2 text-left font-medium"
+							>
+								<div className="flex flex-col gap-0.5">
+									<span>{col.name}</span>
+									{col.type && (
+										<span className="font-normal text-muted-foreground text-xs">
+											{col.type}
+										</span>
+									)}
+								</div>
+							</th>
+						))}
+					</tr>
+				</thead>
+				<tbody>
+					{result.data.map((row, i) => (
+						<tr
+							// biome-ignore lint/suspicious/noArrayIndexKey: result rows have no stable id
+							key={i}
+							className="app-surface-divider last:border-0 hover:bg-muted/30"
+						>
+							{cols.map((col) => (
+								<td
+									key={col.name}
+									className="max-w-[320px] truncate px-3 py-2 font-mono text-xs"
+									title={String(row[col.name] ?? "")}
+								>
+									{String(row[col.name] ?? "")}
+								</td>
+							))}
+						</tr>
+					))}
+				</tbody>
+			</table>
+		</div>
+	);
+}
+
 // ─── page ─────────────────────────────────────────────────────────────────────
 
 function ProxyTestPage() {
@@ -621,6 +693,45 @@ function ProxyTestPage() {
 						/>
 						<p className="text-muted-foreground text-xs">Ctrl+Enter to run</p>
 					</div>
+
+					{/* Results */}
+					{(result || error) && (
+						<>
+							<Separator />
+							<div className="space-y-3">
+								{result && (
+									<div className="flex flex-wrap items-center gap-2">
+										<span className="text-muted-foreground text-xs">
+											<Terminal className="mr-1 inline size-3" />
+											Results
+										</span>
+										<Badge variant="outline" className="text-xs">
+											{(result.rows ?? result.data.length).toLocaleString()} rows
+										</Badge>
+										{result.statistics && (
+											<>
+												<Badge variant="outline" className="text-xs">
+													{(result.statistics.elapsed * 1000).toFixed(1)}ms
+												</Badge>
+												<Badge variant="outline" className="text-xs">
+													{formatBytes(result.statistics.bytes_read)} read
+												</Badge>
+											</>
+										)}
+									</div>
+								)}
+								{error ? (
+									<div className="rounded-lg bg-destructive/10 p-4">
+										<p className="whitespace-pre-wrap break-all font-mono text-destructive text-xs">
+											{error}
+										</p>
+									</div>
+								) : result ? (
+									<ResultTable result={result} />
+								) : null}
+							</div>
+						</>
+					)}
 				</CardContent>
 			</Card>
 
@@ -698,89 +809,6 @@ function ProxyTestPage() {
 				</CardContent>
 			</Card>
 
-			{/* Results */}
-			{(result || error) && (
-				<Card>
-					<CardHeader className="pb-3">
-						<div className="flex items-center justify-between">
-							<div className="flex items-center gap-2">
-								<Terminal className="size-4" />
-								<CardTitle className="text-base">Results</CardTitle>
-							</div>
-							{result && (
-								<div className="flex flex-wrap items-center gap-2">
-									<Badge variant="outline" className="text-xs">
-										{(result.rows ?? result.data.length).toLocaleString()} rows
-									</Badge>
-									{result.statistics && (
-										<>
-											<Badge variant="outline" className="text-xs">
-												{(result.statistics.elapsed * 1000).toFixed(1)}ms
-											</Badge>
-											<Badge variant="outline" className="text-xs">
-												{formatBytes(result.statistics.bytes_read)} read
-											</Badge>
-										</>
-									)}
-								</div>
-							)}
-						</div>
-					</CardHeader>
-
-					<Separator />
-
-					<CardContent className="pt-4">
-						{error ? (
-							<div className="rounded-lg bg-destructive/10 p-4">
-								<p className="whitespace-pre-wrap break-all font-mono text-destructive text-xs">
-									{error}
-								</p>
-							</div>
-						) : result && (result.meta?.length ?? 0) > 0 ? (
-							<div className="app-surface overflow-auto">
-								<table className="w-full min-w-max text-sm">
-									<thead>
-										<tr className="app-surface-divider bg-muted/50">
-											{(result.meta ?? []).map((col) => (
-												<th
-													key={col.name}
-													className="whitespace-nowrap px-3 py-2 text-left font-medium"
-												>
-													<div className="flex flex-col gap-0.5">
-														<span>{col.name}</span>
-														<span className="font-normal text-muted-foreground text-xs">
-															{col.type}
-														</span>
-													</div>
-												</th>
-											))}
-										</tr>
-									</thead>
-									<tbody>
-										{result.data.map((row, i) => (
-											<tr
-												// biome-ignore lint/suspicious/noArrayIndexKey: result rows have no stable id
-												key={i}
-												className="app-surface-divider last:border-0 hover:bg-muted/30"
-											>
-												{(result.meta ?? []).map((col) => (
-													<td
-														key={col.name}
-														className="max-w-[320px] truncate px-3 py-2 font-mono text-xs"
-														title={String(row[col.name] ?? "")}
-													>
-														{String(row[col.name] ?? "")}
-													</td>
-												))}
-											</tr>
-										))}
-									</tbody>
-								</table>
-							</div>
-						) : null}
-					</CardContent>
-				</Card>
-			)}
 		</div>
 	);
 }
