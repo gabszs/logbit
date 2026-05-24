@@ -47,6 +47,8 @@ import {
 	getLogsQueryDefaults,
 	type LogsChartDrilldown,
 	type LogsQueryAbsoluteTimeRange,
+	type LogsVolumeChartData,
+	type LogsVolumePoint,
 	type LogsVolumeRow,
 	type LogTimeRange,
 	normalizeLogsVolumeRows,
@@ -69,6 +71,7 @@ const allSourcesQueryOptions = queryOptions({
 	queryFn: getSourcesForSourceSelect,
 });
 
+const LOGS_VOLUME_MAX_X_AXIS_TICKS = 7;
 const LOGS_VOLUME_TIME_FORMATTER = new Intl.DateTimeFormat(undefined, {
 	hour: "2-digit",
 	minute: "2-digit",
@@ -103,6 +106,72 @@ function formatLogsVolumeTooltipLabel(date: Date) {
 		`${getDateTimePart(parts, "year")}-${getDateTimePart(parts, "month")}-${getDateTimePart(parts, "day")}`,
 		`${getDateTimePart(parts, "hour")}:${getDateTimePart(parts, "minute")}:${getDateTimePart(parts, "second")}`,
 	].join(" ");
+}
+
+function isValidDate(date: Date | null): date is Date {
+	return date != null && !Number.isNaN(date.getTime());
+}
+
+function applyLogsVolumeXAxisLabels({
+	chartData,
+	timeBounds,
+	formatLabel,
+	maxTickCount,
+}: {
+	chartData: LogsVolumeChartData;
+	timeBounds: LogsQueryAbsoluteTimeRange | null;
+	formatLabel: (date: Date) => string;
+	maxTickCount: number;
+}): LogsVolumeChartData {
+	const { points } = chartData;
+	if (points.length === 0) {
+		return {
+			...chartData,
+			xAxisTicks: [],
+		};
+	}
+
+	const tickCount = Math.max(1, Math.min(maxTickCount, points.length));
+	const tickIndexes = new Set<number>();
+	if (tickCount === 1) {
+		tickIndexes.add(0);
+	} else {
+		for (let index = 0; index < tickCount; index++) {
+			tickIndexes.add(
+				Math.round((index * (points.length - 1)) / (tickCount - 1)),
+			);
+		}
+	}
+
+	const boundsStart = timeBounds ? new Date(timeBounds.startIso) : null;
+	const boundsEnd = timeBounds ? new Date(timeBounds.endIso) : null;
+	const firstPointIndex = 0;
+	const lastPointIndex = points.length - 1;
+	const xAxisTicks: string[] = [];
+	const labeledPoints: LogsVolumePoint[] = points.map((point, index) => {
+		if (!tickIndexes.has(index)) {
+			return point;
+		}
+
+		const labelDate =
+			index === firstPointIndex && isValidDate(boundsStart)
+				? boundsStart
+				: index === lastPointIndex && isValidDate(boundsEnd)
+					? boundsEnd
+					: new Date(point.bucketStart);
+
+		xAxisTicks.push(point.bucketStart);
+		return {
+			...point,
+			xAxisLabel: formatLabel(labelDate),
+		};
+	});
+
+	return {
+		...chartData,
+		points: labeledPoints,
+		xAxisTicks,
+	};
 }
 
 export const Route = createFileRoute("/logs")({
@@ -431,21 +500,24 @@ function LogsRoute() {
 	const hasSeverityField = Boolean(
 		selectedSource?.config.severityField?.trim(),
 	);
-	const volumeData = useMemo(
-		() =>
-			normalizeLogsVolumeRows(
-				volumeResult?.data ?? [],
-				volumeTimeRange,
-				hasSeverityField,
-				{
-					timeBounds: volumeTimeBounds,
-					formatBucketLabel: formatLogsVolumeTooltipLabel,
-					formatXAxisLabel: formatLogsVolumeTimeLabel,
-					targetXAxisTickCount: 9,
-				},
-			),
-		[hasSeverityField, volumeResult?.data, volumeTimeBounds, volumeTimeRange],
-	);
+	const volumeData = useMemo(() => {
+		const normalizedVolumeData = normalizeLogsVolumeRows(
+			volumeResult?.data ?? [],
+			volumeTimeRange,
+			hasSeverityField,
+			{
+				timeBounds: volumeTimeBounds,
+				formatBucketLabel: formatLogsVolumeTooltipLabel,
+			},
+		);
+
+		return applyLogsVolumeXAxisLabels({
+			chartData: normalizedVolumeData,
+			timeBounds: volumeTimeBounds,
+			formatLabel: formatLogsVolumeTimeLabel,
+			maxTickCount: LOGS_VOLUME_MAX_X_AXIS_TICKS,
+		});
+	}, [hasSeverityField, volumeResult?.data, volumeTimeBounds, volumeTimeRange]);
 
 	const baseRows = tableResult?.data ?? [];
 	const levelKey = useMemo(() => {

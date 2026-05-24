@@ -39,9 +39,9 @@ const DEFAULT_LOG_LEVELS = [
 	"unknown",
 ] as const;
 function createChartGeometry() {
-	const margin = { top: 2, right: 8, left: -18, bottom: -8 };
+	const margin = { top: 2, right: 8, left: -18, bottom: 0 };
 	const yAxisWidth = 42;
-	const xAxisHeight = 18;
+	const xAxisHeight = 22;
 
 	return {
 		margin,

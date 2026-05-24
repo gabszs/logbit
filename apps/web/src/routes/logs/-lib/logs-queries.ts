@@ -58,8 +58,6 @@ export type LogsVolumeChartData = {
 type LogsVolumeRowsOptions = {
 	timeBounds?: LogsQueryAbsoluteTimeRange | null;
 	formatBucketLabel?: (date: Date, range: LogTimeRange) => string;
-	formatXAxisLabel?: (date: Date, range: LogTimeRange) => string;
-	targetXAxisTickCount?: number;
 };
 
 const DEFAULT_SELECT_QUERY =
@@ -281,46 +279,6 @@ function formatBucketLabel(date: Date, range: LogTimeRange) {
 	return new Intl.DateTimeFormat(undefined, options).format(date);
 }
 
-function applyXAxisLabels(
-	points: LogsVolumePoint[],
-	timeRange: LogTimeRange,
-	formatXAxisLabel: (date: Date, range: LogTimeRange) => string,
-	targetXAxisTickCount: number,
-) {
-	if (points.length === 0) {
-		return {
-			points,
-			xAxisTicks: [],
-		};
-	}
-
-	const tickCount = Math.max(2, Math.min(targetXAxisTickCount, points.length));
-	const tickIndexes = new Set<number>();
-	for (let index = 0; index < tickCount; index++) {
-		tickIndexes.add(
-			Math.round((index * (points.length - 1)) / Math.max(1, tickCount - 1)),
-		);
-	}
-
-	const xAxisTicks: string[] = [];
-	const labeledPoints = points.map((point, index) => {
-		if (!tickIndexes.has(index)) {
-			return point;
-		}
-
-		xAxisTicks.push(point.bucketStart);
-		return {
-			...point,
-			xAxisLabel: formatXAxisLabel(new Date(point.bucketStart), timeRange),
-		};
-	});
-
-	return {
-		points: labeledPoints,
-		xAxisTicks,
-	};
-}
-
 function sortGroupKeys(a: string, b: string) {
 	const severityGroupOrder: readonly string[] = SEVERITY_GROUP_ORDER;
 	const aIndex = severityGroupOrder.indexOf(a);
@@ -499,8 +457,6 @@ export function normalizeLogsVolumeRows(
 		}
 	>();
 	const formatPointLabel = options.formatBucketLabel ?? formatBucketLabel;
-	const formatXAxisLabel = options.formatXAxisLabel ?? formatPointLabel;
-	const targetXAxisTickCount = options.targetXAxisTickCount ?? 8;
 	const timeBounds = options.timeBounds;
 	const boundsStart = timeBounds ? new Date(timeBounds.startIso) : null;
 	const boundsEnd = timeBounds ? new Date(timeBounds.endIso) : null;
@@ -604,17 +560,10 @@ export function normalizeLogsVolumeRows(
 							groups: pointGroups,
 						};
 					});
-	const chartData = applyXAxisLabels(
-		points,
-		timeRange,
-		formatXAxisLabel,
-		targetXAxisTickCount,
-	);
-
 	return {
-		points: chartData.points,
+		points,
 		groups,
-		xAxisTicks: chartData.xAxisTicks,
+		xAxisTicks: [],
 	};
 }
 
