@@ -1,5 +1,4 @@
 import {
-	ChartBar,
 	ChevronDown,
 	ChevronRight,
 	Eye,
@@ -17,41 +16,6 @@ import type {
 	DynamicFacetViewGroup,
 } from "../-lib/logs-facets";
 import type { LogsResultsView } from "../-lib/logs-patterns";
-
-const LOG_LEVELS = [
-	"FATAL",
-	"CRITICAL",
-	"ERROR",
-	"WARN",
-	"INFO",
-	"DEBUG",
-	"TRACE",
-	"UNKNOWN",
-];
-
-function getSeverityTextClass(level: string) {
-	switch (level) {
-		case "TRACE":
-			return "text-stone-500 dark:text-stone-400";
-		case "DEBUG":
-			return "text-blue-600 dark:text-blue-400";
-		case "INFO":
-			return "text-emerald-600 dark:text-emerald-400";
-		case "WARN":
-		case "WARNING":
-			return "text-amber-600 dark:text-amber-500";
-		case "CRITICAL":
-			return "text-rose-600 dark:text-rose-400";
-		case "ERROR":
-			return "text-red-600 dark:text-red-400";
-		case "FATAL":
-			return "text-purple-600 dark:text-purple-400";
-		case "UNKNOWN":
-			return "text-stone-400 dark:text-stone-500 italic";
-		default:
-			return "text-stone-600 dark:text-stone-400";
-	}
-}
 
 const filterItems = [{ label: "Denoise Results", value: "denoise" }];
 
@@ -71,11 +35,27 @@ const SEARCHABLE_FACET_LABELS = new Set([
 	"SpanName",
 	"SpanId",
 	"TraceId",
+	"Body",
 ]);
+
+type SidebarFacetField = DynamicFacetViewGroup["fields"][number];
+
+export function isBodyCustomFacet(field: SidebarFacetField) {
+	return field.label === "Body" && field.filterMode === "contains";
+}
+
+export function getFacetSelectedCount(field: SidebarFacetField) {
+	return (
+		field.options.filter((option) => option.included || option.excluded)
+			.length +
+		(field.customOptions ?? []).filter(
+			(option) => option.included || option.excluded,
+		).length
+	);
+}
 
 export function getLogsSidebarSections(sourceType: SourceType | null) {
 	return {
-		logLevel: sourceType === SourceType.Log,
 		traceControls: sourceType === SourceType.Trace,
 		spanName: sourceType === SourceType.Trace,
 	};
@@ -97,9 +77,6 @@ export function LogsSidebarPreview({
 	activeFilters = [],
 	isDenoisePanelVisible = true,
 	isRootSpansOnly = false,
-	selectedLevels = [],
-	levelDistribution,
-	showLevelDist = false,
 	dynamicFacetGroups = [],
 	hasDynamicFacetFilters = false,
 	isDynamicFacetsLoading = false,
@@ -108,11 +85,9 @@ export function LogsSidebarPreview({
 	onFilterToggle,
 	onToggleDenoisePanel,
 	onToggleRootSpansOnly,
-	onLevelToggle,
-	onClearLevels,
 	onClearAllFilters,
-	onToggleLevelDist,
 	onDynamicFacetToggle,
+	onDynamicFacetContainsToggle,
 	onDynamicFacetClear,
 }: {
 	className?: string;
@@ -121,9 +96,6 @@ export function LogsSidebarPreview({
 	activeFilters?: string[];
 	isDenoisePanelVisible?: boolean;
 	isRootSpansOnly?: boolean;
-	selectedLevels?: string[];
-	levelDistribution?: { counts: Map<string, number>; total: number };
-	showLevelDist?: boolean;
 	dynamicFacetGroups?: DynamicFacetViewGroup[];
 	hasDynamicFacetFilters?: boolean;
 	isDynamicFacetsLoading?: boolean;
@@ -132,18 +104,19 @@ export function LogsSidebarPreview({
 	onFilterToggle?: (filter: string) => void;
 	onToggleDenoisePanel?: () => void;
 	onToggleRootSpansOnly?: () => void;
-	onLevelToggle?: (level: string) => void;
-	onClearLevels?: () => void;
 	onClearAllFilters?: () => void;
-	onToggleLevelDist?: () => void;
 	onDynamicFacetToggle?: (
+		fieldId: string,
+		value: string,
+		mode: DynamicFacetMode,
+	) => void;
+	onDynamicFacetContainsToggle?: (
 		fieldId: string,
 		value: string,
 		mode: DynamicFacetMode,
 	) => void;
 	onDynamicFacetClear?: (fieldId: string) => void;
 }) {
-	const [isLogLevelExpanded, setIsLogLevelExpanded] = useState(false);
 	const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(
 		{},
 	);
@@ -153,15 +126,19 @@ export function LogsSidebarPreview({
 	const [optionSearch, setOptionSearch] = useState<Record<string, string>>({});
 	const sections = getLogsSidebarSections(sourceType);
 	const collapseAllFilters = () => {
-		setIsLogLevelExpanded(false);
 		setExpandedGroups({});
 		setExpandedFields({});
 	};
 	const hasActiveFilters =
-		activeFilters.length > 0 ||
-		selectedLevels.length > 0 ||
-		hasDynamicFacetFilters ||
-		isRootSpansOnly;
+		activeFilters.length > 0 || hasDynamicFacetFilters || isRootSpansOnly;
+	const handleCustomFacetToggle = (
+		fieldId: string,
+		value: string,
+		mode: DynamicFacetMode,
+	) => {
+		onDynamicFacetContainsToggle?.(fieldId, value, mode);
+		setOptionSearch((current) => ({ ...current, [fieldId]: "" }));
+	};
 
 	return (
 		<aside
@@ -332,108 +309,6 @@ export function LogsSidebarPreview({
 							</>
 						) : null}
 
-						{sections.logLevel ? (
-							<div className="flex flex-col py-1">
-								<div className="flex items-center justify-between px-2 py-1">
-									<button
-										type="button"
-										onClick={() => setIsLogLevelExpanded(!isLogLevelExpanded)}
-										className="flex flex-1 items-center gap-1.5 text-left"
-									>
-										{isLogLevelExpanded ? (
-											<ChevronDown className="size-3.5 text-stone-500" />
-										) : (
-											<ChevronRight className="size-3.5 text-stone-500" />
-										)}
-										<span className="font-bold text-stone-600 text-xs transition-colors dark:text-stone-400">
-											Log Level{" "}
-											{selectedLevels.length > 0
-												? `(${selectedLevels.length})`
-												: ""}
-										</span>
-									</button>
-									<div className="flex items-center gap-1">
-										{selectedLevels.length > 0 && (
-											<button
-												type="button"
-												onClick={onClearLevels}
-												className="rounded p-1 text-stone-400 transition-colors hover:bg-stone-200 hover:text-stone-700 dark:hover:bg-stone-800 dark:hover:text-stone-300"
-												title="Clear Filters"
-											>
-												<FilterX className="size-3.5" />
-											</button>
-										)}
-										<button
-											type="button"
-											onClick={onToggleLevelDist}
-											className={cn(
-												"rounded p-1 text-stone-400 transition-colors hover:bg-stone-200 hover:text-stone-700 dark:hover:bg-stone-800 dark:hover:text-stone-300",
-												showLevelDist &&
-													"bg-[#f6821f0c] text-[#f6821f] dark:bg-[#f6821f0a] dark:text-[#f6821f]",
-											)}
-											title={
-												showLevelDist
-													? "Hide Distribution"
-													: "Show Distribution"
-											}
-										>
-											<ChartBar className="size-3.5" />
-										</button>
-									</div>
-								</div>
-
-								{isLogLevelExpanded && (
-									<div className="mt-1 flex flex-col gap-0.5 px-2">
-										{LOG_LEVELS.map((level) => {
-											const isSelected = selectedLevels.includes(level);
-											const count = levelDistribution?.counts.get(level) || 0;
-											const total = levelDistribution?.total || 1;
-											const percentage =
-												count > 0 ? ((count / total) * 100).toFixed(1) : "0.0";
-
-											return (
-												<button
-													key={level}
-													type="button"
-													onClick={() => onLevelToggle?.(level)}
-													className={cn(
-														"group flex w-full items-center justify-between rounded px-2 py-1.5 text-left transition-all",
-														isSelected
-															? "bg-[#f6821f0c] dark:bg-[#f6821f0a]"
-															: "hover:bg-stone-100/70 dark:hover:bg-stone-900/60",
-													)}
-												>
-													<div className="flex items-center gap-1.5">
-														<span
-															className={cn(
-																"h-1.5 w-1.5 rounded-full transition-all",
-																isSelected
-																	? "bg-[#f6821f] shadow-[0_0_6px_#f6821f]"
-																	: "bg-stone-300 shadow-inner dark:bg-stone-700",
-															)}
-														/>
-														<span
-															className={cn(
-																"font-bold font-mono text-xs",
-																getSeverityTextClass(level),
-															)}
-														>
-															{level === "UNKNOWN" ? "EMPTY/UNKNOWN" : level}
-														</span>
-													</div>
-													{showLevelDist && (
-														<span className="font-mono text-[10px] text-stone-500">
-															{percentage}%
-														</span>
-													)}
-												</button>
-											);
-										})}
-									</div>
-								)}
-							</div>
-						) : null}
-
 						{isDynamicFacetsLoading ? (
 							<div className="px-2 py-2 text-stone-500 text-xs">
 								Loading filters...
@@ -450,45 +325,54 @@ export function LogsSidebarPreview({
 							dynamicFacetGroups.map((group) => {
 								const isGroupExpanded = expandedGroups[group.id] ?? false;
 								const selectedCount = group.fields.reduce(
-									(sum, field) =>
-										sum +
-										field.options.filter(
-											(option) => option.included || option.excluded,
-										).length,
+									(sum, field) => sum + getFacetSelectedCount(field),
 									0,
 								);
+								const singleField = group.fields.length === 1 ? group.fields[0] : null;
 
 								return (
 									<div key={group.id} className="rounded">
-										<button
-											type="button"
-											onClick={() =>
-												setExpandedGroups((current) => ({
-													...current,
-													[group.id]: !isGroupExpanded,
-												}))
-											}
-											className={cn(
-												"flex w-full items-center gap-1.5 rounded px-2 py-1.5 text-left text-xs transition-colors",
-												selectedCount > 0
-													? "bg-[#f6821f0c] text-stone-900 dark:bg-[#f6821f0a] dark:text-stone-100"
-													: "text-stone-600 hover:bg-stone-100/70 dark:text-stone-400 dark:hover:bg-stone-900/60",
-											)}
-										>
-											{isGroupExpanded ? (
-												<ChevronDown className="size-3.5 shrink-0 text-stone-500" />
-											) : (
-												<ChevronRight className="size-3.5 shrink-0 text-stone-500" />
-											)}
-											<span className="min-w-0 flex-1 truncate font-bold text-stone-600 dark:text-stone-400">
-												{group.label}
-											</span>
-											{selectedCount > 0 ? (
-												<span className="font-mono text-[#f6821f] text-[10px]">
-													{selectedCount}
+										<div className="flex items-center gap-1">
+											<button
+												type="button"
+												onClick={() =>
+													setExpandedGroups((current) => ({
+														...current,
+														[group.id]: !isGroupExpanded,
+													}))
+												}
+												className={cn(
+													"flex min-w-0 flex-1 items-center gap-1.5 rounded px-2 py-1.5 text-left text-xs transition-colors",
+													selectedCount > 0
+														? "bg-[#f6821f0c] text-stone-900 dark:bg-[#f6821f0a] dark:text-stone-100"
+														: "text-stone-600 hover:bg-stone-100/70 dark:text-stone-400 dark:hover:bg-stone-900/60",
+												)}
+											>
+												{isGroupExpanded ? (
+													<ChevronDown className="size-3.5 shrink-0 text-stone-500" />
+												) : (
+													<ChevronRight className="size-3.5 shrink-0 text-stone-500" />
+												)}
+												<span className="min-w-0 flex-1 truncate font-bold text-stone-600 dark:text-stone-400">
+													{group.label}
 												</span>
+												{selectedCount > 0 ? (
+													<span className="font-mono text-[#f6821f] text-[10px]">
+														{selectedCount}
+													</span>
+												) : null}
+											</button>
+											{selectedCount > 0 && singleField ? (
+												<button
+													type="button"
+													onClick={() => onDynamicFacetClear?.(singleField.id)}
+													className="rounded p-1 text-stone-400 transition-colors hover:bg-stone-200 hover:text-stone-700 dark:hover:bg-stone-800 dark:hover:text-stone-300"
+													title="Clear field filters"
+												>
+													<FilterX className="size-3" />
+												</button>
 											) : null}
-										</button>
+										</div>
 										{isGroupExpanded ? (
 											<div className="ml-3 flex flex-col border-stone-200 border-l pl-2 dark:border-stone-800">
 												{group.fields.map((field) => {
@@ -499,6 +383,10 @@ export function LogsSidebarPreview({
 													const hasSearch = SEARCHABLE_FACET_LABELS.has(
 														field.label,
 													);
+													const customSearchValue = fieldSearch.trim();
+													const isCustomFacet = isBodyCustomFacet(field);
+													const fieldHasActiveFilters =
+														getFacetSelectedCount(field) > 0;
 													const filteredOptions = field.options.filter(
 														(option) =>
 															fieldSearch.trim()
@@ -522,10 +410,7 @@ export function LogsSidebarPreview({
 																		}
 																		className={cn(
 																			"flex min-w-0 flex-1 items-center gap-1.5 rounded px-2 py-1.5 text-left text-xs transition-colors",
-																			field.options.some(
-																				(option) =>
-																					option.included || option.excluded,
-																			)
+																			fieldHasActiveFilters
 																				? "bg-[#f6821f0c] text-stone-900 dark:bg-[#f6821f0a] dark:text-stone-100"
 																				: "text-stone-600 hover:bg-stone-100/70 dark:text-stone-400 dark:hover:bg-stone-900/60",
 																		)}
@@ -539,10 +424,7 @@ export function LogsSidebarPreview({
 																			{field.label}
 																		</span>
 																	</button>
-																	{field.options.some(
-																		(option) =>
-																			option.included || option.excluded,
-																	) ? (
+																	{fieldHasActiveFilters ? (
 																		<button
 																			type="button"
 																			onClick={() =>
@@ -569,11 +451,120 @@ export function LogsSidebarPreview({
 																						[field.id]: event.target.value,
 																					}))
 																				}
+																				onKeyDown={(event) => {
+																					if (
+																						event.key === "Enter" &&
+																						isCustomFacet &&
+																						customSearchValue
+																					) {
+																						event.preventDefault();
+																						handleCustomFacetToggle(
+																							field.id,
+																							customSearchValue,
+																							"include",
+																						);
+																					}
+																				}}
 																				placeholder={`Search ${field.label}`}
 																				className="h-7 w-full rounded border border-stone-200 bg-transparent pr-2 pl-7 font-mono text-[11px] outline-none transition-colors focus:border-[#f6821f] dark:border-stone-800"
 																			/>
 																		</label>
 																	) : null}
+																	{isCustomFacet && customSearchValue ? (
+																		<div className="group flex items-center gap-1 rounded border border-dashed border-stone-300 bg-stone-50/70 px-1.5 py-1 text-xs transition-colors dark:border-stone-800 dark:bg-stone-950/60">
+																			<button
+																				type="button"
+																				onClick={() =>
+																					handleCustomFacetToggle(
+																						field.id,
+																						customSearchValue,
+																						"include",
+																					)
+																				}
+																				className="rounded p-0.5 text-stone-400 transition-colors hover:bg-stone-200 hover:text-[#f6821f] dark:hover:bg-stone-800"
+																				title="Include custom body search"
+																			>
+																				<Plus className="size-3" />
+																			</button>
+																			<button
+																				type="button"
+																				onClick={() =>
+																					handleCustomFacetToggle(
+																						field.id,
+																						customSearchValue,
+																						"exclude",
+																					)
+																				}
+																				className="rounded p-0.5 text-stone-400 transition-colors hover:bg-stone-200 hover:text-rose-500 dark:hover:bg-stone-800"
+																				title="Exclude custom body search"
+																			>
+																				<Minus className="size-3" />
+																			</button>
+																			<span className="min-w-0 flex-1 truncate font-mono text-[11px] text-stone-600 dark:text-stone-400">
+																				{customSearchValue}
+																			</span>
+																			<span className="font-mono text-[10px] text-stone-400">
+																				Custom
+																			</span>
+																		</div>
+																	) : null}
+																	{isCustomFacet
+																		? field.customOptions.map((option) => (
+																				<div
+																					key={`custom:${option.value}`}
+																					className={cn(
+																						"group flex items-center gap-1 rounded px-1.5 py-1 text-xs transition-colors",
+																						option.included &&
+																							"bg-[#f6821f0c] dark:bg-[#f6821f0a]",
+																						option.excluded &&
+																							"bg-rose-500/10 dark:bg-rose-500/10",
+																					)}
+																				>
+																					<button
+																						type="button"
+																						onClick={() =>
+																							onDynamicFacetContainsToggle?.(
+																								field.id,
+																								option.value,
+																								"include",
+																							)
+																						}
+																						className={cn(
+																							"rounded p-0.5 text-stone-400 transition-colors hover:bg-stone-200 hover:text-[#f6821f] dark:hover:bg-stone-800",
+																							option.included &&
+																								"text-[#f6821f]",
+																						)}
+																						title="Include custom body search"
+																					>
+																						<Plus className="size-3" />
+																					</button>
+																					<button
+																						type="button"
+																						onClick={() =>
+																							onDynamicFacetContainsToggle?.(
+																								field.id,
+																								option.value,
+																								"exclude",
+																							)
+																						}
+																						className={cn(
+																							"rounded p-0.5 text-stone-400 transition-colors hover:bg-stone-200 hover:text-rose-500 dark:hover:bg-stone-800",
+																							option.excluded &&
+																								"text-rose-500",
+																						)}
+																						title="Exclude custom body search"
+																					>
+																						<Minus className="size-3" />
+																					</button>
+																					<span className="min-w-0 flex-1 truncate font-mono text-[11px] text-stone-600 dark:text-stone-400">
+																						{option.value}
+																					</span>
+																					<span className="font-mono text-[10px] text-stone-400">
+																						{option.count}
+																					</span>
+																				</div>
+																			))
+																		: null}
 																	{filteredOptions.map((option) => (
 																		<div
 																			key={option.value}

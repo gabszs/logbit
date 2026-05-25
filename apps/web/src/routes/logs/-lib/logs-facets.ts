@@ -14,6 +14,7 @@ type FacetSourceConfig = {
 };
 
 export type DynamicFacetMode = "include" | "exclude";
+export type DynamicFacetFilterMode = "exact" | "contains";
 
 export type DynamicFacetField =
 	| {
@@ -22,6 +23,7 @@ export type DynamicFacetField =
 			label: string;
 			column: string;
 			dataType: string;
+			filterMode?: DynamicFacetFilterMode;
 	  }
 	| {
 			id: string;
@@ -30,6 +32,7 @@ export type DynamicFacetField =
 			column: string;
 			path: string;
 			dataType: string;
+			filterMode?: DynamicFacetFilterMode;
 	  };
 
 export type DynamicFacetGroup = {
@@ -41,6 +44,8 @@ export type DynamicFacetGroup = {
 export type DynamicFacetSelection = {
 	included: string[];
 	excluded: string[];
+	containsIncluded?: string[];
+	containsExcluded?: string[];
 };
 
 export type DynamicFacetState = Record<string, DynamicFacetSelection>;
@@ -58,6 +63,7 @@ export type DynamicFacetOption = {
 
 export type DynamicFacetViewField = DynamicFacetField & {
 	options: DynamicFacetOption[];
+	customOptions: DynamicFacetOption[];
 	total: number;
 };
 
@@ -168,6 +174,118 @@ export function fieldValueExpression(field: DynamicFacetField) {
 	return `JSON_VALUE(toJSONString(${quoteIdentifier(field.column)}), ${jsonPathLiteral(field.path)})`;
 }
 
+function fieldWhereValueExpression(field: DynamicFacetField) {
+	return `nullIf(${fieldValueExpression(field)}, '')`;
+}
+
+function sqlStringList(values: string[]) {
+	return values.map((value) => `'${escapeSqlString(value)}'`).join(", ");
+}
+
+function sqlStringArray(values: string[]) {
+	return `[${sqlStringList(values)}]`;
+}
+
+function facetFilterMode(field: DynamicFacetField): DynamicFacetFilterMode {
+	return field.filterMode ?? "exact";
+}
+
+function bodyContainsExpression(field: DynamicFacetField, values: string[]) {
+	return `multiSearchAnyCaseInsensitive(${fieldValueExpression(field)}, ${sqlStringArray(values)})`;
+}
+
+export function buildDynamicFacetWhereExpression(
+	fields: DynamicFacetField[],
+	state: DynamicFacetState,
+) {
+	const clauses: string[] = [];
+
+	for (const field of fields) {
+		const selection = state[field.id];
+		if (!selection) continue;
+
+		const expression = fieldWhereValueExpression(field);
+		if (selection.included.length > 0) {
+			clauses.push(
+				`${expression} IN (${sqlStringList(selection.included)})`,
+			);
+		}
+
+		if (selection.excluded.length > 0) {
+			clauses.push(
+				[
+					"(",
+					`  ${expression} IS NULL`,
+					`  OR ${expression} NOT IN (${sqlStringList(selection.excluded)})`,
+					")",
+				].join("\n"),
+			);
+		}
+
+		if (
+			facetFilterMode(field) === "contains" &&
+			selection.containsIncluded?.length
+		) {
+			clauses.push(
+				`${bodyContainsExpression(field, selection.containsIncluded)} = 1`,
+			);
+		}
+
+		if (
+			facetFilterMode(field) === "contains" &&
+			selection.containsExcluded?.length
+		) {
+			clauses.push(
+				`${bodyContainsExpression(field, selection.containsExcluded)} = 0`,
+			);
+		}
+	}
+
+	return clauses.length > 0 ? clauses.join("\nAND\n") : null;
+}
+
+function escapeRegExp(value: string) {
+	return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function stripManagedFacetWhereExpression(
+	whereQuery: string,
+	previousFacetExpression: string | null | undefined,
+) {
+	const normalized = normalizeSqlExpression(whereQuery);
+	if (!previousFacetExpression) return normalized;
+
+	const previous = normalizeSqlExpression(previousFacetExpression);
+	if (!previous) return normalized;
+
+	const escapedPrevious = escapeRegExp(previous);
+	const patterns = [
+		new RegExp(`\\s+AND\\s*\\(\\s*${escapedPrevious}\\s*\\)\\s*$`, "u"),
+		new RegExp(`^\\s*\\(\\s*${escapedPrevious}\\s*\\)\\s*`, "u"),
+		new RegExp(`\\s+AND\\s*${escapedPrevious}\\s*$`, "u"),
+		new RegExp(`^\\s*${escapedPrevious}\\s*`, "u"),
+	];
+
+	return patterns
+		.reduce((current, pattern) => current.replace(pattern, ""), normalized)
+		.replace(/\s+AND\s*$/iu, "")
+		.trim();
+}
+
+export function applyDynamicFacetWhereQuery(
+	whereQuery: string,
+	facetExpression: string | null,
+	previousFacetExpression?: string | null,
+) {
+	const manualWhere = stripManagedFacetWhereExpression(
+		whereQuery,
+		previousFacetExpression,
+	);
+	if (!facetExpression) return manualWhere;
+
+	return manualWhere ? `${manualWhere}\nAND (${facetExpression})` : facetExpression;
+}
+
 export function groupFacetFields(fields: DynamicFacetField[]) {
 	const groups = new Map<string, DynamicFacetGroup>();
 	for (const field of fields) {
@@ -212,7 +330,49 @@ export function toggleDynamicFacetValue(
 	const nextState = { ...state };
 	if (
 		nextSelection.included.length === 0 &&
-		nextSelection.excluded.length === 0
+		nextSelection.excluded.length === 0 &&
+		(nextSelection.containsIncluded?.length ?? 0) === 0 &&
+		(nextSelection.containsExcluded?.length ?? 0) === 0
+	) {
+		delete nextState[fieldId];
+		return nextState;
+	}
+	nextState[fieldId] = nextSelection;
+	return nextState;
+}
+
+export function toggleDynamicFacetContainsValue(
+	state: DynamicFacetState,
+	fieldId: string,
+	value: string,
+	mode: DynamicFacetMode,
+): DynamicFacetState {
+	const normalizedValue = value.trim();
+	if (!normalizedValue) return state;
+
+	const current = state[fieldId] ?? emptySelection();
+	const targetKey =
+		mode === "include" ? "containsIncluded" : "containsExcluded";
+	const otherKey =
+		mode === "include" ? "containsExcluded" : "containsIncluded";
+	const currentTargetValues = current[targetKey] ?? [];
+	const currentOtherValues = current[otherKey] ?? [];
+	const targetValues = currentTargetValues.includes(normalizedValue)
+		? withoutValue(currentTargetValues, normalizedValue)
+		: [...currentTargetValues, normalizedValue];
+	const nextSelection = {
+		...current,
+		containsIncluded: current.containsIncluded ?? [],
+		containsExcluded: current.containsExcluded ?? [],
+		[targetKey]: targetValues,
+		[otherKey]: withoutValue(currentOtherValues, normalizedValue),
+	};
+	const nextState = { ...state };
+	if (
+		nextSelection.included.length === 0 &&
+		nextSelection.excluded.length === 0 &&
+		nextSelection.containsIncluded.length === 0 &&
+		nextSelection.containsExcluded.length === 0
 	) {
 		delete nextState[fieldId];
 		return nextState;
@@ -224,8 +384,20 @@ export function toggleDynamicFacetValue(
 export function hasDynamicFacetState(state: DynamicFacetState) {
 	return Object.values(state).some(
 		(selection) =>
-			selection.included.length > 0 || selection.excluded.length > 0,
+			selection.included.length > 0 ||
+			selection.excluded.length > 0 ||
+			(selection.containsIncluded?.length ?? 0) > 0 ||
+			(selection.containsExcluded?.length ?? 0) > 0,
 	);
+}
+
+function textContainsAny(values: string[], needles: string[]) {
+	if (needles.length === 0) return false;
+	const normalizedNeedles = needles.map((needle) => needle.toLowerCase());
+	return values.some((value) => {
+		const normalizedValue = value.toLowerCase();
+		return normalizedNeedles.some((needle) => normalizedValue.includes(needle));
+	});
 }
 
 function rowMatchesSelection(
@@ -243,6 +415,16 @@ function rowMatchesSelection(
 	if (selection.excluded.length > 0) {
 		const excluded = new Set(selection.excluded);
 		if (values.some((value) => excluded.has(value))) {
+			return false;
+		}
+	}
+	if ((selection.containsIncluded?.length ?? 0) > 0) {
+		if (!textContainsAny(values, selection.containsIncluded ?? [])) {
+			return false;
+		}
+	}
+	if ((selection.containsExcluded?.length ?? 0) > 0) {
+		if (textContainsAny(values, selection.containsExcluded ?? [])) {
 			return false;
 		}
 	}
@@ -278,6 +460,8 @@ function isKeysColumn(type: string) {
 }
 
 function sortFields(a: DynamicFacetField, b: DynamicFacetField) {
+	if (a.kind === "column" && a.column === "SeverityText") return -1;
+	if (b.kind === "column" && b.column === "SeverityText") return 1;
 	if (a.kind !== b.kind) return a.kind === "column" ? -1 : 1;
 	if (a.column !== b.column) return a.column.localeCompare(b.column);
 	return a.label.localeCompare(b.label);
@@ -306,6 +490,7 @@ export function buildFacetFieldsFromMetadata(
 				label: column.name,
 				column: column.name,
 				dataType: column.type,
+				filterMode: column.name === "Body" ? "contains" : "exact",
 			});
 			continue;
 		}
@@ -324,6 +509,7 @@ export function buildFacetFieldsFromMetadata(
 				column: column.name,
 				path,
 				dataType: "String",
+				filterMode: "exact",
 			});
 		}
 	}
@@ -456,6 +642,8 @@ export function buildFacetViewGroups(
 			}
 			const included = new Set(selection.included);
 			const excluded = new Set(selection.excluded);
+			const containsIncluded = new Set(selection.containsIncluded ?? []);
+			const containsExcluded = new Set(selection.containsExcluded ?? []);
 			const options = Array.from(counts.entries())
 				.sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
 				.map(([value, count]) => ({
@@ -464,16 +652,40 @@ export function buildFacetViewGroups(
 					included: included.has(value),
 					excluded: excluded.has(value),
 				}));
+			const customOptions =
+				facetFilterMode(field) === "contains"
+					? [
+							...(selection.containsIncluded ?? []).map((value) => ({
+								value,
+								count: facetRows.filter((facetRow) =>
+									textContainsAny(facetRow.values[field.id] ?? [], [value]),
+								).length,
+								included: containsIncluded.has(value),
+								excluded: false,
+							})),
+							...(selection.containsExcluded ?? []).map((value) => ({
+								value,
+								count: facetRows.filter((facetRow) =>
+									textContainsAny(facetRow.values[field.id] ?? [], [value]),
+								).length,
+								included: false,
+								excluded: containsExcluded.has(value),
+							})),
+						]
+					: [];
 
 			return {
 				...field,
 				options,
+				customOptions,
 				total: options.reduce((sum, option) => sum + option.count, 0),
 			};
 		}),
 	}));
 
 	return viewGroups.filter((group) =>
-		group.fields.some((field) => field.options.length > 0),
+		group.fields.some(
+			(field) => field.options.length > 0 || field.customOptions.length > 0,
+		),
 	);
 }

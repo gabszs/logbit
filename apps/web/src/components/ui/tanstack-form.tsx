@@ -8,12 +8,7 @@ import * as React from "react";
 import { cn } from "@/web/utils/cn";
 import { Label } from "./label";
 
-const {
-	fieldContext,
-	formContext,
-	useFieldContext: _useFieldContext,
-	useFormContext,
-} = createFormHookContexts();
+const { fieldContext, formContext, useFormContext } = createFormHookContexts();
 
 const { useAppForm, withForm } = createFormHook({
 	fieldContext,
@@ -32,9 +27,7 @@ type FormItemContextValue = {
 	id: string;
 };
 
-const FormItemContext = React.createContext<FormItemContextValue>(
-	{} as FormItemContextValue,
-);
+const FormItemContext = React.createContext<FormItemContextValue | null>(null);
 
 function FormItem({ className, ...props }: React.ComponentProps<"div">) {
 	const id = React.useId();
@@ -51,13 +44,18 @@ function FormItem({ className, ...props }: React.ComponentProps<"div">) {
 }
 
 const useFieldContext = () => {
-	const { id } = React.useContext(FormItemContext);
-	const { name, store, ...fieldContext } = _useFieldContext();
+	const formItemContext = React.useContext(FormItemContext);
+	const field = React.useContext(fieldContext);
+	const errors = useStore(field?.store, (state) => state?.meta.errors ?? []);
 
-	const errors = useStore(store, (state) => state.meta.errors);
-	if (!fieldContext) {
+	if (!formItemContext) {
 		throw new Error("useFieldContext should be used within <FormItem>");
 	}
+	if (!field) {
+		throw new Error("useFieldContext should be used within <form.AppField>");
+	}
+	const { id } = formItemContext;
+	const { name, store, ...fieldContextValue } = field;
 
 	return {
 		id,
@@ -67,7 +65,7 @@ const useFieldContext = () => {
 		formMessageId: `${id}-form-item-message`,
 		errors,
 		store,
-		...fieldContext,
+		...fieldContextValue,
 	};
 };
 
