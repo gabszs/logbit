@@ -1,16 +1,14 @@
 ## Integrations
 
--- junstar query do painel principal com o with (tabelas de trace ids + traces + logs)
+-- checar os biome ignore e type ignore in-line e corrigir os que forem justos
+
+-- ajustar query do painel principal com o with (tabelas de trace ids + traces + logs)
 
 -- adiconar aba de session no painel do frontend para qualquer linah que tenah o atributo session.id
 
 -- forcar o envio manual das mtricas quando fechar a tela no frontend
 
 -- investigar acumulo de memoria no front, ele salva todos os logs?!
-
--- arrumar bug nao redenrizar trace completo na primeira linha
-
--- arrumar bug animacao do painel de traces
 
 -- adiconar botao refrash trace -> no primeiro click nao vai, mas se saiu e volto denovo ele recarrega
 

@@ -1,4 +1,5 @@
-import type { LogSourceEntity } from "@/web/lib/sources";
+import { SourceType } from "@/web/lib/source-types";
+import type { LogSourceEntity, TraceSourceEntity } from "@/web/lib/sources";
 
 const TIME_RANGE_OPTIONS = [
 	{ value: "5m", label: "Last 5 minutes" },
@@ -68,6 +69,8 @@ type LogsVolumeBucket = {
 
 const DEFAULT_SELECT_QUERY =
 	"Timestamp, ServiceName as service, SeverityText as level, Body";
+const DEFAULT_TRACE_SELECT_QUERY =
+	"Timestamp, ServiceName as service, StatusCode as level, round(Duration / 1e6) as duration, SpanName";
 const DEFAULT_ORDER_BY_QUERY = "Timestamp DESC";
 const UNKNOWN_GROUP_KEY = "unknown";
 const ALL_LOGS_GROUP_KEY = "__all__";
@@ -136,6 +139,8 @@ type LogsQueryBaseOptions = {
 	additionalWhereClauses?: string[];
 };
 
+export type LogsQueryableSource = LogSourceEntity | TraceSourceEntity;
+
 export function quoteIdentifier(identifier: string) {
 	return `\`${identifier.replaceAll("`", "``")}\``;
 }
@@ -150,7 +155,7 @@ export function normalizeSqlExpression(value: string | null | undefined) {
 	return trimmed.replaceAll(/;+\s*$/gu, "");
 }
 
-function isConfiguredLogSource(source: LogSourceEntity) {
+function isConfiguredLogSource(source: LogsQueryableSource) {
 	return Boolean(source.config.database && source.config.table);
 }
 
@@ -230,7 +235,7 @@ function buildWhereClauses(
 	return clauses;
 }
 
-function buildFromClause(source: LogSourceEntity) {
+function buildFromClause(source: LogsQueryableSource) {
 	return `FROM ${quoteIdentifier(source.config.database ?? "")}.${quoteIdentifier(source.config.table ?? "")}`;
 }
 
@@ -377,7 +382,8 @@ function normalizeSeverityGroupValue(value: string | null | undefined) {
 	return trimmed;
 }
 
-function buildSeverityGroupExpression(source: LogSourceEntity) {
+function buildSeverityGroupExpression(source: LogsQueryableSource) {
+	if (source.type !== SourceType.Log) return null;
 	const severityField = normalizeSqlExpression(source.config.severityField);
 	if (!severityField) return null;
 
@@ -388,7 +394,7 @@ function buildSeverityGroupExpression(source: LogSourceEntity) {
 }
 
 function buildLogsQueryConfig(
-	source: LogSourceEntity,
+	source: LogsQueryableSource,
 	options: LogsQueryBaseOptions,
 ) {
 	const timestampQueryField =
@@ -415,7 +421,7 @@ function buildLogsQueryConfig(
 }
 
 export function buildLogsTableQuery(
-	source: LogSourceEntity,
+	source: LogsQueryableSource,
 	options: LogsQueryBaseOptions & {
 		selectQuery: string;
 		orderByQuery: string;
@@ -457,7 +463,7 @@ export function buildLogsTableQuery(
 }
 
 export function buildLogsVolumeQuery(
-	source: LogSourceEntity,
+	source: LogsQueryableSource,
 	options: LogsQueryBaseOptions = {
 		timeRange: "15m",
 	},
@@ -495,7 +501,7 @@ export function buildLogsVolumeQuery(
 }
 
 export function buildLogsChartDrilldownClauses(
-	source: LogSourceEntity,
+	source: LogsQueryableSource,
 	drilldown: LogsChartDrilldown | null,
 ) {
 	if (!drilldown) return [];
@@ -637,17 +643,19 @@ export function normalizeLogsVolumeRows(
 	};
 }
 
-export function getLogsQueryDefaults(source: LogSourceEntity) {
+export function getLogsQueryDefaults(source: LogsQueryableSource) {
 	return {
 		selectQuery:
 			normalizeSqlExpression(source.config.defaultSelectQuery) ||
-			DEFAULT_SELECT_QUERY,
+			(source.type === SourceType.Log
+				? DEFAULT_SELECT_QUERY
+				: DEFAULT_TRACE_SELECT_QUERY),
 		orderByQuery:
 			normalizeSqlExpression(source.config.defaultOrderByQuery) ||
 			DEFAULT_ORDER_BY_QUERY,
 	};
 }
 
-export function getLogsSourceLabel(source: LogSourceEntity) {
+export function getLogsSourceLabel(source: LogsQueryableSource) {
 	return `${source.name} · ${source.config.database ?? "?"}.${source.config.table ?? "?"}`;
 }

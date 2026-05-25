@@ -18,7 +18,12 @@ import {
 import { useContentSidebar } from "@/web/hooks/use-content-sidebar";
 import { useLogsCanvasSidebar } from "@/web/hooks/use-logs-canvas-sidebar";
 import { requireAuthenticated } from "@/web/lib/route-guards";
-import { getLogSources, getSourcesForSourceSelect } from "@/web/lib/sources";
+import { SourceType } from "@/web/lib/source-types";
+import {
+	getSourcesForSourceSelect,
+	isLogSource,
+	type SourceEntity,
+} from "@/web/lib/sources";
 import {
 	type ClickhouseJsonResult,
 	createProxyClient,
@@ -36,6 +41,23 @@ import {
 } from "./-components/logs-volume-chart";
 import type { AutoRefreshInterval } from "./-components/query-composer";
 import { QueryComposer } from "./-components/query-composer";
+import {
+	applyDynamicFacetFilters,
+	buildDistinctJsonPathsQuery,
+	buildDynamicFacetSidecarQuery,
+	buildFacetFieldsFromMetadata,
+	buildFacetViewGroups,
+	buildJsonKeysQuery,
+	buildMetadataQuery,
+	type ClickhouseColumnMeta,
+	type DynamicFacetField,
+	type DynamicFacetMode,
+	type DynamicFacetRow,
+	type DynamicFacetState,
+	hasDynamicFacetState,
+	normalizeFacetRows,
+	toggleDynamicFacetValue,
+} from "./-lib/logs-facets";
 import {
 	computeLogsPatternGroups,
 	type LogsResultsView,
@@ -60,11 +82,6 @@ import {
 	getLogsRowSelectorAliases,
 	getLogsRowSelectorSelects,
 } from "./-lib/logs-row-panel";
-
-const logSourcesQueryOptions = queryOptions({
-	queryKey: ["sources", "logs"],
-	queryFn: getLogSources,
-});
 
 const allSourcesQueryOptions = queryOptions({
 	queryKey: ["sources", "all"],
@@ -204,10 +221,7 @@ export const Route = createFileRoute("/logs")({
 		});
 	},
 	loader: async ({ context }) => {
-		await Promise.all([
-			context.queryClient.ensureQueryData(logSourcesQueryOptions),
-			context.queryClient.ensureQueryData(allSourcesQueryOptions),
-		]);
+		await context.queryClient.ensureQueryData(allSourcesQueryOptions);
 	},
 	component: LogsRoute,
 	pendingComponent: LogsSkeleton,
@@ -216,7 +230,6 @@ export const Route = createFileRoute("/logs")({
 
 function LogsRoute() {
 	const navigate = useNavigate();
-	const { data: logSources = [] } = useQuery(logSourcesQueryOptions);
 	const { data: allSources = [] } = useQuery(allSourcesQueryOptions);
 	const { isExpanded: isAppSidebarExpanded } = useContentSidebar();
 	const { isExpanded: isLogsCanvasSidebarExpanded } = useLogsCanvasSidebar();
@@ -250,6 +263,20 @@ function LogsRoute() {
 		useState<RowIdentity | null>(null);
 	const [selectedRowIdentityVersion, setSelectedRowIdentityVersion] =
 		useState(0);
+	const [dynamicFacetState, setDynamicFacetState] = useState<DynamicFacetState>(
+		{},
+	);
+	const [dynamicFacetFields, setDynamicFacetFields] = useState<
+		DynamicFacetField[]
+	>([]);
+	const [dynamicFacetRows, setDynamicFacetRows] = useState<DynamicFacetRow[]>(
+		[],
+	);
+	const [isDynamicFacetsLoading, setIsDynamicFacetsLoading] = useState(false);
+	const [dynamicFacetsError, setDynamicFacetsError] = useState<string | null>(
+		null,
+	);
+	const [isRootSpansOnly, setIsRootSpansOnly] = useState(false);
 	const previousSourceIdRef = useRef<string | null>(null);
 	const timeRangeRef = useRef(timeRange);
 	const resultsView: LogsResultsView =
@@ -257,18 +284,21 @@ function LogsRoute() {
 	const selectedLevels = useMemo(() => search.levels ?? [], [search.levels]);
 
 	const selectedSource = useMemo(
-		() => logSources.find((source) => source.id === search.sourceId) ?? null,
-		[logSources, search.sourceId],
+		() => allSources.find((source) => source.id === search.sourceId) ?? null,
+		[allSources, search.sourceId],
 	);
 	const rowPanelAdapter = useMemo(
 		() =>
-			selectedSource
+			selectedSource && isLogSource(selectedSource)
 				? createLogsRowPanelAdapter(selectedSource, allSources)
 				: null,
 		[allSources, selectedSource],
 	);
 	const hiddenRowSelectorAliases = useMemo(
-		() => (selectedSource ? getLogsRowSelectorAliases(selectedSource) : []),
+		() =>
+			selectedSource && isLogSource(selectedSource)
+				? getLogsRowSelectorAliases(selectedSource)
+				: [],
 		[selectedSource],
 	);
 
@@ -308,6 +338,92 @@ function LogsRoute() {
 		[],
 	);
 
+	const loadDynamicFacets = useCallback(
+		async ({
+			source,
+			queryState,
+			drilldownOptions,
+			now,
+		}: {
+			source: SourceEntity;
+			queryState: ActiveLogsQueryState;
+			drilldownOptions: {
+				additionalWhereClauses: string[];
+				absoluteTimeRange?: LogsQueryAbsoluteTimeRange;
+			};
+			now: Date;
+		}) => {
+			setIsDynamicFacetsLoading(true);
+			setDynamicFacetsError(null);
+			setDynamicFacetFields([]);
+			setDynamicFacetRows([]);
+			setDynamicFacetState({});
+
+			try {
+				const client = createProxyClient(source.connectionId);
+				const facetQueryState = {
+					whereQuery: queryState.whereQuery,
+					orderByQuery: queryState.orderByQuery,
+					timeRange: queryState.timeRange,
+					now,
+					...drilldownOptions,
+				};
+				const metadata = await executeClickhouseJsonQuery<ClickhouseColumnMeta>(
+					client,
+					buildMetadataQuery(source),
+				);
+				const firstPass = buildFacetFieldsFromMetadata(metadata.data, {});
+				const jsonKeyEntries = await Promise.all(
+					firstPass.jsonKeyColumns.map(async ({ jsonColumn, keyColumn }) => {
+						const result = await executeClickhouseJsonQuery<{
+							keys?: string[];
+						}>(client, buildJsonKeysQuery(source, keyColumn, facetQueryState));
+						return [jsonColumn, result.data[0]?.keys ?? []] as const;
+					}),
+				);
+				const jsonPathEntries = await Promise.all(
+					firstPass.jsonColumnsWithoutKeyColumns.map(async (jsonColumn) => {
+						const result = await executeClickhouseJsonQuery<{
+							keys?: string[];
+						}>(
+							client,
+							buildDistinctJsonPathsQuery(source, jsonColumn, facetQueryState),
+						);
+						return [jsonColumn, result.data[0]?.keys ?? []] as const;
+					}),
+				);
+				const jsonKeys = Object.fromEntries([
+					...jsonKeyEntries,
+					...jsonPathEntries,
+				]);
+				const { fields } = buildFacetFieldsFromMetadata(
+					metadata.data,
+					jsonKeys,
+				);
+				const sidecarQuery = buildDynamicFacetSidecarQuery(
+					source,
+					fields,
+					facetQueryState,
+				);
+				if (!sidecarQuery) {
+					setDynamicFacetFields(fields);
+					setDynamicFacetRows([]);
+					return;
+				}
+				const sidecar = await executeClickhouseJsonQuery<
+					Record<string, unknown>
+				>(client, sidecarQuery);
+				setDynamicFacetFields(fields);
+				setDynamicFacetRows(normalizeFacetRows(sidecar.data, fields));
+			} catch (error) {
+				setDynamicFacetsError(formatClickhouseQueryError(error));
+			} finally {
+				setIsDynamicFacetsLoading(false);
+			}
+		},
+		[],
+	);
+
 	const runQueryForSource = useCallback(
 		async (
 			source: typeof selectedSource,
@@ -326,7 +442,9 @@ function LogsRoute() {
 				...queryState,
 				now: queryNow,
 				...drilldownOptions,
-				extraSelectExpressions: getLogsRowSelectorSelects(source),
+				extraSelectExpressions: isLogSource(source)
+					? getLogsRowSelectorSelects(source)
+					: [],
 			});
 			if (!tableQuery) {
 				return;
@@ -345,6 +463,10 @@ function LogsRoute() {
 			setVolumeTimeBounds(queryTimeBounds);
 			setVolumeTimeRange(queryState.timeRange);
 			setActiveChartPopover(null);
+			setDynamicFacetFields([]);
+			setDynamicFacetRows([]);
+			setDynamicFacetState({});
+			setDynamicFacetsError(null);
 
 			try {
 				const client = createProxyClient(source.connectionId);
@@ -358,9 +480,16 @@ function LogsRoute() {
 				if (tableOutcome.status === "fulfilled") {
 					setTableResult(tableOutcome.value);
 					setQueryError(null);
+					void loadDynamicFacets({
+						source,
+						queryState,
+						drilldownOptions,
+						now: queryNow,
+					});
 				} else {
 					setTableResult(null);
 					setQueryError(formatClickhouseQueryError(tableOutcome.reason));
+					setIsDynamicFacetsLoading(false);
 				}
 
 				if (volumeOutcome.status === "fulfilled") {
@@ -374,15 +503,15 @@ function LogsRoute() {
 				setIsRunning(false);
 			}
 		},
-		[buildDrilldownOptions],
+		[buildDrilldownOptions, loadDynamicFacets],
 	);
 
 	useEffect(() => {
-		if (logSources.length === 0) return;
+		if (allSources.length === 0) return;
 
 		const nextSource =
-			logSources.find((source) => source.id === search.sourceId) ??
-			logSources[0];
+			allSources.find((source) => source.id === search.sourceId) ??
+			allSources[0];
 
 		if (search.sourceId === nextSource.id) return;
 
@@ -391,12 +520,12 @@ function LogsRoute() {
 			search: (prev) => ({ ...prev, sourceId: nextSource.id }),
 			replace: true,
 		});
-	}, [logSources, navigate, search.sourceId]);
+	}, [allSources, navigate, search.sourceId]);
 
 	useEffect(() => {
 		if (!search.sourceId) return;
 
-		const nextSource = logSources.find(
+		const nextSource = allSources.find(
 			(source) => source.id === search.sourceId,
 		);
 		if (!nextSource) return;
@@ -415,6 +544,11 @@ function LogsRoute() {
 		setVolumeError(null);
 		setSelectedRowIdentity(null);
 		setSelectedRowIdentityVersion(0);
+		setDynamicFacetState({});
+		setDynamicFacetFields([]);
+		setDynamicFacetRows([]);
+		setDynamicFacetsError(null);
+		setIsRootSpansOnly(false);
 		setSelectQuery(defaults.selectQuery);
 		setOrderByQuery(defaults.orderByQuery);
 		setWhereQuery("");
@@ -428,7 +562,7 @@ function LogsRoute() {
 			},
 			null,
 		);
-	}, [logSources, runQueryForSource, search.sourceId]);
+	}, [allSources, runQueryForSource, search.sourceId]);
 
 	const canRun =
 		Boolean(
@@ -455,7 +589,7 @@ function LogsRoute() {
 		) => {
 			let finalWhereQuery = queryState.whereQuery;
 
-			if (selectedLevels.length > 0) {
+			if (isLogSource(source) && selectedLevels.length > 0) {
 				const severityField =
 					source.config.severityField?.trim() || "SeverityText";
 				const normalLevels = selectedLevels.filter(
@@ -498,7 +632,9 @@ function LogsRoute() {
 	);
 
 	const hasSeverityField = Boolean(
-		selectedSource?.config.severityField?.trim(),
+		selectedSource &&
+			isLogSource(selectedSource) &&
+			selectedSource.config.severityField?.trim(),
 	);
 	const volumeData = useMemo(() => {
 		const normalizedVolumeData = normalizeLogsVolumeRows(
@@ -523,9 +659,10 @@ function LogsRoute() {
 	const levelKey = useMemo(() => {
 		if (!baseRows.length) return null;
 		const keys = Object.keys(baseRows[0]);
-		const configuredKey = selectedSource?.config.severityField
-			?.trim()
-			.toLowerCase();
+		const configuredKey =
+			selectedSource && isLogSource(selectedSource)
+				? selectedSource.config.severityField?.trim().toLowerCase()
+				: undefined;
 		if (configuredKey) {
 			const found = keys.find(
 				(k) =>
@@ -546,71 +683,117 @@ function LogsRoute() {
 			if (found) return found;
 		}
 		return null;
-	}, [baseRows, selectedSource?.config.severityField]);
+	}, [baseRows, selectedSource]);
 
-	const { levelFilteredRows, levelDistribution } = useMemo(() => {
-		const distribution = new Map<string, number>();
-		let totalWithLevel = 0;
+	const { levelFilteredRows, levelFilteredFacetRows, levelDistribution } =
+		useMemo(() => {
+			const distribution = new Map<string, number>();
+			let totalWithLevel = 0;
 
-		const normalizedRows = baseRows.map((row) => {
-			let level = null;
-			if (levelKey) {
-				const raw = row[levelKey];
-				if (typeof raw === "string" && raw.trim()) {
-					level = raw.trim().toUpperCase();
-					if (level === "WARNING") level = "WARN";
+			const normalizedRows = baseRows.map((row, index) => {
+				let level = null;
+				if (levelKey) {
+					const raw = row[levelKey];
+					if (typeof raw === "string" && raw.trim()) {
+						level = raw.trim().toUpperCase();
+						if (level === "WARNING") level = "WARN";
+					}
 				}
-			}
-			if (!level) {
-				level = "UNKNOWN";
-			}
+				if (!level) {
+					level = "UNKNOWN";
+				}
 
-			distribution.set(level, (distribution.get(level) || 0) + 1);
-			totalWithLevel++;
+				distribution.set(level, (distribution.get(level) || 0) + 1);
+				totalWithLevel++;
 
-			return { row, level };
-		});
+				return { row, level, facetRow: dynamicFacetRows[index] };
+			});
 
-		const filtered =
-			selectedLevels.length > 0
-				? normalizedRows
-						.filter((nr) => nr.level && selectedLevels.includes(nr.level))
-						.map((nr) => nr.row)
-				: baseRows;
+			const filteredEntries =
+				selectedSource &&
+				isLogSource(selectedSource) &&
+				selectedLevels.length > 0
+					? normalizedRows.filter(
+							(nr) => nr.level && selectedLevels.includes(nr.level),
+						)
+					: normalizedRows;
 
-		return {
-			levelFilteredRows: filtered,
-			levelDistribution: { counts: distribution, total: totalWithLevel },
-		};
-	}, [baseRows, levelKey, selectedLevels]);
+			return {
+				levelFilteredRows: filteredEntries.map((entry) => entry.row),
+				levelFilteredFacetRows: filteredEntries.map(
+					(entry) => entry.facetRow ?? { values: {} },
+				),
+				levelDistribution: { counts: distribution, total: totalWithLevel },
+			};
+		}, [baseRows, dynamicFacetRows, levelKey, selectedLevels, selectedSource]);
+	const dynamicFacetFilteredEntries = useMemo(
+		() =>
+			applyDynamicFacetFilters(
+				levelFilteredRows.map((row, index) => ({
+					row,
+					facetRow: levelFilteredFacetRows[index],
+				})),
+				levelFilteredFacetRows,
+				dynamicFacetState,
+			),
+		[dynamicFacetState, levelFilteredFacetRows, levelFilteredRows],
+	);
+	const dynamicFacetFilteredRows = useMemo(
+		() => dynamicFacetFilteredEntries.map((entry) => entry.row),
+		[dynamicFacetFilteredEntries],
+	);
+	const dynamicFacetFilteredFacetRows = useMemo(
+		() =>
+			dynamicFacetFilteredEntries.map(
+				(entry) => entry.facetRow ?? { values: {} },
+			),
+		[dynamicFacetFilteredEntries],
+	);
+	const dynamicFacetViewGroups = useMemo(
+		() =>
+			buildFacetViewGroups(
+				dynamicFacetFields,
+				hasDynamicFacetState(dynamicFacetState)
+					? dynamicFacetFilteredFacetRows
+					: levelFilteredFacetRows,
+				dynamicFacetState,
+			),
+		[
+			dynamicFacetFields,
+			dynamicFacetFilteredFacetRows,
+			dynamicFacetState,
+			levelFilteredFacetRows,
+		],
+	);
 	const patternsResult = useMemo(
 		() =>
 			computeLogsPatternGroups({
-				rows: levelFilteredRows,
-				source: selectedSource,
+				rows: dynamicFacetFilteredRows,
+				source:
+					selectedSource && isLogSource(selectedSource) ? selectedSource : null,
 				timeRange,
 			}),
-		[selectedSource, levelFilteredRows, timeRange],
+		[selectedSource, dynamicFacetFilteredRows, timeRange],
 	);
 
 	const { denoisedRows, noisyGroups } = useMemo(() => {
 		if (!search.denoise || !patternsResult.groups.length) {
-			return { denoisedRows: levelFilteredRows, noisyGroups: [] };
+			return { denoisedRows: dynamicFacetFilteredRows, noisyGroups: [] };
 		}
 
-		const threshold = levelFilteredRows.length * 0.1;
+		const threshold = dynamicFacetFilteredRows.length * 0.1;
 		const noisy = patternsResult.groups.filter((g) => g.count > threshold);
 		if (noisy.length === 0) {
-			return { denoisedRows: levelFilteredRows, noisyGroups: [] };
+			return { denoisedRows: dynamicFacetFilteredRows, noisyGroups: [] };
 		}
 
 		const noisyRowsSet = new Set(noisy.flatMap((g) => g.samples));
-		const filteredRows = levelFilteredRows.filter(
+		const filteredRows = dynamicFacetFilteredRows.filter(
 			(row) => !noisyRowsSet.has(row),
 		);
 
 		return { denoisedRows: filteredRows, noisyGroups: noisy };
-	}, [search.denoise, levelFilteredRows, patternsResult.groups]);
+	}, [search.denoise, dynamicFacetFilteredRows, patternsResult.groups]);
 
 	const tableColumns = useMemo(() => {
 		if (tableResult?.meta?.length) {
@@ -644,7 +827,9 @@ function LogsRoute() {
 		return buildLogsTableQuery(selectedSource, {
 			...queryState,
 			...drilldownOptions,
-			extraSelectExpressions: getLogsRowSelectorSelects(selectedSource),
+			extraSelectExpressions: isLogSource(selectedSource)
+				? getLogsRowSelectorSelects(selectedSource)
+				: [],
 		});
 	}, [
 		activeQueryState,
@@ -666,7 +851,7 @@ function LogsRoute() {
 
 	const getRowKey = useCallback(
 		(row: Record<string, unknown>) => {
-			if (!selectedSource) return null;
+			if (!selectedSource || !isLogSource(selectedSource)) return null;
 			return buildLogsRowIdentity(selectedSource, row)?.selectedRowKey ?? null;
 		},
 		[selectedSource],
@@ -674,7 +859,7 @@ function LogsRoute() {
 
 	const handleRowClick = useCallback(
 		(row: Record<string, unknown>) => {
-			if (!selectedSource) return;
+			if (!selectedSource || !isLogSource(selectedSource)) return;
 			const identity = buildLogsRowIdentity(selectedSource, row);
 			if (identity) {
 				setSelectedRowIdentity(identity);
@@ -742,12 +927,31 @@ function LogsRoute() {
 	}, [navigate]);
 
 	const handleClearAllFilters = useCallback(() => {
+		setDynamicFacetState({});
+		setIsRootSpansOnly(false);
 		void navigate({
 			to: "/logs",
 			search: (prev) => ({ ...prev, denoise: false, levels: [] }),
 			replace: true,
 		});
 	}, [navigate]);
+
+	const handleDynamicFacetToggle = useCallback(
+		(fieldId: string, value: string, mode: DynamicFacetMode) => {
+			setDynamicFacetState((current) =>
+				toggleDynamicFacetValue(current, fieldId, value, mode),
+			);
+		},
+		[],
+	);
+
+	const handleDynamicFacetClear = useCallback((fieldId: string) => {
+		setDynamicFacetState((current) => {
+			const next = { ...current };
+			delete next[fieldId];
+			return next;
+		});
+	}, []);
 
 	const handleToggleLevelDist = useCallback(() => {
 		void navigate({
@@ -874,21 +1078,36 @@ function LogsRoute() {
 							</SheetHeader>
 							<LogsSidebarPreview
 								className="min-h-0 flex-1"
+								sourceType={
+									selectedSource?.type === SourceType.Trace
+										? SourceType.Trace
+										: SourceType.Log
+								}
 								value={resultsView}
 								activeFilters={search.denoise ? ["denoise"] : []}
 								isDenoisePanelVisible={isDenoisePanelVisible}
+								isRootSpansOnly={isRootSpansOnly}
 								selectedLevels={selectedLevels}
 								levelDistribution={levelDistribution}
 								showLevelDist={search.showLevelDist}
+								dynamicFacetGroups={dynamicFacetViewGroups}
+								hasDynamicFacetFilters={hasDynamicFacetState(dynamicFacetState)}
+								isDynamicFacetsLoading={isDynamicFacetsLoading}
+								dynamicFacetsError={dynamicFacetsError}
 								onValueChange={handleResultsViewChange}
 								onFilterToggle={handleFilterToggle}
 								onToggleDenoisePanel={() =>
 									setIsDenoisePanelVisible(!isDenoisePanelVisible)
 								}
+								onToggleRootSpansOnly={() =>
+									setIsRootSpansOnly((current) => !current)
+								}
 								onLevelToggle={handleLevelToggle}
 								onClearLevels={handleClearLevels}
 								onClearAllFilters={handleClearAllFilters}
 								onToggleLevelDist={handleToggleLevelDist}
+								onDynamicFacetToggle={handleDynamicFacetToggle}
+								onDynamicFacetClear={handleDynamicFacetClear}
 							/>
 						</SheetContent>
 					</Sheet>
@@ -896,21 +1115,36 @@ function LogsRoute() {
 
 				{isLogsCanvasSidebarExpanded && (
 					<LogsSidebarPreview
+						sourceType={
+							selectedSource?.type === SourceType.Trace
+								? SourceType.Trace
+								: SourceType.Log
+						}
 						value={resultsView}
 						activeFilters={search.denoise ? ["denoise"] : []}
 						isDenoisePanelVisible={isDenoisePanelVisible}
+						isRootSpansOnly={isRootSpansOnly}
 						selectedLevels={selectedLevels}
 						levelDistribution={levelDistribution}
 						showLevelDist={search.showLevelDist}
+						dynamicFacetGroups={dynamicFacetViewGroups}
+						hasDynamicFacetFilters={hasDynamicFacetState(dynamicFacetState)}
+						isDynamicFacetsLoading={isDynamicFacetsLoading}
+						dynamicFacetsError={dynamicFacetsError}
 						onValueChange={handleResultsViewChange}
 						onFilterToggle={handleFilterToggle}
 						onToggleDenoisePanel={() =>
 							setIsDenoisePanelVisible(!isDenoisePanelVisible)
 						}
+						onToggleRootSpansOnly={() =>
+							setIsRootSpansOnly((current) => !current)
+						}
 						onLevelToggle={handleLevelToggle}
 						onClearLevels={handleClearLevels}
 						onClearAllFilters={handleClearAllFilters}
 						onToggleLevelDist={handleToggleLevelDist}
+						onDynamicFacetToggle={handleDynamicFacetToggle}
+						onDynamicFacetClear={handleDynamicFacetClear}
 						className={`fixed top-13 bottom-0 z-20 hidden w-[280px] border-[color:var(--surface-border)] border-r bg-background shadow-[12px_0_32px_rgba(0,0,0,0.08)] xl:flex dark:shadow-[12px_0_32px_rgba(0,0,0,0.24)] ${isAppSidebarExpanded ? "left-48" : "left-12"}`}
 					/>
 				)}
