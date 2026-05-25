@@ -2,6 +2,7 @@ import { describe, expect, it } from "bun:test";
 import {
 	applyDynamicFacetFilters,
 	buildDynamicFacetSidecarQuery,
+	buildFacetViewGroups,
 	buildJsonKeysQuery,
 	buildMetadataQuery,
 	type DynamicFacetField,
@@ -110,6 +111,22 @@ describe("logs facets", () => {
 		expect(second).toEqual({
 			"column:ServiceName": { included: [], excluded: ["api"] },
 		});
+	});
+
+	it("keeps selected excluded options visible when their current count is zero", () => {
+		const state: DynamicFacetState = {
+			"column:ServiceName": { included: [], excluded: ["staging"] },
+		};
+		const groups = buildFacetViewGroups(
+			[fields[0]],
+			[{ values: { "column:ServiceName": ["api"] } }],
+			state,
+		);
+
+		expect(groups[0]?.fields[0]?.options).toEqual([
+			{ value: "api", count: 1, included: false, excluded: false },
+			{ value: "staging", count: 0, included: false, excluded: true },
+		]);
 	});
 
 	it("builds metadata, JSON key, and sidecar SQL without changing main SQL", () => {

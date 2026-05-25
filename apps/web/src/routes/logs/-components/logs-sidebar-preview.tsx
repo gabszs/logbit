@@ -152,6 +152,11 @@ export function LogsSidebarPreview({
 	);
 	const [optionSearch, setOptionSearch] = useState<Record<string, string>>({});
 	const sections = getLogsSidebarSections(sourceType);
+	const collapseAllFilters = () => {
+		setIsLogLevelExpanded(false);
+		setExpandedGroups({});
+		setExpandedFields({});
+	};
 	const hasActiveFilters =
 		activeFilters.length > 0 ||
 		selectedLevels.length > 0 ||
@@ -162,7 +167,7 @@ export function LogsSidebarPreview({
 		<aside
 			className={cn("flex h-full flex-col bg-background text-sm", className)}
 		>
-			<div className="min-h-0 flex-1 overflow-y-auto px-3.5 py-3.5">
+			<div className="logs-sidebar-scrollbar min-h-0 flex-1 overflow-y-auto px-3.5 py-3.5">
 				<div className="space-y-2.5">
 					<SectionHeader label="Mode" />
 					<div className="flex flex-col gap-1">
@@ -203,58 +208,32 @@ export function LogsSidebarPreview({
 					</div>
 				</div>
 
-				{sections.traceControls ? (
-					<div className="logs-surface-divider mt-2.5 pt-2.5">
-						<SectionHeader label="Trace Analysis" />
-						<div className="flex flex-col gap-1">
-							<button
-								type="button"
-								onClick={onToggleRootSpansOnly}
-								className={cn(
-									"flex w-full items-center gap-1.5 rounded px-2 py-1.5 text-left text-xs transition-colors",
-									isRootSpansOnly
-										? "bg-[#f6821f0c] text-stone-900 dark:bg-[#f6821f0a] dark:text-stone-100"
-										: "text-stone-600 hover:bg-stone-100/70 dark:text-stone-400 dark:hover:bg-stone-900/60",
-								)}
-							>
-								<span
-									className={cn(
-										"h-1.5 w-1.5 rounded-full",
-										isRootSpansOnly
-											? "bg-[#f6821f]"
-											: "bg-stone-300 dark:bg-stone-700",
-									)}
-								/>
-								<span className="font-bold">Root spans only</span>
-							</button>
-							<button
-								type="button"
-								disabled
-								className="flex w-full cursor-not-allowed items-center gap-1.5 rounded px-2 py-1.5 text-left text-stone-400 text-xs opacity-70 dark:text-stone-600"
-							>
-								<span className="h-1.5 w-1.5 rounded-full bg-stone-300 dark:bg-stone-700" />
-								<span className="font-bold">Event Deltas</span>
-							</button>
-						</div>
-					</div>
-				) : null}
-
 				<div className="logs-surface-divider mt-2.5 pt-2.5">
 					<div className="mb-2 flex items-center justify-between gap-2">
 						<h3 className="flex items-center gap-1.5 font-normal text-[9px] text-stone-400 uppercase tracking-[0.16em] dark:text-stone-600">
 							<span className="inline-block h-px w-3 bg-stone-300 dark:bg-stone-700" />
 							Filters
 						</h3>
-						{hasActiveFilters ? (
+						<div className="flex items-center gap-1">
 							<button
 								type="button"
-								onClick={onClearAllFilters}
+								onClick={collapseAllFilters}
 								className="rounded p-1 text-stone-400 transition-colors hover:bg-stone-200 hover:text-stone-700 dark:hover:bg-stone-800 dark:hover:text-stone-300"
-								title="Clear all filters"
+								title="Collapse all filters"
 							>
-								<FilterX className="size-3.5" />
+								<Minus className="size-3.5" />
 							</button>
-						) : null}
+							{hasActiveFilters ? (
+								<button
+									type="button"
+									onClick={onClearAllFilters}
+									className="rounded p-1 text-stone-400 transition-colors hover:bg-stone-200 hover:text-stone-700 dark:hover:bg-stone-800 dark:hover:text-stone-300"
+									title="Clear all filters"
+								>
+									<FilterX className="size-3.5" />
+								</button>
+							) : null}
+						</div>
 					</div>
 					<div className="flex flex-col gap-1">
 						{filterItems.map((item) => {
@@ -319,126 +298,156 @@ export function LogsSidebarPreview({
 								</div>
 							);
 						})}
-					</div>
-				</div>
 
-				{sections.logLevel ? (
-					<div className="mt-0 flex flex-col py-1">
-						<div className="flex items-center justify-between px-2 py-1">
-							<button
-								type="button"
-								onClick={() => setIsLogLevelExpanded(!isLogLevelExpanded)}
-								className="flex flex-1 items-center gap-1.5 text-left"
-							>
-								{isLogLevelExpanded ? (
-									<ChevronDown className="size-3.5 text-stone-500" />
-								) : (
-									<ChevronRight className="size-3.5 text-stone-500" />
-								)}
-								<span className="font-bold text-stone-600 text-xs transition-colors dark:text-stone-400">
-									Log Level{" "}
-									{selectedLevels.length > 0
-										? `(${selectedLevels.length})`
-										: ""}
-								</span>
-							</button>
-							<div className="flex items-center gap-1">
-								{selectedLevels.length > 0 && (
-									<button
-										type="button"
-										onClick={onClearLevels}
-										className="rounded p-1 text-stone-400 transition-colors hover:bg-stone-200 hover:text-stone-700 dark:hover:bg-stone-800 dark:hover:text-stone-300"
-										title="Clear Filters"
-									>
-										<FilterX className="size-3.5" />
-									</button>
-								)}
+						{sections.traceControls ? (
+							<>
 								<button
 									type="button"
-									onClick={onToggleLevelDist}
+									onClick={onToggleRootSpansOnly}
 									className={cn(
-										"rounded p-1 text-stone-400 transition-colors hover:bg-stone-200 hover:text-stone-700 dark:hover:bg-stone-800 dark:hover:text-stone-300",
-										showLevelDist &&
-											"bg-[#f6821f0c] text-[#f6821f] dark:bg-[#f6821f0a] dark:text-[#f6821f]",
+										"flex w-full items-center gap-1.5 rounded px-2 py-1.5 text-left text-xs transition-colors",
+										isRootSpansOnly
+											? "bg-[#f6821f0c] text-stone-900 dark:bg-[#f6821f0a] dark:text-stone-100"
+											: "text-stone-600 hover:bg-stone-100/70 dark:text-stone-400 dark:hover:bg-stone-900/60",
 									)}
-									title={
-										showLevelDist ? "Hide Distribution" : "Show Distribution"
-									}
 								>
-									<ChartBar className="size-3.5" />
+									<span
+										className={cn(
+											"h-1.5 w-1.5 rounded-full",
+											isRootSpansOnly
+												? "bg-[#f6821f]"
+												: "bg-stone-300 dark:bg-stone-700",
+										)}
+									/>
+									<span className="font-bold">Root spans only</span>
 								</button>
-							</div>
-						</div>
+								<button
+									type="button"
+									disabled
+									className="flex w-full cursor-not-allowed items-center gap-1.5 rounded px-2 py-1.5 text-left text-stone-400 text-xs opacity-70 dark:text-stone-600"
+								>
+									<span className="h-1.5 w-1.5 rounded-full bg-stone-300 dark:bg-stone-700" />
+									<span className="font-bold">Event Deltas</span>
+								</button>
+							</>
+						) : null}
 
-						{isLogLevelExpanded && (
-							<div className="mt-1 flex flex-col gap-0.5 px-2">
-								{LOG_LEVELS.map((level) => {
-									const isSelected = selectedLevels.includes(level);
-									const count = levelDistribution?.counts.get(level) || 0;
-									const total = levelDistribution?.total || 1;
-									const percentage =
-										count > 0 ? ((count / total) * 100).toFixed(1) : "0.0";
-
-									return (
+						{sections.logLevel ? (
+							<div className="flex flex-col py-1">
+								<div className="flex items-center justify-between px-2 py-1">
+									<button
+										type="button"
+										onClick={() => setIsLogLevelExpanded(!isLogLevelExpanded)}
+										className="flex flex-1 items-center gap-1.5 text-left"
+									>
+										{isLogLevelExpanded ? (
+											<ChevronDown className="size-3.5 text-stone-500" />
+										) : (
+											<ChevronRight className="size-3.5 text-stone-500" />
+										)}
+										<span className="font-bold text-stone-600 text-xs transition-colors dark:text-stone-400">
+											Log Level{" "}
+											{selectedLevels.length > 0
+												? `(${selectedLevels.length})`
+												: ""}
+										</span>
+									</button>
+									<div className="flex items-center gap-1">
+										{selectedLevels.length > 0 && (
+											<button
+												type="button"
+												onClick={onClearLevels}
+												className="rounded p-1 text-stone-400 transition-colors hover:bg-stone-200 hover:text-stone-700 dark:hover:bg-stone-800 dark:hover:text-stone-300"
+												title="Clear Filters"
+											>
+												<FilterX className="size-3.5" />
+											</button>
+										)}
 										<button
-											key={level}
 											type="button"
-											onClick={() => onLevelToggle?.(level)}
+											onClick={onToggleLevelDist}
 											className={cn(
-												"group flex w-full items-center justify-between rounded px-2 py-1.5 text-left transition-all",
-												isSelected
-													? "bg-[#f6821f0c] dark:bg-[#f6821f0a]"
-													: "hover:bg-stone-100/70 dark:hover:bg-stone-900/60",
+												"rounded p-1 text-stone-400 transition-colors hover:bg-stone-200 hover:text-stone-700 dark:hover:bg-stone-800 dark:hover:text-stone-300",
+												showLevelDist &&
+													"bg-[#f6821f0c] text-[#f6821f] dark:bg-[#f6821f0a] dark:text-[#f6821f]",
 											)}
+											title={
+												showLevelDist
+													? "Hide Distribution"
+													: "Show Distribution"
+											}
 										>
-											<div className="flex items-center gap-1.5">
-												<span
+											<ChartBar className="size-3.5" />
+										</button>
+									</div>
+								</div>
+
+								{isLogLevelExpanded && (
+									<div className="mt-1 flex flex-col gap-0.5 px-2">
+										{LOG_LEVELS.map((level) => {
+											const isSelected = selectedLevels.includes(level);
+											const count = levelDistribution?.counts.get(level) || 0;
+											const total = levelDistribution?.total || 1;
+											const percentage =
+												count > 0 ? ((count / total) * 100).toFixed(1) : "0.0";
+
+											return (
+												<button
+													key={level}
+													type="button"
+													onClick={() => onLevelToggle?.(level)}
 													className={cn(
-														"h-1.5 w-1.5 rounded-full transition-all",
+														"group flex w-full items-center justify-between rounded px-2 py-1.5 text-left transition-all",
 														isSelected
-															? "bg-[#f6821f] shadow-[0_0_6px_#f6821f]"
-															: "bg-stone-300 shadow-inner dark:bg-stone-700",
-													)}
-												/>
-												<span
-													className={cn(
-														"font-bold font-mono text-xs",
-														getSeverityTextClass(level),
+															? "bg-[#f6821f0c] dark:bg-[#f6821f0a]"
+															: "hover:bg-stone-100/70 dark:hover:bg-stone-900/60",
 													)}
 												>
-													{level === "UNKNOWN" ? "EMPTY/UNKNOWN" : level}
-												</span>
-											</div>
-											{showLevelDist && (
-												<span className="font-mono text-[10px] text-stone-500">
-													{percentage}%
-												</span>
-											)}
-										</button>
-									);
-								})}
+													<div className="flex items-center gap-1.5">
+														<span
+															className={cn(
+																"h-1.5 w-1.5 rounded-full transition-all",
+																isSelected
+																	? "bg-[#f6821f] shadow-[0_0_6px_#f6821f]"
+																	: "bg-stone-300 shadow-inner dark:bg-stone-700",
+															)}
+														/>
+														<span
+															className={cn(
+																"font-bold font-mono text-xs",
+																getSeverityTextClass(level),
+															)}
+														>
+															{level === "UNKNOWN" ? "EMPTY/UNKNOWN" : level}
+														</span>
+													</div>
+													{showLevelDist && (
+														<span className="font-mono text-[10px] text-stone-500">
+															{percentage}%
+														</span>
+													)}
+												</button>
+											);
+										})}
+									</div>
+								)}
 							</div>
-						)}
-					</div>
-				) : null}
+						) : null}
 
-				<div className="logs-surface-divider mt-2.5 pt-2.5">
-					<SectionHeader label="Dynamic Filters" />
-					{isDynamicFacetsLoading ? (
-						<div className="px-2 py-2 text-stone-500 text-xs">
-							Loading filters...
-						</div>
-					) : dynamicFacetsError ? (
-						<div className="rounded border border-amber-200 bg-amber-50 px-2 py-2 text-amber-700 text-xs dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-400">
-							{dynamicFacetsError}
-						</div>
-					) : dynamicFacetGroups.length === 0 ? (
-						<div className="px-2 py-2 text-stone-500 text-xs">
-							No dynamic filters available.
-						</div>
-					) : (
-						<div className="flex flex-col gap-1">
-							{dynamicFacetGroups.map((group) => {
+						{isDynamicFacetsLoading ? (
+							<div className="px-2 py-2 text-stone-500 text-xs">
+								Loading filters...
+							</div>
+						) : dynamicFacetsError ? (
+							<div className="rounded border border-amber-200 bg-amber-50 px-2 py-2 text-amber-700 text-xs dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-400">
+								{dynamicFacetsError}
+							</div>
+						) : dynamicFacetGroups.length === 0 ? (
+							<div className="px-2 py-2 text-stone-500 text-xs">
+								No dynamic filters available.
+							</div>
+						) : (
+							dynamicFacetGroups.map((group) => {
 								const isGroupExpanded = expandedGroups[group.id] ?? false;
 								const selectedCount = group.fields.reduce(
 									(sum, field) =>
@@ -459,7 +468,12 @@ export function LogsSidebarPreview({
 													[group.id]: !isGroupExpanded,
 												}))
 											}
-											className="flex w-full items-center gap-1.5 rounded px-2 py-1.5 text-left text-xs transition-colors hover:bg-stone-100/70 dark:hover:bg-stone-900/60"
+											className={cn(
+												"flex w-full items-center gap-1.5 rounded px-2 py-1.5 text-left text-xs transition-colors",
+												selectedCount > 0
+													? "bg-[#f6821f0c] text-stone-900 dark:bg-[#f6821f0a] dark:text-stone-100"
+													: "text-stone-600 hover:bg-stone-100/70 dark:text-stone-400 dark:hover:bg-stone-900/60",
+											)}
 										>
 											{isGroupExpanded ? (
 												<ChevronDown className="size-3.5 shrink-0 text-stone-500" />
@@ -506,14 +520,22 @@ export function LogsSidebarPreview({
 																				[field.id]: !fieldExpanded,
 																			}))
 																		}
-																		className="flex min-w-0 flex-1 items-center gap-1.5 rounded px-1.5 py-1 text-left text-xs transition-colors hover:bg-stone-100/70 dark:hover:bg-stone-900/60"
+																		className={cn(
+																			"flex min-w-0 flex-1 items-center gap-1.5 rounded px-2 py-1.5 text-left text-xs transition-colors",
+																			field.options.some(
+																				(option) =>
+																					option.included || option.excluded,
+																			)
+																				? "bg-[#f6821f0c] text-stone-900 dark:bg-[#f6821f0a] dark:text-stone-100"
+																				: "text-stone-600 hover:bg-stone-100/70 dark:text-stone-400 dark:hover:bg-stone-900/60",
+																		)}
 																	>
 																		{fieldExpanded ? (
 																			<ChevronDown className="size-3 shrink-0 text-stone-500" />
 																		) : (
 																			<ChevronRight className="size-3 shrink-0 text-stone-500" />
 																		)}
-																		<span className="truncate font-mono text-stone-600 dark:text-stone-400">
+																		<span className="truncate font-bold">
 																			{field.label}
 																		</span>
 																	</button>
@@ -617,9 +639,9 @@ export function LogsSidebarPreview({
 										) : null}
 									</div>
 								);
-							})}
-						</div>
-					)}
+							})
+						)}
+					</div>
 				</div>
 			</div>
 		</aside>

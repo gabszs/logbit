@@ -449,6 +449,11 @@ export function buildFacetViewGroups(
 				}
 			}
 			const selection = state[field.id] ?? emptySelection();
+			for (const value of [...selection.included, ...selection.excluded]) {
+				if (!counts.has(value)) {
+					counts.set(value, 0);
+				}
+			}
 			const included = new Set(selection.included);
 			const excluded = new Set(selection.excluded);
 			const options = Array.from(counts.entries())

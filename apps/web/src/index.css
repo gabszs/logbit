@@ -206,6 +206,24 @@
 		scrollbar-width: thin;
 	}
 
+	.logs-sidebar-scrollbar {
+		scrollbar-width: thin;
+		scrollbar-color: color-mix(in oklab, var(--border) 70%, transparent)
+			transparent;
+	}
+
+	.logs-sidebar-scrollbar::-webkit-scrollbar {
+		width: 6px;
+	}
+
+	.logs-sidebar-scrollbar::-webkit-scrollbar-thumb {
+		background-color: color-mix(
+			in oklab,
+			var(--border) 70%,
+			transparent
+		) !important;
+	}
+
 	.scrollbar-hide {
 		/* Firefox */
 		scrollbar-width: none;

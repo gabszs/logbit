@@ -18,20 +18,31 @@ import {
 	DropdownMenuTrigger,
 } from "@/web/components/ui/dropdown-menu";
 import { Input } from "@/web/components/ui/input";
-import type { LogSourceEntity } from "@/web/lib/sources";
-import { getLogSources } from "@/web/lib/sources";
+import { SourceType } from "@/web/lib/source-types";
+import type { SourceEntity } from "@/web/lib/sources";
+import { getSourcesForSourceSelect } from "@/web/lib/sources";
 import { cn } from "@/web/utils/cn";
 
-const logSourcesQueryOptions = queryOptions({
-	queryKey: ["sources", "logs"],
-	queryFn: getLogSources,
+const sourceOptionsQueryOptions = queryOptions({
+	queryKey: ["sources", "all"],
+	queryFn: getSourcesForSourceSelect,
 });
+
+function sourceTypeLabel(type: SourceEntity["type"]) {
+	if (type === SourceType.Log) return "Log";
+	if (type === SourceType.Trace) return "Trace";
+	return type;
+}
 
 export function LogSourceSwitcher() {
 	const auth = useAuth();
 	const navigate = useNavigate();
 	const location = useLocation();
-	const { data: sources, error, isPending } = useQuery(logSourcesQueryOptions);
+	const {
+		data: sources,
+		error,
+		isPending,
+	} = useQuery(sourceOptionsQueryOptions);
 	const [isOpen, setIsOpen] = useState(false);
 	const [search, setSearch] = useState("");
 	const [isSwitching, setIsSwitching] = useState(false);
@@ -52,7 +63,7 @@ export function LogSourceSwitcher() {
 
 	const selectedSource = sources?.find((item) => item.id === currentSourceId);
 
-	const handleValueChange = async (source: LogSourceEntity) => {
+	const handleValueChange = async (source: SourceEntity) => {
 		if (source.id === currentSourceId) return;
 
 		setIsSwitching(true);
@@ -127,6 +138,7 @@ export function LogSourceSwitcher() {
 									<div className="min-w-0">
 										<div className="truncate">{source.name}</div>
 										<div className="truncate text-muted-foreground text-xs">
+											{sourceTypeLabel(source.type)} ·{" "}
 											{source.config.database ?? "?"}.
 											{source.config.table ?? "?"}
 										</div>
