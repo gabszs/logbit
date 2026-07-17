@@ -621,28 +621,14 @@ function LogsRoute() {
 		() => dynamicFacetFilteredEntries.map((entry) => entry.row),
 		[dynamicFacetFilteredEntries],
 	);
-	const dynamicFacetFilteredFacetRows = useMemo(
-		() =>
-			dynamicFacetFilteredEntries.map(
-				(entry) => entry.facetRow ?? { values: {} },
-			),
-		[dynamicFacetFilteredEntries],
-	);
 	const dynamicFacetViewGroups = useMemo(
 		() =>
 			buildFacetViewGroups(
 				dynamicFacetFields,
-				hasDynamicFacetState(dynamicFacetState)
-					? dynamicFacetFilteredFacetRows
-					: baseFacetRows,
+				baseFacetRows,
 				dynamicFacetState,
 			),
-		[
-			dynamicFacetFields,
-			dynamicFacetFilteredFacetRows,
-			dynamicFacetState,
-			baseFacetRows,
-		],
+		[dynamicFacetFields, dynamicFacetState, baseFacetRows],
 	);
 	const patternsResult = useMemo(
 		() =>

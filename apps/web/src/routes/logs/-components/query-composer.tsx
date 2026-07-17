@@ -1,4 +1,5 @@
 import { Check, ChevronDown, RefreshCw } from "lucide-react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -6,7 +7,6 @@ import {
 	DropdownMenuShortcut,
 	DropdownMenuTrigger,
 } from "@/web/components/ui/dropdown-menu";
-import { Input } from "@/web/components/ui/input";
 import {
 	Select,
 	SelectContent,
@@ -28,6 +28,84 @@ const AUTO_REFRESH_OPTIONS: Array<{
 	{ value: "30s", label: "30 sec" },
 	{ value: "60s", label: "60 sec" },
 ];
+
+function ExpandableQueryField({
+	value,
+	onChange,
+	placeholder,
+	label,
+	prefix,
+	className,
+}: {
+	value: string;
+	onChange: (value: string) => void;
+	placeholder: string;
+	label?: string;
+	prefix?: ReactNode;
+	className?: string;
+}) {
+	const [isExpanded, setIsExpanded] = useState(false);
+	const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+	useEffect(() => {
+		const textarea = textareaRef.current;
+		if (!textarea) return;
+
+		if (!isExpanded) {
+			textarea.style.height = "";
+			return;
+		}
+
+		textarea.style.height = "auto";
+		textarea.style.height = `${textarea.scrollHeight}px`;
+	}, [isExpanded, value]);
+
+	return (
+		<div
+			className={cn(
+				"flex min-w-0 overflow-hidden rounded-lg border border-stone-200 bg-[#faf9f6] transition-[min-height,box-shadow,border-color] duration-150 dark:border-stone-800 dark:bg-stone-950",
+				isExpanded
+					? "min-h-10 border-[#f6821f] shadow-[inset_0_-1px_0_#f6821f]"
+					: "h-10",
+				className,
+			)}
+		>
+			{label ? (
+				<div className="flex shrink-0 items-start border-stone-200 border-r bg-[#faf9f6] dark:border-stone-800 dark:bg-stone-950">
+					<div className="flex h-10 items-center px-3 font-mono text-foreground text-sm leading-none">
+						{label}
+					</div>
+				</div>
+			) : null}
+			{prefix}
+			<textarea
+				ref={textareaRef}
+				value={value}
+				onChange={(event) => onChange(event.target.value)}
+				onFocus={() => setIsExpanded(true)}
+				onBlur={() => setIsExpanded(false)}
+				rows={1}
+				wrap={isExpanded ? "soft" : "off"}
+				autoCapitalize="off"
+				autoComplete="off"
+				autoCorrect="off"
+				data-enable-grammarly="false"
+				data-gramm="false"
+				data-gramm_editor="false"
+				data-lt-active="false"
+				data-ms-editor="false"
+				spellCheck={false}
+				className={cn(
+					"min-h-10 min-w-0 flex-1 resize-none rounded-none border-0 bg-transparent px-3 py-[11px] font-mono text-sm leading-[18px] shadow-none outline-none placeholder:text-muted-foreground focus-visible:ring-0",
+					isExpanded
+						? "overflow-hidden whitespace-pre-wrap"
+						: "overflow-hidden whitespace-nowrap",
+				)}
+				placeholder={placeholder}
+			/>
+		</div>
+	);
+}
 
 export function QueryComposer({
 	className,
@@ -74,56 +152,47 @@ export function QueryComposer({
 			)}
 		>
 			<div className="grid gap-2 xl:grid-cols-[minmax(0,2.2fr)_minmax(18rem,0.9fr)]">
-				<div className="flex h-10 min-w-0 overflow-hidden rounded-lg border border-stone-200 bg-[#faf9f6] dark:border-stone-800 dark:bg-stone-950">
-					<div className="flex h-10 items-center border-stone-200 border-r bg-[#faf9f6] px-3 font-mono text-foreground text-sm leading-none dark:border-stone-800 dark:bg-stone-950">
-						SELECT
-					</div>
-					<Input
-						value={selectQuery}
-						onChange={(event) => onSelectQueryChange(event.target.value)}
-						className="h-10 flex-1 rounded-none border-0 bg-transparent py-0 font-mono text-sm leading-none shadow-none focus-visible:ring-0"
-						placeholder="Timestamp, ServiceName as service, SeverityText as level, Body"
-					/>
-				</div>
+				<ExpandableQueryField
+					label="SELECT"
+					value={selectQuery}
+					onChange={onSelectQueryChange}
+					placeholder="Timestamp, ServiceName as service, SeverityText as level, Body"
+				/>
 
-				<div className="flex h-10 min-w-0 overflow-hidden rounded-lg border border-stone-200 bg-[#faf9f6] dark:border-stone-800 dark:bg-stone-950">
-					<div className="flex h-10 items-center border-stone-200 border-r bg-[#faf9f6] px-3 font-mono text-foreground text-sm leading-none dark:border-stone-800 dark:bg-stone-950">
-						ORDER BY
-					</div>
-					<Input
-						value={orderByQuery}
-						onChange={(event) => onOrderByQueryChange(event.target.value)}
-						className="h-10 flex-1 rounded-none border-0 bg-transparent py-0 font-mono text-sm leading-none shadow-none focus-visible:ring-0"
-						placeholder="(TimestampTime, Timestamp) DESC"
-					/>
-				</div>
+				<ExpandableQueryField
+					label="ORDER BY"
+					value={orderByQuery}
+					onChange={onOrderByQueryChange}
+					placeholder="(TimestampTime, Timestamp) DESC"
+				/>
 			</div>
 
 			<div className="grid items-stretch gap-2 xl:grid-cols-[minmax(0,1fr)_minmax(18rem,0.42fr)_auto]">
-				<div className="flex h-10 min-w-0 overflow-hidden rounded-lg border border-stone-200 bg-[#faf9f6] dark:border-stone-800 dark:bg-stone-950">
-					<div className="flex items-stretch border-stone-200 border-r bg-[#faf9f6] dark:border-stone-800 dark:bg-stone-950">
-						<Select
-							value={mode}
-							onValueChange={(value) => onModeChange(value as "sql" | "lucene")}
-						>
-							<SelectTrigger className="h-10 w-28 items-center rounded-none border-0 bg-[#faf9f6] font-mono text-foreground text-sm leading-none shadow-none dark:bg-stone-950">
-								<SelectValue />
-							</SelectTrigger>
-							<SelectContent>
-								<SelectItem value="sql">SQL</SelectItem>
-								<SelectItem value="lucene" disabled>
-									Lucene
-								</SelectItem>
-							</SelectContent>
-						</Select>
-					</div>
-					<Input
-						value={whereQuery}
-						onChange={(event) => onWhereQueryChange(event.target.value)}
-						className="h-10 flex-1 rounded-none border-0 bg-transparent py-0 font-mono text-sm leading-none shadow-none focus-visible:ring-0"
-						placeholder="WHERE SQL clause (ex. column = 'foo')"
-					/>
-				</div>
+				<ExpandableQueryField
+					value={whereQuery}
+					onChange={onWhereQueryChange}
+					placeholder="WHERE SQL clause (ex. column = 'foo')"
+					prefix={
+						<div className="flex shrink-0 items-stretch border-stone-200 border-r bg-[#faf9f6] dark:border-stone-800 dark:bg-stone-950">
+							<Select
+								value={mode}
+								onValueChange={(value) =>
+									onModeChange(value as "sql" | "lucene")
+								}
+							>
+								<SelectTrigger className="h-10 w-28 items-center rounded-none border-0 bg-[#faf9f6] font-mono text-foreground text-sm leading-none shadow-none dark:bg-stone-950">
+									<SelectValue />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="sql">SQL</SelectItem>
+									<SelectItem value="lucene" disabled>
+										Lucene
+									</SelectItem>
+								</SelectContent>
+							</Select>
+						</div>
+					}
+				/>
 
 				<div className="flex h-10 min-w-0 items-stretch">
 					<TimeRangeSelect

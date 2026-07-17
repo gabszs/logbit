@@ -13,11 +13,9 @@ import { MemoryStore, rateLimiter } from "hono-rate-limiter";
 import { db, pgClient } from "./db";
 import { settings } from "./env";
 import authRouter from "./features/auth/routes";
-import connectionsRouter from "./features/connections/routes";
 import { profileRouter } from "./features/profile/routes";
 import proxyRouter from "./features/proxy/routes";
 import { settingsRouter } from "./features/settings/routes";
-import sourcesRouter from "./features/sources/routes";
 import utilityRoutes from "./features/utils/routes";
 import { BunRedisStore, redis } from "./lib/cache";
 import { authenticateSession } from "./lib/middleware";
@@ -92,9 +90,7 @@ const app = new OpenAPIHono<AppContextType>()
 	.use(`${apiPrefix}/v1/*`, ...rateLimitMiddleware)
 	.use(`${apiPrefix}/v1/*`, authenticateSession)
 	.route(`${apiPrefix}/v1`, authRouter)
-	.route(`${apiPrefix}/v1`, connectionsRouter)
 	.route(`${apiPrefix}/v1`, proxyRouter)
-	.route(`${apiPrefix}/v1`, sourcesRouter)
 	.route(`${apiPrefix}/`, utilityRoutes)
 	.onError(
 		problemDetailsHandler({
