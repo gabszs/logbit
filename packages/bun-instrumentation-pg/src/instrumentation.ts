@@ -100,12 +100,11 @@ export class BunPgInstrumentation extends InstrumentationBase {
 			prototype: originalSQL.prototype,
 		});
 
-		// Copy static properties
+		// Copy static properties and prototype from originalSQL
 		Object.defineProperties(
 			wrappedSQL,
 			Object.getOwnPropertyDescriptors(originalSQL),
 		);
-		wrappedSQL.prototype = originalSQL.prototype;
 
 		try {
 			parent[key] = wrappedSQL;
@@ -289,14 +288,29 @@ export class BunPgInstrumentation extends InstrumentationBase {
 			);
 		}
 
-		// Detect if it's a tagged template call: args[0] is an array of strings
+		// Detect query or configuration call
+		const isTaggedTemplate =
+			Array.isArray(args[0]) && (args[0] as { raw?: unknown }).raw !== undefined;
+		const isStringQuery = typeof args[0] === "string";
+
+		// If called with options (not a query), wrap and return the scoped instance
+		if (!isTaggedTemplate && !isStringQuery) {
+			const result = (originalInstance as unknown as WrappedMethod).apply(
+				originalInstance,
+				args,
+			);
+			if (result && (typeof result === "function" || typeof result === "object")) {
+				return this._wrapSqlInstance(result as BunSQLInstance);
+			}
+			return result;
+		}
+
 		let queryText: string | undefined;
-		if (Array.isArray(args[0]) && (args[0] as { raw?: unknown }).raw) {
-			// Tagged template
+		if (isTaggedTemplate) {
 			const strings = args[0] as string[];
 			queryText = strings.join("?");
-		} else if (typeof args[0] === "string") {
-			queryText = args[0];
+		} else if (isStringQuery) {
+			queryText = args[0] as string;
 		}
 
 		const operation = queryText
@@ -344,6 +358,7 @@ export class BunPgInstrumentation extends InstrumentationBase {
 			if (!spanEnded) {
 				if (err) {
 					span.recordException(err);
+					span.setAttribute(ATTR_ERROR_TYPE, err.name || "Error");
 					span.setStatus({
 						code: SpanStatusCode.ERROR,
 						message: err.message,

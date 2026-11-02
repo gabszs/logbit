@@ -1,0 +1,31 @@
+{
+	"name": "@loglog/bun-instrumentation-fetch",
+	"version": "0.1.0",
+	"description": "OpenTelemetry Bun native fetch instrumentation",
+	"main": "src/index.ts",
+	"types": "src/index.ts",
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
+	"keywords": [
+		"bun",
+		"fetch",
+		"opentelemetry",
+		"instrumentation",
+		"tracing"
+	],
+	"peerDependencies": {
+		"@opentelemetry/api": "^1.3.0"
+	},
+	"devDependencies": {
+		"@opentelemetry/api": "^1.3.0",
+		"@types/node": "catalog:",
+		"bun-types": "^1.4.4",
+		"typescript": "catalog:"
+	},
+	"dependencies": {
+		"@opentelemetry/instrumentation": "0.213.0",
+		"@opentelemetry/semantic-conventions": "1.40.0"
+	}
+}
+

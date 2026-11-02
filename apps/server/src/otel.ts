@@ -1,4 +1,5 @@
 import v8 from "node:v8";
+import { BunFetchInstrumentation } from "@loglog/bun-instrumentation-fetch";
 import { BunPgInstrumentation } from "@loglog/bun-instrumentation-pg";
 import { BunRedisInstrumentation } from "@loglog/bun-instrumentation-redis";
 import { DiagConsoleLogger, DiagLogLevel, diag } from "@opentelemetry/api";
@@ -40,6 +41,7 @@ const sdk = new NodeSDK({
 	instrumentations: [
 		new BunPgInstrumentation(),
 		new BunRedisInstrumentation(),
+		new BunFetchInstrumentation(),
 		new HttpInstrumentation({
 			enabled: true,
 		}),

@@ -13,12 +13,31 @@ export const ATTR_ERROR_TYPE = "error.type";
 
 export function getClientAttributes(sql: BunSQLInstance): Attributes {
 	const options = sql.options ?? {};
+	let database = options.database;
+	let hostname = options.hostname;
+	let port = options.port;
+	let username = options.username;
+
+	if (options.url && (!hostname || !port || !database || !username)) {
+		try {
+			const parsed = new URL(options.url);
+			if (!hostname) hostname = parsed.hostname;
+			if (!port && parsed.port) port = Number.parseInt(parsed.port, 10);
+			if (!database && parsed.pathname.length > 1) {
+				database = parsed.pathname.slice(1);
+			}
+			if (!username && parsed.username) username = parsed.username;
+		} catch {
+			// ignore URL parse errors
+		}
+	}
+
 	return {
 		[ATTR_DB_SYSTEM_NAME]: "postgresql",
-		[ATTR_DB_NAMESPACE]: options.database,
-		[ATTR_SERVER_ADDRESS]: options.hostname,
-		[ATTR_SERVER_PORT]: options.port,
-		[ATTR_DB_USER]: options.username,
+		[ATTR_DB_NAMESPACE]: database,
+		[ATTR_SERVER_ADDRESS]: hostname,
+		[ATTR_SERVER_PORT]: port,
+		[ATTR_DB_USER]: username,
 	};
 }
 

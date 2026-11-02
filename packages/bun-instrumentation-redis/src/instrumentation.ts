@@ -18,6 +18,7 @@ import type {
 	BunModuleExports,
 	BunRedisClientConstructor,
 	BunRedisClientInstance,
+	BunRedisClientInternalOptions,
 	RedisInstrumentationConfig,
 } from "./types";
 import { getClientAttributes } from "./utils";
@@ -52,6 +53,7 @@ export class BunRedisInstrumentation extends InstrumentationBase {
 		if (Bun?.RedisClient) {
 			diag.debug("Bun.RedisClient found globally, patching directly...");
 			this._patchRedisClient(Bun.RedisClient);
+			this._patchRedisConstructor(Bun as unknown as Record<string, unknown>);
 		}
 
 		return [
@@ -62,6 +64,9 @@ export class BunRedisInstrumentation extends InstrumentationBase {
 					if (moduleExports?.RedisClient) {
 						diag.debug("RedisClient found in module exports, patching...");
 						this._patchRedisClient(moduleExports.RedisClient);
+						this._patchRedisConstructor(
+							moduleExports as unknown as Record<string, unknown>,
+						);
 					}
 					return moduleExports;
 				},
@@ -72,6 +77,35 @@ export class BunRedisInstrumentation extends InstrumentationBase {
 				},
 			),
 		];
+	}
+
+	private _patchRedisConstructor(parent: Record<string, unknown>): void {
+		const original = parent.RedisClient as BunRedisClientConstructor;
+		if (!original || (original as any)[WRAP_SYMBOL]) return;
+
+		const wrapped = function (url?: string, options?: unknown) {
+			const instance = Reflect.construct(original, [url, options]) as BunRedisClientInstance;
+			let parsedOptions: BunRedisClientInternalOptions = {};
+			if (typeof url === "string") {
+				parsedOptions.url = url;
+			} else if (typeof url === "object" && url !== null) {
+				parsedOptions = { ...(url as any) };
+			}
+			if (typeof options === "object" && options !== null) {
+				parsedOptions = { ...parsedOptions, ...(options as any) };
+			}
+			(instance as any)._otel_options = parsedOptions;
+			return instance;
+		};
+		(wrapped as any)[WRAP_SYMBOL] = true;
+		(wrapped as any)._original = original;
+		Object.defineProperties(wrapped, Object.getOwnPropertyDescriptors(original));
+
+		try {
+			parent.RedisClient = wrapped;
+		} catch (e) {
+			diag.error("Failed to patch RedisClient constructor:", e);
+		}
 	}
 
 	private _patchRedisClient(RedisClient: BunRedisClientConstructor): void {
@@ -297,7 +331,7 @@ export class BunRedisInstrumentation extends InstrumentationBase {
 					kind: SpanKind.CLIENT,
 					attributes: {
 						...getClientAttributes(this),
-						[ATTR_DB_OPERATION_NAME]: commandName,
+						[ATTR_DB_OPERATION_NAME]: spanName,
 					},
 				});
 

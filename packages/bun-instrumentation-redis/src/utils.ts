@@ -18,10 +18,10 @@ export function getClientAttributes(
 		[ATTR_DB_SYSTEM_NAME]: "redis",
 	};
 
-	// Bun's RedisClient stores options in a private-ish way or we can extract from the instance
-	if (client.options) {
-		const options = client.options;
+	const options = client.options || (client as any)._otel_options;
 
+	// Extract from options or stored connection metadata
+	if (options) {
 		// Extract db.namespace (database index)
 		if (options.db !== undefined) {
 			attributes[ATTR_DB_NAMESPACE] = String(options.db);

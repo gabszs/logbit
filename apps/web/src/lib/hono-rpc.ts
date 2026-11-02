@@ -8,7 +8,9 @@ export const honoClient = hc<AppType>(settings.serverUrl, {
 	},
 });
 
-export async function getResponseErrorMessage(response: Response) {
+export async function getResponseErrorMessage(
+	response: Response | { headers: Headers; json(): Promise<any>; text(): Promise<string>; status: number },
+) {
 	const contentType = response.headers.get("content-type") ?? "";
 	const data =
 		contentType.includes("application/json") ||
